@@ -4,10 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Cycle Tracker</title>
-
 <link rel="stylesheet" href="styles.css">
-
 </head>
+
 <body>
 
 <div class="wrapper">
@@ -23,7 +22,7 @@
 <div style="margin-top:15px;display:flex;gap:20px;">
 <div>🟥 Menstruation</div>
 <div>🟨 Fertile</div>
-<div>🟩 Post ovulation</div>
+<div>🟩 Non-fertile</div>
 </div>
 
 <h3>Temperature Chart</h3>
@@ -48,86 +47,32 @@ placeholder="36.56">
 
 <label>Bleeding</label>
 
-<div
-class="segment-row"
-id="bleedingButtons">
-
-<button
-type="button"
-onclick="setBleeding('none',event)">
-None
-</button>
-
-<button
-type="button"
-onclick="setBleeding('spotting',event)">
-Spotting
-</button>
-
-<button
-type="button"
-onclick="setBleeding('menstruation',event)">
-Period
-</button>
-
+<div class="segment-row" id="bleedingButtons">
+<button type="button" onclick="setBleeding('none',event)">None</button>
+<button type="button" onclick="setBleeding('spotting',event)">Spotting</button>
+<button type="button" onclick="setBleeding('menstruation',event)">Period</button>
 </div>
 
-<input
-type="hidden"
-id="bleeding"
-value="none">
+<input type="hidden" id="bleeding" value="none">
 
 <label>Discharge</label>
 
-<div
-class="segment-row"
-id="dischargeButtons">
-
-<button
-type="button"
-onclick="setDischarge('none',event)">
-None
-</button>
-
-<button
-type="button"
-onclick="setDischarge('dry',event)">
-Dry
-</button>
-
-<button
-type="button"
-onclick="setDischarge('moist',event)">
-Moist
-</button>
-
-<button
-type="button"
-onclick="setDischarge('wet',event)">
-Wet
-</button>
-
+<div class="segment-row" id="dischargeButtons">
+<button type="button" onclick="setDischarge('none',event)">None</button>
+<button type="button" onclick="setDischarge('dry',event)">Dry</button>
+<button type="button" onclick="setDischarge('moist',event)">Moist</button>
+<button type="button" onclick="setDischarge('wet',event)">Wet</button>
 </div>
 
-<input
-type="hidden"
-id="discharge"
-value="none">
+<input type="hidden" id="discharge" value="none">
 
-<button onclick="saveDayEntry()">
-Save
-</button>
+<div id="daySummary" style="margin-top:12px;opacity:0.8;"></div>
 
-<button
-onclick="resetTestData()"
-style="
-margin-top:12px;
-background:#334155;
-">
+<button onclick="saveDayEntry()">Save</button>
+
+<button onclick="resetTestData()" style="margin-top:12px;background:#334155;">
 Reset Test Data
 </button>
-
-<div id="result"></div>
 
 </div>
 
