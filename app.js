@@ -1,364 +1,471 @@
-const STORAGE_KEY = "cycleData";
+const qs = id => document.getElementById(id);
+const qsa = sel => document.querySelectorAll(sel);
 
-let selectedDate = null;
+class Store {
+  constructor(){
+    this.data = JSON.parse(localStorage.getItem("cycleData") || "{}");
+    this.selectedDay = null;
+    this.rangeStart = null;
+    this.rangeEnd = null;
 
+    this.modalState = {
+      temp: "",
+      bleeding: "none",
+      discharge: "none",
+      peak: false
+    };
+  }
 
-/* ===== STORAGE ===== */
+  save(){
+    localStorage.setItem("cycleData", JSON.stringify(this.data));
+  }
 
-function getStoredEntries() {
-    try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-    } catch {
-        return [];
-    }
+  reset(){
+    localStorage.removeItem("cycleData");
+    this.data = {};
+  }
 }
 
-function saveEntries(entries) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-}
+const store = new Store();
 
+/* ================= CALENDAR ================= */
+function renderCalendar(){
+  const el = qs("calendar");
+  el.innerHTML="";
 
-/* ===== UTIL ===== */
+  for(let i=1;i<=30;i++){
+    const d = store.data[i];
+    const div = document.createElement("div");
 
-function formatDate(date) {
-    return date.toISOString().split("T")[0];
-}
+    div.className="day";
+    div.textContent=i;
 
-function findEntry(entries, date) {
-    return entries.find(e => e.date === date);
-}
+    if(d?.bleeding==="menstruation") div.classList.add("red");
+    else if(d?.fertile) div.classList.add("green");
+    else if(d) div.classList.add("yellow");
 
-function sortEntries(entries) {
-    return entries.sort((a, b) => new Date(a.date) - new Date(b.date));
-}
+    if(store.selectedDay===i) div.classList.add("selected");
 
+    if(d?.peak){
+      const mark = document.createElement("div");
+      mark.style.width = "6px";
+      mark.style.height = "6px";
+      mark.style.background = "#a855f7";
+      mark.style.borderRadius = "50%";
+      mark.style.position = "absolute";
+      mark.style.bottom = "6px";
 
-/* ===== CYCLE ===== */
-
-function calculateCycleDay(currentDate, entries) {
-
-    const periods = entries
-        .filter(e => e.bleeding === "menstruation")
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
-
-    if (periods.length === 0) return 1;
-
-    const lastStart = new Date(periods[periods.length - 1].date);
-    const current = new Date(currentDate);
-
-    return Math.floor((current - lastStart) / 86400000) + 1;
-}
-
-
-/* ===== STATUS LOGIC ===== */
-
-function getStatus(entry, entries) {
-
-    if (entry.bleeding === "menstruation") {
-        return "period";
-    }
-
-    const index = entries.findIndex(e => e.date === entry.date);
-
-    const prevDays = entries.slice(Math.max(0, index - 3), index);
-
-    const hadWetBefore = prevDays.some(e => e.discharge === "wet");
-
-    if (entry.discharge === "wet") {
-        return "fertile";
+      div.style.position = "relative";
+      div.appendChild(mark);
     }
 
-    if (hadWetBefore && entry.temperature && entry.temperature >= 36.7) {
-        return "post";
-    }
-
-    return "post";
-}
-
-
-/* ===== CALENDAR ===== */
-
-function renderCalendar() {
-
-    const calendar = document.getElementById("calendar");
-    calendar.innerHTML = "";
-
-    const now = new Date();
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    const entries = getStoredEntries();
-
-    for (let day = 1; day <= lastDay.getDate(); day++) {
-
-        const date = new Date(now.getFullYear(), now.getMonth(), day);
-        const ds = formatDate(date);
-        const entry = findEntry(entries, ds);
-
-        const cell = document.createElement("div");
-        cell.className = "day";
-        cell.innerText = day;
-
-        if (entry) {
-
-            if (entry.bleeding === "menstruation") {
-                cell.style.background = "#ef4444";
-            } else if (entry.status === "fertile") {
-                cell.style.background = "#eab308";
-            } else if (entry.status === "post") {
-                cell.style.background = "#22c55e";
-            }
-        }
-
-        cell.onclick = () => loadDayEntry(ds);
-        calendar.appendChild(cell);
-    }
-}
-
-
-/* ===== LOAD ===== */
-
-function loadDayEntry(date) {
-
-    selectedDate = date;
-
-    const entry = findEntry(getStoredEntries(), date);
-
-    document.getElementById("formTitle").innerText =
-        date + " | Cycle day: " + (entry?.cycleDay || "?");
-
-    document.getElementById("temperature").value =
-        entry?.temperature ?? "";
-
-    restoreBleeding(entry);
-    restoreDischarge(entry);
-    updateSummary(entry);
-}
-
-
-/* ===== FORM ===== */
-
-function restoreBleeding(entry) {
-
-    const bleeding = entry?.bleeding || "none";
-
-    document.getElementById("bleeding").value = bleeding;
-
-    document.querySelectorAll("#bleedingButtons button")
-        .forEach(button => {
-
-            button.classList.remove("active");
-
-            const label = button.textContent.trim().toLowerCase();
-
-            if (label.includes(
-                bleeding === "menstruation" ? "period" : bleeding
-            )) {
-                button.classList.add("active");
-            }
-        });
-}
-
-function restoreDischarge(entry) {
-
-    const discharge = entry?.discharge || "none";
-
-    document.getElementById("discharge").value = discharge;
-
-    document.querySelectorAll("#dischargeButtons button")
-        .forEach(button => {
-
-            button.classList.remove("active");
-
-            if (button.textContent.trim().toLowerCase() === discharge) {
-                button.classList.add("active");
-            }
-        });
-}
-
-
-/* ===== SUMMARY ===== */
-
-function updateSummary(entry) {
-
-    const el = document.getElementById("daySummary");
-
-   if (!entry) {
-    el.innerText = "No data yet — add entry and save";
-    return;
-}
-
-    el.innerText =
-        `Bleeding: ${entry.bleeding} | Discharge: ${entry.discharge}`;
-}
-
-
-/* ===== BUTTONS ===== */
-
-function setBleeding(value, event) {
-
-    document.getElementById("bleeding").value = value;
-
-    document.querySelectorAll("#bleedingButtons button")
-        .forEach(b => b.classList.remove("active"));
-
-    event.target.classList.add("active");
-}
-
-function setDischarge(value, event) {
-
-    document.getElementById("discharge").value = value;
-
-    document.querySelectorAll("#dischargeButtons button")
-        .forEach(b => b.classList.remove("active"));
-
-    event.target.classList.add("active");
-}
-
-
-/* ===== SAVE ===== */
-
-function saveDayEntry() {
-
-    if (!selectedDate) {
-        alert("Vyber den v kalendáři");
-        return;
-    }
-
-    let entries = getStoredEntries();
-
-    const temperature = document.getElementById("temperature").value;
-    const bleeding = document.getElementById("bleeding").value;
-    const discharge = document.getElementById("discharge").value;
-
-    const cycleDay = calculateCycleDay(selectedDate, entries);
-
-    const newEntry = {
-        date: selectedDate,
-        temperature: temperature ? parseFloat(temperature) : null,
-        bleeding,
-        discharge,
-        cycleDay,
-        status: null
+    div.onclick=()=>{
+      store.selectedDay=i;
+      render();
     };
 
-    const index = entries.findIndex(e => e.date === selectedDate);
+    el.appendChild(div);
+  }
+}
 
-    if (index > -1) {
-        entries[index] = newEntry;
+/* ================= INFO ================= */
+function renderInfo(){
+  if(!store.selectedDay){
+    qs("infoTitle").innerText="No day selected";
+    qs("infoTemp").innerText="-";
+    qs("infoBleeding").innerText="-";
+    qs("infoDischarge").innerText="-";
+    return;
+  }
+
+  const d = store.data[store.selectedDay] || {};
+
+  qs("infoTitle").innerText="Day "+store.selectedDay;
+  qs("infoTemp").innerText=d.temp || "-";
+  qs("infoBleeding").innerText=d.bleeding || "-";
+  qs("infoDischarge").innerText=d.discharge || "-";
+}
+
+/* ================= CHART ================= */
+function renderChart(){
+  const canvas = qs("tempChart");
+  const ctx = canvas.getContext("2d");
+
+  const dpr = window.devicePixelRatio || 1;
+
+  canvas.width = canvas.offsetWidth * dpr;
+  canvas.height = canvas.offsetHeight * dpr;
+
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.scale(dpr, dpr);
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const paddingLeft = 50;
+  const paddingBottom = 30;
+  const paddingTop = 20;
+  const paddingRight = 20;
+
+  const width = canvas.offsetWidth - paddingLeft - paddingRight;
+  const height = canvas.offsetHeight - paddingTop - paddingBottom;
+
+  const minTemp = 36.0;
+  const maxTemp = 37.5;
+
+  const stepX = width / 30;
+
+  const getX = d => paddingLeft + (d - 0.5) * stepX;
+  const getY = t => paddingTop + (maxTemp - t)/(maxTemp - minTemp) * height;
+
+  /* ===== FERTILE BACKGROUND ===== */
+  for(let i=1;i<=30;i++){
+    const d = store.data[i];
+    if(d?.fertile){
+      const x = paddingLeft + (i-1)*stepX;
+      ctx.fillStyle = "rgba(30, 187, 82, 0.26)";
+      ctx.fillRect(x, paddingTop, stepX, height);
+    }
+  }
+
+  /* GRID */
+  for(let i=0;i<=30;i++){
+    const x = paddingLeft + i * stepX;
+    const isMajor = i % 5 === 0;
+
+    ctx.beginPath();
+    ctx.strokeStyle = isMajor ? "rgba(0,0,0,0.18)" : "rgba(0,0,0,0.06)";
+    ctx.lineWidth = isMajor ? 2 : 2;
+
+    ctx.moveTo(x, paddingTop);
+    ctx.lineTo(x, canvas.offsetHeight - paddingBottom);
+    ctx.stroke();
+  }
+
+  for(let t = minTemp; t <= maxTemp; t += 0.1){
+    const y = getY(t);
+    const isMajor = Math.abs((t * 10) % 5) < 0.001;
+
+    ctx.beginPath();
+    ctx.strokeStyle = isMajor ? "rgba(0,0,0,0.18)" : "rgba(0,0,0,0.06)";
+    ctx.lineWidth = isMajor ? 2 : 2;
+
+    ctx.moveTo(paddingLeft, y);
+    ctx.lineTo(canvas.offsetWidth - paddingRight, y);
+    ctx.stroke();
+  }
+
+  /* Y LABELS */
+  ctx.fillStyle = "#374151";
+  ctx.font = "12px Inter";
+
+  for(let t = minTemp; t <= maxTemp; t += 0.2){
+    const y = getY(t);
+    ctx.fillText(t.toFixed(1), 5, y+4);
+  }
+
+  /* DATA */
+  const points = [];
+
+  for(let i=1;i<=30;i++){
+    const d = store.data[i];
+    if(!d?.temp) continue;
+
+    let raw = parseFloat(d.temp.replace(",","."));
+    if(raw < 10) raw += 36;
+
+    points.push({
+      x: getX(i),
+      y: getY(raw),
+      day: i,
+      data: d
+    });
+  }
+
+  /* LINE */
+  if(points.length > 1){
+    ctx.beginPath();
+    ctx.strokeStyle = "#111";
+    ctx.lineWidth = 1.5;
+
+    ctx.moveTo(points[0].x, points[0].y);
+
+    for(let i=1;i<points.length;i++){
+      ctx.lineTo(points[i].x, points[i].y);
+    }
+
+    ctx.stroke();
+  }
+
+  /* POINTS */
+ points.forEach(p => {
+
+  const isSelected = p.day === store.selectedDay;
+
+  /* MAIN POINT */
+  ctx.beginPath();
+  ctx.fillStyle = isSelected ? "#2563eb" : "#111";
+  ctx.arc(p.x, p.y, isSelected ? 4.5 : 3, 0, Math.PI*2);
+  ctx.fill();
+
+  /* SELECTED RING */
+  if(isSelected){
+    ctx.beginPath();
+    ctx.strokeStyle = "#2563eb";
+    ctx.lineWidth = 2;
+    ctx.arc(p.x, p.y, 8, 0, Math.PI*2);
+    ctx.stroke();
+  }
+
+  /* PEAK */
+  if(p.data.peak){
+    ctx.beginPath();
+    ctx.strokeStyle = "#ef4444";
+    ctx.lineWidth = 2;
+    ctx.arc(p.x, p.y, isSelected ? 10 : 8, 0, Math.PI*2);
+    ctx.stroke();
+  }
+});
+  /* X LABELS */
+  ctx.fillStyle = "#6b7280";
+  ctx.font = "11px Inter";
+  ctx.textAlign = "center";
+
+  for(let i=1;i<=30;i++){
+    const x = getX(i);
+    ctx.fillText(i, x, canvas.offsetHeight - 4);
+  }
+
+  /* TOOLTIP */
+  const tooltip = qs("chartTooltip");
+
+canvas.onmousemove = (e)=>{
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  const hit = points.find(p =>
+    Math.hypot(p.x - mx, p.y - my) < 10
+  );
+
+  if(hit){
+    tooltip.style.opacity = 1;
+
+    tooltip.style.left = e.clientX + "px";
+    tooltip.style.top = e.clientY + "px";
+
+    tooltip.innerHTML = `
+      Day ${hit.day}<br>
+      Temp: ${hit.data.temp || "-"}<br>
+      Bleeding: ${hit.data.bleeding || "-"}<br>
+      Discharge: ${hit.data.discharge || "-"}<br>
+      Peak: ${hit.data.peak ? "yes" : "no"}
+    `;
+  } else {
+    tooltip.style.opacity = 0;
+  }
+};
+
+canvas.onmouseleave = ()=>{
+  tooltip.style.opacity = 0;
+};
+
+  /* CLICK SELECT */
+  canvas.onclick = (e)=>{
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+
+    const day = Math.round((x - paddingLeft) / stepX + 1);
+
+    if(day >=1 && day <=30){
+      store.selectedDay = day;
+      render();
+    }
+  };
+}
+
+/* ================= MODAL ================= */
+function openModal(){
+  if(!store.selectedDay) return;
+
+  const d = store.data[store.selectedDay] || {};
+
+  store.modalState = {
+    temp: d.temp || "",
+    bleeding: d.bleeding || "none",
+    discharge: d.discharge || "none",
+    peak: d.peak || false
+  };
+
+  qs("tempInput").value = store.modalState.temp;
+  updateSegmentedUI();
+
+  qs("modalTitle").innerText = "Edit Day " + store.selectedDay;
+
+  qs("modal").classList.remove("hidden");
+  setTimeout(()=>qs("modal").classList.add("show"),10);
+}
+
+function closeModal(){
+  qs("modal").classList.remove("show");
+  setTimeout(()=>qs("modal").classList.add("hidden"),200);
+}
+
+qsa(".segmented button").forEach(btn=>{
+  btn.onclick=()=>{
+    const group = btn.parentElement.dataset.group;
+    const val = btn.dataset.value;
+
+    if(group==="markers"){
+      store.modalState[val] = !store.modalState[val];
     } else {
-        entries.push(newEntry);
+      store.modalState[group] = val;
     }
 
-    entries = sortEntries(entries);
+    updateSegmentedUI();
+  };
+});
 
-    entries.forEach(e => {
-        e.status = getStatus(e, entries);
+function updateSegmentedUI(){
+  qsa(".segmented").forEach(group=>{
+    const name = group.dataset.group;
+
+    group.querySelectorAll("button").forEach(btn=>{
+      const val = btn.dataset.value;
+
+      let active = false;
+
+      if(name==="markers"){
+        active = store.modalState[val];
+      } else {
+        active = store.modalState[name] === val;
+      }
+
+      btn.classList.toggle("active", active);
     });
-
-    saveEntries(entries);
-
-    renderCalendar();
-    renderTemperatureChart();
+  });
 }
 
+qs("saveBtn").onclick=()=>{
+  if(!store.selectedDay) return;
 
-/* ===== RESET ===== */
+  store.modalState.temp = qs("tempInput").value;
 
-function resetTestData() {
-    localStorage.clear();
-    location.reload();
+  store.data[store.selectedDay] = {
+    ...store.data[store.selectedDay],
+    ...store.modalState
+  };
+
+  store.save();
+  closeModal();
+  render();
+};
+
+/* ================= RANGE ================= */
+function openRange(){
+  store.rangeStart=null;
+  store.rangeEnd=null;
+
+  qs("rangeModal").classList.remove("hidden");
+  setTimeout(()=>qs("rangeModal").classList.add("show"),10);
+
+  renderRange();
 }
 
+function renderRange(){
+  const grid=qs("rangeCalendar");
+  grid.innerHTML="";
 
-/* ===== CHART ===== */
+  for(let i=1;i<=30;i++){
+    const el=document.createElement("div");
+    el.className="range-day";
+    el.textContent=i;
 
-function renderTemperatureChart() {
-
-    const chart = document.getElementById("tempChart");
-    chart.innerHTML = "";
-
-    const entries = getStoredEntries()
-        .filter(e => e.temperature);
-
-    if (entries.length === 0) return;
-
-    const width = 500;
-    const height = 220;
-
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("width", width);
-    svg.setAttribute("height", height);
-
-    const points = [];
-
-    entries.forEach((entry, index) => {
-
-        const x = 50 + (index * 70);
-        const y = height - ((entry.temperature - 36) * 120);
-
-        points.push(`${x},${y}`);
-    });
-
-    const line = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-
-    line.setAttribute("fill", "none");
-    line.setAttribute("stroke", "#22c55e");
-    line.setAttribute("stroke-width", "3");
-    line.setAttribute("points", points.join(" "));
-
-    svg.appendChild(line);
-
-    if (entries.length >= 4) {
-
-        const cover = 36.55;
-        const y = height - ((cover - 36) * 120);
-
-        const cl = document.createElementNS("http://www.w3.org/2000/svg", "line");
-
-        cl.setAttribute("x1", 30);
-        cl.setAttribute("x2", 470);
-        cl.setAttribute("y1", y);
-        cl.setAttribute("y2", y);
-        cl.setAttribute("stroke", "#f59e0b");
-        cl.setAttribute("stroke-dasharray", "8,4");
-
-        svg.appendChild(cl);
+    if(
+      store.rangeStart &&
+      store.rangeEnd &&
+      i>=Math.min(store.rangeStart,store.rangeEnd) &&
+      i<=Math.max(store.rangeStart,store.rangeEnd)
+    ){
+      el.classList.add("in-range");
     }
 
-    entries.forEach((entry, index) => {
+    if(i===store.rangeStart || i===store.rangeEnd){
+      el.classList.add("edge");
+    }
 
-        const x = 50 + (index * 70);
-        const y = height - ((entry.temperature - 36) * 120);
+    el.onclick=()=>{
+      clickRange(i);
+      renderRange();
+    };
 
-        const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        dot.setAttribute("cx", x);
-        dot.setAttribute("cy", y);
-        dot.setAttribute("r", 5);
-        dot.setAttribute("fill", "#22c55e");
+    grid.appendChild(el);
+  }
 
-        svg.appendChild(dot);
-
-        const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        t.setAttribute("x", x - 12);
-        t.setAttribute("y", y - 10);
-        t.setAttribute("fill", "white");
-        t.textContent = entry.temperature;
-
-        svg.appendChild(t);
-
-        const d = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        d.setAttribute("x", x - 10);
-        d.setAttribute("y", 210);
-        d.setAttribute("fill", "white");
-        d.textContent = "D" + entry.cycleDay;
-
-        svg.appendChild(d);
-    });
-
-    chart.appendChild(svg);
+  qs("rangeFrom").innerText = store.rangeStart || "-";
+  qs("rangeTo").innerText = store.rangeEnd || "-";
 }
 
+function clickRange(day){
+  if(!store.rangeStart){
+    store.rangeStart=day;
+  } else if(!store.rangeEnd){
+    store.rangeEnd=day;
+  } else{
+    store.rangeStart=day;
+    store.rangeEnd=null;
+  }
+}
 
-/* ===== INIT ===== */
+qs("confirmRangeBtn").onclick=()=>{
+  if(!store.rangeStart || !store.rangeEnd) return;
 
-renderCalendar();
-renderTemperatureChart();
+  const start = Math.min(store.rangeStart, store.rangeEnd);
+  const end = Math.max(store.rangeStart, store.rangeEnd);
+
+  for(let i=1;i<=30;i++){
+    if(!store.data[i]) store.data[i]={};
+    store.data[i].fertile = (i>=start && i<=end);
+  }
+
+  store.save();
+  closeRange();
+  render();
+};
+
+function closeRange(){
+  qs("rangeModal").classList.remove("show");
+  setTimeout(()=>qs("rangeModal").classList.add("hidden"),200);
+}
+
+/* ================= DEV ================= */
+qs("resetBtn").onclick=()=>{
+  store.reset();
+  render();
+};
+
+qs("seedBtn").onclick=()=>{
+  store.data = {};
+  for(let i=1;i<=30;i++){
+    store.data[i] = {
+      temp: (36 + Math.random()).toFixed(2)
+    };
+  }
+  store.save();
+  render();
+};
+
+/* ================= EVENTS ================= */
+qs("editBtn").onclick=openModal;
+qs("closeBtn").onclick=closeModal;
+
+qs("rangeBtn").onclick=openRange;
+qs("closeRangeBtn").onclick=closeRange;
+
+/* ================= RENDER ================= */
+function render(){
+  renderCalendar();
+  renderInfo();
+  renderChart();
+}
+
+render();

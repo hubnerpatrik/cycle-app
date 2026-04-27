@@ -1,84 +1,126 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Cycle Tracker</title>
-<link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cycle Tracker</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
 
-<div class="wrapper">
+<div class="app">
 
-<h1>Cycle Tracker</h1>
+  <h1>Cycle Tracker</h1>
 
-<div class="layout">
+  <div class="layout">
 
-<div>
+    <div class="calendar-card">
+      <div id="calendar"></div>
+      <div class="legend">
+        <div><span class="dot red"></span> Menstruation</div>
+        <div><span class="dot green"></span> Fertile</div>
+        <div><span class="dot yellow"></span> Non-fertile</div>
+      </div>
 
-<div id="calendar"></div>
+      <button id="rangeBtn" class="range-btn">Select fertile range</button>
+    </div>
 
-<div style="margin-top:15px;display:flex;gap:20px;">
-<div>🟥 Menstruation</div>
-<div>🟨 Fertile</div>
-<div>🟩 Non-fertile</div>
-</div>
+    <div class="info-card">
 
-<h3>Temperature Chart</h3>
+      <h2 id="infoTitle">No day selected</h2>
 
-<div id="tempChart"></div>
+      <div class="info-content">
+        <div class="info-row">
+          <span class="label">Temperature</span>
+          <span class="value" id="infoTemp">-</span>
+        </div>
 
-</div>
+        <div class="info-row">
+          <span class="label">Bleeding</span>
+          <span class="value" id="infoBleeding">-</span>
+        </div>
 
-<div class="card">
+        <div class="info-row">
+          <span class="label">Discharge</span>
+          <span class="value" id="infoDischarge">-</span>
+        </div>
+      </div>
 
-<div id="formTitle">
-Select a day
-</div>
+      <button id="editBtn" class="edit-btn">Edit day</button>
 
-<label>Temperature</label>
+    </div>
 
-<input
-type="number"
-step="0.01"
-id="temperature"
-placeholder="36.56">
+  </div>
 
-<label>Bleeding</label>
-
-<div class="segment-row" id="bleedingButtons">
-<button type="button" onclick="setBleeding('none',event)">None</button>
-<button type="button" onclick="setBleeding('spotting',event)">Spotting</button>
-<button type="button" onclick="setBleeding('menstruation',event)">Period</button>
-</div>
-
-<input type="hidden" id="bleeding" value="none">
-
-<label>Discharge</label>
-
-<div class="segment-row" id="dischargeButtons">
-<button type="button" onclick="setDischarge('none',event)">None</button>
-<button type="button" onclick="setDischarge('dry',event)">Dry</button>
-<button type="button" onclick="setDischarge('moist',event)">Moist</button>
-<button type="button" onclick="setDischarge('wet',event)">Wet</button>
-</div>
-
-<input type="hidden" id="discharge" value="none">
-
-<div id="daySummary" style="margin-top:12px;opacity:0.8;"></div>
-
-<button onclick="saveDayEntry()">Save</button>
-
-<button onclick="resetTestData()" style="margin-top:12px;background:#334155;">
-Reset Test Data
-</button>
+  <div class="chart-card">
+    <canvas id="tempChart"></canvas>
+  </div>
 
 </div>
 
+<div class="dev-panel">
+  <button id="resetBtn">Dev reset</button>
+  <button id="seedBtn">Seed test data</button>
 </div>
 
+<!-- EDIT MODAL -->
+<div id="modal" class="modal hidden">
+  <div class="modal-card">
+
+    <h2 id="modalTitle"></h2>
+
+    <input id="tempInput" placeholder="36.50">
+
+    <div class="segmented" data-group="bleeding">
+      <button data-value="none">None</button>
+      <button data-value="spotting">Spotting</button>
+      <button data-value="menstruation">Period</button>
+    </div>
+
+    <div class="segmented" data-group="discharge">
+      <button data-value="none">None</button>
+      <button data-value="dry">Dry</button>
+      <button data-value="moist">Moist</button>
+      <button data-value="wet">Wet</button>
+    </div>
+
+    <div class="segmented" data-group="markers">
+      <button data-value="peak">Mark peak day</button>
+    </div>
+
+    <div class="modal-actions">
+      <button id="closeBtn" class="btn secondary">Close</button>
+      <button id="saveBtn" class="btn primary">Save</button>
+    </div>
+
+  </div>
 </div>
+
+<!-- RANGE MODAL -->
+<div id="rangeModal" class="modal hidden">
+  <div class="modal-card">
+
+    <h2>Fertile window</h2>
+
+    <div class="range-info">
+      From: <span id="rangeFrom">-</span>
+      To: <span id="rangeTo">-</span>
+    </div>
+
+    <div id="rangeCalendar" class="range-grid"></div>
+
+    <div class="modal-actions">
+      <button id="closeRangeBtn" class="btn secondary">Close</button>
+      <button id="confirmRangeBtn" class="btn primary">Confirm</button>
+    </div>
+    
+  </div>
+</div>
+
+<div id="chartTooltip" class="tooltip"></div>
 
 <script src="app.js"></script>
 
