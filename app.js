@@ -5,8 +5,11 @@ class Store {
   constructor(){
     this.data = JSON.parse(localStorage.getItem("cycleData") || "{}");
     this.selectedDay = null;
+
     this.rangeStart = null;
     this.rangeEnd = null;
+
+    this.coverline = parseFloat(localStorage.getItem("coverline")) || null;
 
     this.modalState = {
       temp: "",
@@ -18,11 +21,14 @@ class Store {
 
   save(){
     localStorage.setItem("cycleData", JSON.stringify(this.data));
+    localStorage.setItem("coverline", this.coverline);
   }
 
   reset(){
     localStorage.removeItem("cycleData");
+    localStorage.removeItem("coverline");
     this.data = {};
+    this.coverline = null;
   }
 }
 
@@ -122,7 +128,7 @@ function renderChart(){
     const d = store.data[i];
     if(d?.fertile){
       const x = paddingLeft + (i-1)*stepX;
-      ctx.fillStyle = "rgba(30, 187, 82, 0.26)";
+      ctx.fillStyle = "rgba(30, 187, 82, 0.2)";
       ctx.fillRect(x, paddingTop, stepX, height);
     }
   }
@@ -131,7 +137,7 @@ function renderChart(){
   for(let i=0;i<=30;i++){
     const x = paddingLeft + i * stepX;
     const isMajor = i % 5 === 0;
-
+  /* vertical grid lines */
     ctx.beginPath();
     ctx.strokeStyle = isMajor ? "rgba(0,0,0,0.18)" : "rgba(0,0,0,0.06)";
     ctx.lineWidth = isMajor ? 2 : 2;
@@ -141,6 +147,7 @@ function renderChart(){
     ctx.stroke();
   }
 
+/* horizontal grid lines */
   for(let t = minTemp; t <= maxTemp; t += 0.1){
     const y = getY(t);
     const isMajor = Math.abs((t * 10) % 5) < 0.001;
@@ -154,13 +161,24 @@ function renderChart(){
     ctx.stroke();
   }
 
-  /* Y LABELS */
-  ctx.fillStyle = "#374151";
-  ctx.font = "12px Inter";
+  /* COVERLINE */
+  if(store.coverline){
+    const y = getY(store.coverline);
 
-  for(let t = minTemp; t <= maxTemp; t += 0.2){
-    const y = getY(t);
-    ctx.fillText(t.toFixed(1), 5, y+4);
+    ctx.beginPath();
+    ctx.strokeStyle = "#2563eb";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6,4]);
+
+    ctx.moveTo(paddingLeft, y);
+    ctx.lineTo(canvas.offsetWidth - paddingRight, y);
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = "#2563eb";
+    ctx.font = "11px Inter";
+    ctx.fillText(store.coverline.toFixed(2), paddingLeft + 5, y - 6);
   }
 
   /* DATA */
@@ -197,35 +215,32 @@ function renderChart(){
   }
 
   /* POINTS */
- points.forEach(p => {
+  points.forEach(p => {
+    const isSelected = p.day === store.selectedDay;
 
-  const isSelected = p.day === store.selectedDay;
-
-  /* MAIN POINT */
-  ctx.beginPath();
-  ctx.fillStyle = isSelected ? "#2563eb" : "#111";
-  ctx.arc(p.x, p.y, isSelected ? 4.5 : 3, 0, Math.PI*2);
-  ctx.fill();
-
-  /* SELECTED RING */
-  if(isSelected){
     ctx.beginPath();
-    ctx.strokeStyle = "#2563eb";
-    ctx.lineWidth = 2;
-    ctx.arc(p.x, p.y, 8, 0, Math.PI*2);
-    ctx.stroke();
-  }
+    ctx.fillStyle = isSelected ? "#2563eb" : "#111";
+    ctx.arc(p.x, p.y, isSelected ? 4.5 : 3, 0, Math.PI*2);
+    ctx.fill();
 
-  /* PEAK */
-  if(p.data.peak){
-    ctx.beginPath();
-    ctx.strokeStyle = "#ef4444";
-    ctx.lineWidth = 2;
-    ctx.arc(p.x, p.y, isSelected ? 10 : 8, 0, Math.PI*2);
-    ctx.stroke();
-  }
-});
-  /* X LABELS */
+    if(isSelected){
+      ctx.beginPath();
+      ctx.strokeStyle = "#2563eb";
+      ctx.lineWidth = 2;
+      ctx.arc(p.x, p.y, 8, 0, Math.PI*2);
+      ctx.stroke();
+    }
+
+    if(p.data.peak){
+      ctx.beginPath();
+      ctx.strokeStyle = "#ef4444";
+      ctx.lineWidth = 2;
+      ctx.arc(p.x, p.y, isSelected ? 10 : 8, 0, Math.PI*2);
+      ctx.stroke();
+    }
+  });
+
+    /* X LABELS (days) */
   ctx.fillStyle = "#6b7280";
   ctx.font = "11px Inter";
   ctx.textAlign = "center";
@@ -235,51 +250,69 @@ function renderChart(){
     ctx.fillText(i, x, canvas.offsetHeight - 4);
   }
 
+  /* Y LABELS (temperature) */
+  ctx.fillStyle = "#374151";
+  ctx.font = "12px Inter";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+
+  for(let t = minTemp; t <= maxTemp; t += 0.2){
+    const y = getY(t);
+    ctx.fillText(t.toFixed(1), 6, y);
+  }
+
   /* TOOLTIP */
   const tooltip = qs("chartTooltip");
 
-canvas.onmousemove = (e)=>{
-  const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
+  canvas.onmousemove = (e)=>{
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
 
-  const hit = points.find(p =>
-    Math.hypot(p.x - mx, p.y - my) < 10
-  );
+    const hit = points.find(p =>
+      Math.hypot(p.x - mx, p.y - my) < 10
+    );
 
-  if(hit){
-    tooltip.style.opacity = 1;
+    if(hit){
+      tooltip.style.opacity = 1;
+      tooltip.style.left = e.clientX + "px";
+      tooltip.style.top = e.clientY + "px";
 
-    tooltip.style.left = e.clientX + "px";
-    tooltip.style.top = e.clientY + "px";
+      tooltip.innerHTML = `
+        Day ${hit.day}<br>
+        Temp: ${hit.data.temp || "-"}<br>
+        Bleeding: ${hit.data.bleeding || "-"}<br>
+        Discharge: ${hit.data.discharge || "-"}<br>
+        Peak: ${hit.data.peak ? "yes" : "no"}
+      `;
+    } else {
+      tooltip.style.opacity = 0;
+    }
+  };
 
-    tooltip.innerHTML = `
-      Day ${hit.day}<br>
-      Temp: ${hit.data.temp || "-"}<br>
-      Bleeding: ${hit.data.bleeding || "-"}<br>
-      Discharge: ${hit.data.discharge || "-"}<br>
-      Peak: ${hit.data.peak ? "yes" : "no"}
-    `;
-  } else {
+  canvas.onmouseleave = ()=>{
     tooltip.style.opacity = 0;
-  }
-};
+  };
 
-canvas.onmouseleave = ()=>{
-  tooltip.style.opacity = 0;
-};
-
-  /* CLICK SELECT */
+  /* CLICK */
   canvas.onclick = (e)=>{
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
     const day = Math.round((x - paddingLeft) / stepX + 1);
 
     if(day >=1 && day <=30){
       store.selectedDay = day;
-      render();
     }
+
+    if(e.shiftKey){
+      const temp = maxTemp - ((y - paddingTop) / height) * (maxTemp - minTemp);
+      store.coverline = temp;
+      store.save();
+    }
+
+    render();
   };
 }
 
@@ -435,7 +468,7 @@ qs("confirmRangeBtn").onclick=()=>{
 function closeRange(){
   qs("rangeModal").classList.remove("show");
   setTimeout(()=>qs("rangeModal").classList.add("hidden"),200);
-}
+};
 
 /* ================= DEV ================= */
 qs("resetBtn").onclick=()=>{
