@@ -1,642 +1,1658 @@
+// app.js
+
 const qs = id => document.getElementById(id);
-const qsa = sel => document.querySelectorAll(sel);
-const DAY_WIDTH = 32;
-const LABEL_WIDTH = 80;
+const qsa = selector => document.querySelectorAll(selector);
+
+/* layout */
+
+const LAYOUT = {
+  columnWidth: 36,
+  sideLabelWidth: 68,
+  tempScaleWidth: 52,
+
+  chartHeight: 260,
+  chartPaddingTop: 20,
+  chartPaddingBottom: 24,
+
+  minTemp: 36.0,
+  maxTemp: 37.5
+};
 
 /* utils */
 
-function parseDateKey(key){
-  const [y,m,d] = key.split("-").map(Number);
-  return new Date(y, m-1, d);
+function normalize(date) {
+  const d = new Date(date);
+
+  d.setHours(0, 0, 0, 0);
+
+  return d;
 }
 
-function normalize(d){
-  const n = new Date(d);
-  n.setHours(0,0,0,0);
-  return n;
+function parseDateKey(key) {
+  const [y, m, d] = key.split("-").map(Number);
+
+  return new Date(y, m - 1, d);
 }
 
-function formatDateKey(date){
+function formatDateKey(date) {
   const d = normalize(date);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function daysBetween(a, b){
-  const utcA = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
-  const utcB = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
-  return Math.floor((utcA - utcB) / 86400000);
+function getDaysInMonth(year, month) {
+  return new Date(year, month + 1, 0).getDate();
 }
 
-function getDaysInMonth(y,m){
-  return new Date(y, m+1, 0).getDate();
+function getOffset(year, month) {
+  return (new Date(year, month, 1).getDay() + 6) % 7;
 }
 
-function getOffset(y,m){
-  return (new Date(y,m,1).getDay()+6)%7;
+function formatTemp(temp) {
+  return temp != null
+    ? Number(temp).toFixed(2)
+    : "-";
 }
 
-function formatTemp(t){
-  return t != null ? Number(t).toFixed(2) : "-";
+function isValidTemp(temp) {
+  return (
+    temp == null ||
+    (temp >= 34 && temp <= 42)
+  );
 }
 
-/* validation */
-
-function isValidTemp(t){
-  return t == null || (t >= 34 && t <= 42);
+function getColumnWidth() {
+  return LAYOUT.columnWidth;
 }
 
-function sanitizeModal(modal){
-  return {
-    temp: isValidTemp(modal.temp) ? modal.temp : null,
-    bleeding: modal.bleeding || "none",
-    discharge: modal.discharge || "none",
-    peak: !!modal.peak
-  };
+function getColumnX(index) {
+  return index * getColumnWidth();
 }
 
-function validateTempInput(){
-  const raw = qs("tempInput")?.value.trim();
-  if(raw === "") return true;
+function getColumnCenterX(index) {
+  return getColumnX(index) + getColumnWidth() / 2;
+}
 
-  const val = parseFloat(raw);
-  return !isNaN(val) && isValidTemp(val);
+function getChartWidth(columns) {
+  return columns.length * getColumnWidth();
+}
+
+function getGraphHeight() {
+  return (
+    LAYOUT.chartHeight -
+    LAYOUT.chartPaddingTop -
+    LAYOUT.chartPaddingBottom
+  );
+}
+
+function getChartY(temp) {
+  return (
+    LAYOUT.chartPaddingTop +
+    (
+      (LAYOUT.maxTemp - temp) /
+      (LAYOUT.maxTemp - LAYOUT.minTemp)
+    ) * getGraphHeight()
+  );
+}
+
+function syncLayoutVariables() {
+  document.documentElement.style.setProperty(
+    "--column-width",
+    `${LAYOUT.columnWidth}px`
+  );
+
+  document.documentElement.style.setProperty(
+    "--label-width",
+    `${LAYOUT.sideLabelWidth}px`
+  );
+
+  document.documentElement.style.setProperty(
+    "--temp-scale-width",
+    `${LAYOUT.tempScaleWidth}px`
+  );
+
+  document.documentElement.style.setProperty(
+    "--chart-height",
+    `${LAYOUT.chartHeight}px`
+  );
 }
 
 /* store */
 
-class Store{
-  constructor(){
-    this.data = JSON.parse(localStorage.getItem("cycleData")||"{}");
-    this.selectedDate=null;
+class Store {
 
-    const n=new Date();
-    this.month=n.getMonth();
-    this.year=n.getFullYear();
+  constructor() {
 
-    this.modal={temp:null,bleeding:"none",discharge:"none",peak:false};
+    this.entries = JSON.parse(
+      localStorage.getItem("cycleData") || "{}"
+    );
 
-    this._cycleStarts=null;
+    this.selectedColumnKey = null;
+
+    this.hoveredColumnKey = null;
+
+    const now = new Date();
+
+    this.month = now.getMonth();
+
+    this.year = now.getFullYear();
+
+    this.modal = {
+      temp: null,
+      bleeding: "none",
+      discharge: "none",
+      sediment: false,
+      other: ""
+    };
+
   }
 
-  save(){
-    localStorage.setItem("cycleData",JSON.stringify(this.data));
-    this._cycleStarts=null;
+  save() {
+
+    localStorage.setItem(
+      "cycleData",
+      JSON.stringify(this.entries)
+    );
+
   }
+
 }
 
-const store=new Store();
+const store = new Store();
 
-/* cycle */
+/* state */
 
-function getCycleStartDates(){
-  return Object.keys(store.data)
-    .filter(k => store.data[k]?.bleeding === "menstruation")
-    .map(k => normalize(parseDateKey(k)))
-    .sort((a,b)=>a-b);
+function selectColumn(key) {
+
+  store.selectedColumnKey = key;
+
+  render();
+
 }
 
-function getCycleStartDatesCached(){
-  if(!store._cycleStarts){
-    store._cycleStarts = getCycleStartDates();
+function hoverColumn(key) {
+
+  store.hoveredColumnKey = key;
+
+  renderChart(currentColumns);
+
+}
+
+function clearHover() {
+
+  store.hoveredColumnKey = null;
+
+  renderChart(currentColumns);
+
+}
+
+/* cycles */
+
+function getCycleStartDates() {
+
+  const keys = Object.keys(store.entries)
+    .sort();
+
+  const starts = [];
+
+  keys.forEach((key, index) => {
+
+    const current = store.entries[key];
+
+    if (current?.bleeding !== "menstruation") {
+      return;
+    }
+
+    const prevKey = keys[index - 1];
+
+    const prev = store.entries[prevKey];
+
+    const previousWasPeriod =
+      prev?.bleeding === "menstruation";
+
+    if (!previousWasPeriod) {
+
+      starts.push(
+        normalize(
+          parseDateKey(key)
+        )
+      );
+
+    }
+
+  });
+
+  return starts;
+
+}
+
+function buildCycles() {
+
+  const starts = getCycleStartDates();
+
+  if (!starts.length) {
+    return [];
   }
-  return store._cycleStarts;
-}
 
-function recalculateCycle(){
-  store._cycleStarts = null;
+  const cycles = [];
 
-  const starts = getCycleStartDatesCached();
-  if(!starts.length) return;
+  starts.forEach((start, index) => {
 
-  let cycleId = 0;
+    const next =
+      starts[index + 1] || null;
 
-  starts.forEach((start, index)=>{
-    cycleId++;
-
-    const next = starts[index+1] || null;
+    const cycle = {
+      id: index + 1,
+      startDate: new Date(start),
+      days: []
+    };
 
     let d = new Date(start);
-    let day = 1;
+
+    let cycleDay = 1;
+
     let safety = 0;
 
-    while((!next || d < next) && safety < 90){
+    while (
+      (!next || d < next) &&
+      safety < 90
+    ) {
+
       const key = formatDateKey(d);
 
-      if(store.data[key]){
-        store.data[key].cycleDay = day;
-        store.data[key].cycleId = cycleId;
-      }
+      const raw =
+        store.entries[key] || {};
 
-      d.setDate(d.getDate()+1);
-      day++;
+      cycle.days.push({
+        key,
+        date: new Date(d),
+        cycleDay,
+
+        temp: raw.temp ?? null,
+        bleeding: raw.bleeding ?? "none",
+        discharge: raw.discharge ?? "none",
+        sediment: raw.sediment ?? false,
+        other: raw.other ?? ""
+      });
+
+      d.setDate(
+        d.getDate() + 1
+      );
+
+      cycleDay++;
       safety++;
+
     }
+
+    cycles.push(cycle);
+
   });
+
+  return cycles;
+
 }
 
-/* ovulation */
+function getLatestCycle() {
 
-function detectOvulation(cycleDays){
-  const temps = cycleDays.map(d => d.temp);
+  const cycles = buildCycles();
 
-  for(let i=6;i<temps.length-2;i++){
-    const lows = temps.slice(i-6,i);
-    const valid = lows.filter(t => t != null);
+  if (cycles.length) {
 
-    if(valid.length < 4) continue;
+    return cycles[
+      cycles.length - 1
+    ];
 
-    const maxLow = Math.max(...valid);
-    const cover = maxLow + 0.05;
+  }
+
+  const keys =
+    Object.keys(store.entries)
+      .sort();
+
+  if (!keys.length) {
+    return null;
+  }
+
+  return {
+    id: 1,
+    startDate: parseDateKey(keys[0]),
+
+    days: keys.map((key, index) => {
+
+      const raw = store.entries[key];
+
+      return {
+        key,
+        date: parseDateKey(key),
+        cycleDay: index + 1,
+
+        temp: raw.temp ?? null,
+        bleeding: raw.bleeding ?? "none",
+        discharge: raw.discharge ?? "none",
+        sediment: raw.sediment ?? false,
+        other: raw.other ?? ""
+      };
+
+    })
+
+  };
+
+}
+
+/* overlays */
+
+function detectOvulation(days) {
+
+  const temps =
+    days.map(day => day.temp);
+
+  for (let i = 6; i < temps.length - 2; i++) {
+
+    const lows =
+      temps.slice(i - 6, i);
+
+    const valid =
+      lows.filter(
+        temp => temp != null
+      );
+
+    if (valid.length < 4) {
+      continue;
+    }
+
+    const maxLow =
+      Math.max(...valid);
+
+    const cover =
+      maxLow + 0.05;
 
     const t1 = temps[i];
-    const t2 = temps[i+1];
-    const t3 = temps[i+2];
+    const t2 = temps[i + 1];
+    const t3 = temps[i + 2];
 
-    if(t1 == null || t2 == null || t3 == null) continue;
-
-    if(t1 > cover && t2 > cover && t3 > cover && t2 >= t1 && t3 >= t2){
-      if(t3 - maxLow >= 0.2) return Math.max(0, i-1);
-
-      const t4 = temps[i+3];
-      if(t4 != null && t4 > cover) return Math.max(0, i-1);
+    if (
+      t1 == null ||
+      t2 == null ||
+      t3 == null
+    ) {
+      continue;
     }
+
+    if (
+      t1 > cover &&
+      t2 > cover &&
+      t3 > cover
+    ) {
+
+      return Math.max(0, i - 1);
+
+    }
+
   }
 
   return null;
+
 }
 
-function getLastDataDate(){
-  const keys = Object.keys(store.data);
-  if(!keys.length) return null;
+function buildOverlays(days) {
 
-  const last = keys
-    .map(k => parseDateKey(k))
-    .sort((a,b)=>a-b)
-    .pop();
+  const fertile = new Set();
 
-  return normalize(last);
-}
+  const threeHighs = new Set();
 
-/* main calc */
+  const peakPlusFour = new Set();
 
-function recalculateFertileFromTemps(){
+  const ovulationIndex =
+    detectOvulation(days);
 
-  store._cycleStarts = null;
+  let coverline = null;
 
-  const starts = getCycleStartDatesCached();
-  if(!starts.length) return;
+  if (ovulationIndex != null) {
 
-  const lastDataDate = getLastDataDate();
-  if(!lastDataDate) return;
+    const lows = days
+      .slice(
+        ovulationIndex - 5,
+        ovulationIndex + 1
+      )
+      .map(day => day.temp)
+      .filter(Boolean);
 
-  const MAX = 90;
+    if (lows.length >= 4) {
 
-  starts.forEach((start, index)=>{
+      coverline =
+        Math.max(...lows) + 0.05;
 
-    const next = starts[index+1] || null;
-
-    const cycleDays = [];
-    let d = new Date(start);
-    let safety = 0;
-
-    while((!next ? d <= lastDataDate : d < next) && safety < MAX){
-
-      const key = formatDateKey(d);
-
-      cycleDays.push({
-        date: new Date(d),
-        key,
-        temp: store.data[key]?.temp ?? null
-      });
-
-      d.setDate(d.getDate()+1);
-      safety++;
     }
 
-    cycleDays.forEach(day=>{
-      if(store.data[day.key]){
-        delete store.data[day.key].fertile;
+    for (
+      let i = ovulationIndex - 5;
+      i <= ovulationIndex;
+      i++
+    ) {
+
+      if (days[i]) {
+        fertile.add(days[i].key);
       }
-    });
 
-    const ovulationIndex = detectOvulation(cycleDays);
-    if(ovulationIndex == null) return;
+    }
 
-    const ovulationDate = normalize(cycleDays[ovulationIndex].date);
+    for (
+      let i = ovulationIndex + 1;
+      i <= ovulationIndex + 3;
+      i++
+    ) {
 
-    cycleDays.forEach(day=>{
-      if(!store.data[day.key]) return;
-
-      const diff = daysBetween(day.date, ovulationDate);
-
-      if(diff >= -5 && diff <= 0){
-        store.data[day.key].fertile = true;
+      if (days[i]) {
+        threeHighs.add(days[i].key);
       }
-    });
+
+    }
+
+  }
+
+  let peakIndex = -1;
+
+  days.forEach((day, index) => {
+
+    if (day.discharge === "wet") {
+      peakIndex = index;
+    }
 
   });
+
+  if (peakIndex !== -1) {
+
+    for (
+      let i = peakIndex;
+      i <= peakIndex + 3;
+      i++
+    ) {
+
+      if (days[i]) {
+        peakPlusFour.add(days[i].key);
+      }
+
+    }
+
+  }
+
+  return {
+    fertile,
+    threeHighs,
+    peakPlusFour,
+    coverline
+  };
+
+}
+
+/* columns */
+
+function buildCycleColumns(cycle) {
+
+  if (!cycle) {
+    return [];
+  }
+
+  const overlays =
+    buildOverlays(cycle.days);
+
+  return cycle.days.map((day, index) => ({
+    index,
+
+    x: getColumnX(index),
+
+    centerX:
+      getColumnCenterX(index),
+
+    key: day.key,
+    date: day.date,
+    cycleDay: day.cycleDay,
+
+    temp: day.temp,
+    bleeding: day.bleeding,
+    discharge: day.discharge,
+    sediment: day.sediment,
+    other: day.other,
+
+    overlays: {
+      fertile:
+        overlays.fertile.has(day.key),
+
+      threeHigh:
+        overlays.threeHighs.has(day.key),
+
+      peakPlusFour:
+        overlays.peakPlusFour.has(day.key)
+    }
+  }));
+
+}
+
+let currentColumns = [];
+
+/* calendar */
+
+function renderMonth() {
+
+  qs("monthLabel").innerText =
+    new Date(
+      store.year,
+      store.month
+    ).toLocaleString("en-US", {
+      month: "long",
+      year: "numeric"
+    });
+
+}
+
+function renderTempScale() {
+
+  const scale =
+    qs("tempScale");
+
+  if (!scale) {
+    return;
+  }
+
+  scale.innerHTML = "";
+
+  for (
+    let temp = LAYOUT.maxTemp;
+    temp >= LAYOUT.minTemp;
+    temp -= 0.5
+  ) {
+
+    const label =
+      document.createElement("div");
+
+    label.className =
+      "temp-scale-label";
+
+    label.textContent =
+      Number(temp).toFixed(1);
+
+    const y =
+      getChartY(temp);
+
+    label.style.top =
+      `${y - 9}px`;
+
+    scale.appendChild(label);
+
+  }
+
+}
+
+function renderCalendar() {
+
+  const el = qs("calendar");
+
+  el.innerHTML = "";
+
+  [
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat",
+    "Sun"
+  ].forEach(day => {
+
+    const w =
+      document.createElement("div");
+
+    w.textContent = day;
+
+    w.style.textAlign = "center";
+    w.style.fontSize = "12px";
+    w.style.opacity = "0.6";
+
+    el.appendChild(w);
+
+  });
+
+  const days =
+    getDaysInMonth(
+      store.year,
+      store.month
+    );
+
+  const off =
+    getOffset(
+      store.year,
+      store.month
+    );
+
+  for (let i = 0; i < off; i++) {
+
+    el.appendChild(
+      document.createElement("div")
+    );
+
+  }
+
+  for (let d = 1; d <= days; d++) {
+
+    const date = new Date(
+      store.year,
+      store.month,
+      d
+    );
+
+    const key =
+      formatDateKey(date);
+
+    const entry =
+      store.entries[key];
+
+    const div =
+      document.createElement("div");
+
+    div.className = "day";
+
+    div.textContent = d;
+
+    if (
+      entry?.bleeding ===
+      "menstruation"
+    ) {
+
+      div.classList.add("red");
+
+    }
+
+    if (
+      store.selectedColumnKey === key
+    ) {
+
+      div.classList.add("selected");
+
+    }
+
+    div.onclick = () => {
+      selectColumn(key);
+    };
+
+    el.appendChild(div);
+
+  }
+
+}
+
+/* info */
+
+function renderInfo() {
+
+  if (!store.selectedColumnKey) {
+
+    qs("infoTitle").innerText =
+      "No day selected";
+
+    qs("infoTemp").innerText = "-";
+    qs("infoBleeding").innerText = "-";
+    qs("infoDischarge").innerText = "-";
+
+    return;
+
+  }
+
+  const key =
+    store.selectedColumnKey;
+
+  const data =
+    store.entries[key] || {};
+
+  const column =
+    currentColumns.find(
+      x => x.key === key
+    );
+
+  qs("infoTitle").innerText =
+    `${key} (CD ${column?.cycleDay || "-"})`;
+
+  qs("infoTemp").innerText =
+    formatTemp(data.temp);
+
+  qs("infoBleeding").innerText =
+    data.bleeding !== "none"
+      ? data.bleeding
+      : "-";
+
+  qs("infoDischarge").innerText =
+    data.discharge !== "none"
+      ? data.discharge
+      : "-";
+
+}
+
+/* map */
+
+function createMapCell(
+  text = "",
+  className = ""
+) {
+
+  const cell =
+    document.createElement("div");
+
+  cell.className =
+    `map-cell ${className}`;
+
+  cell.textContent = text;
+
+  return cell;
+
+}
+
+function attachColumnEvents(el, column) {
+
+  el.onmouseenter = () => {
+    hoverColumn(column.key);
+  };
+
+  el.onmouseleave = () => {
+    clearHover();
+  };
+
+  el.onclick = () => {
+    selectColumn(column.key);
+  };
+
+}
+
+function renderMapRows(columns) {
+
+  const rows = {
+    dayNumbers: qs("dayNumbers"),
+    cycleDayRow: qs("cycleDayRow"),
+    mucusRow: qs("mucusRow"),
+    bleedingRow: qs("bleedingRow"),
+    spottingRow: qs("spottingRow"),
+    sedimentRow: qs("sedimentRow"),
+    otherRow: qs("otherRow")
+  };
+
+  const width =
+    getChartWidth(columns);
+
+  Object.values(rows).forEach(row => {
+
+    row.innerHTML = "";
+
+    row.style.width =
+      `${width}px`;
+
+  });
+
+  columns.forEach(column => {
+
+    const selected =
+      store.selectedColumnKey ===
+      column.key;
+
+    const selectedClass =
+      selected
+        ? "selected-column"
+        : "";
+
+    const dayCell =
+      document.createElement("div");
+
+    dayCell.className =
+      `map-day ${selectedClass}`;
+
+    dayCell.textContent =
+      column.date.getDate();
+
+    attachColumnEvents(
+      dayCell,
+      column
+    );
+
+    rows.dayNumbers.appendChild(
+      dayCell
+    );
+
+    const cycleCell =
+      createMapCell(
+        column.cycleDay,
+        selectedClass
+      );
+
+    attachColumnEvents(
+      cycleCell,
+      column
+    );
+
+    rows.cycleDayRow.appendChild(
+      cycleCell
+    );
+
+    const mucusMap = {
+      dry: "D",
+      moist: "M",
+      wet: "W"
+    };
+
+    const mucusCell =
+      createMapCell(
+        mucusMap[column.discharge] || "",
+        `
+        ${selectedClass}
+        ${column.discharge === "wet" ? "fertile" : ""}
+        ${column.overlays.peakPlusFour ? "peak-helper" : ""}
+        `
+      );
+
+    attachColumnEvents(
+      mucusCell,
+      column
+    );
+
+    rows.mucusRow.appendChild(
+      mucusCell
+    );
+
+    const bleedCell =
+      createMapCell(
+        column.bleeding === "menstruation"
+          ? "●"
+          : "",
+        `
+        ${selectedClass}
+        ${column.bleeding === "menstruation" ? "period" : ""}
+        `
+      );
+
+    attachColumnEvents(
+      bleedCell,
+      column
+    );
+
+    rows.bleedingRow.appendChild(
+      bleedCell
+    );
+
+    const spottingCell =
+      createMapCell(
+        column.bleeding === "spotting"
+          ? "◐"
+          : "",
+        `
+        ${selectedClass}
+        ${column.bleeding === "spotting" ? "spotting" : ""}
+        `
+      );
+
+    attachColumnEvents(
+      spottingCell,
+      column
+    );
+
+    rows.spottingRow.appendChild(
+      spottingCell
+    );
+
+    const sedimentCell =
+      createMapCell(
+        column.sediment ? "S" : "",
+        selectedClass
+      );
+
+    attachColumnEvents(
+      sedimentCell,
+      column
+    );
+
+    rows.sedimentRow.appendChild(
+      sedimentCell
+    );
+
+    const otherCell =
+      createMapCell(
+        column.other,
+        selectedClass
+      );
+
+    attachColumnEvents(
+      otherCell,
+      column
+    );
+
+    rows.otherRow.appendChild(
+      otherCell
+    );
+
+  });
+
+}
+
+/* chart */
+
+function drawVerticalGrid(
+  ctx,
+  columns
+) {
+
+  columns.forEach(column => {
+
+    const x =
+      Math.round(column.x) + 0.5;
+
+    ctx.beginPath();
+
+    ctx.strokeStyle =
+      column.index % 5 === 0
+        ? "rgba(0,0,0,0.15)"
+        : "rgba(0,0,0,0.05)";
+
+    ctx.moveTo(
+      x,
+      LAYOUT.chartPaddingTop
+    );
+
+    ctx.lineTo(
+      x,
+      LAYOUT.chartHeight -
+      LAYOUT.chartPaddingBottom
+    );
+
+    ctx.stroke();
+
+  });
+
+  const lastX =
+    getChartWidth(columns) + 0.5;
+
+  ctx.beginPath();
+
+  ctx.strokeStyle =
+    "rgba(0,0,0,0.15)";
+
+  ctx.moveTo(
+    lastX,
+    LAYOUT.chartPaddingTop
+  );
+
+  ctx.lineTo(
+    lastX,
+    LAYOUT.chartHeight -
+    LAYOUT.chartPaddingBottom
+  );
+
+  ctx.stroke();
+
+}
+
+function drawHorizontalGrid(ctx) {
+
+  const steps =
+    Math.round(
+      (LAYOUT.maxTemp - LAYOUT.minTemp) * 10
+    );
+
+  for (let i = 0; i <= steps; i++) {
+
+    const temp =
+      LAYOUT.minTemp + i / 10;
+
+    const y =
+      Math.round(
+        getChartY(temp)
+      ) + 0.5;
+
+    ctx.beginPath();
+
+    ctx.strokeStyle =
+      i % 5 === 0
+        ? "rgba(0,0,0,0.15)"
+        : "rgba(0,0,0,0.05)";
+
+    ctx.moveTo(0, y);
+
+    ctx.lineTo(
+      ctx.canvas.width,
+      y
+    );
+
+    ctx.stroke();
+
+  }
+
+}
+
+function drawOverlayLayer(
+  ctx,
+  columns
+) {
+
+  columns.forEach(column => {
+
+    if (column.overlays.fertile) {
+
+      ctx.fillStyle =
+        "rgba(34,197,94,0.12)";
+
+      ctx.fillRect(
+        column.x,
+        LAYOUT.chartPaddingTop,
+        getColumnWidth(),
+        getGraphHeight()
+      );
+
+    }
+
+    if (column.overlays.peakPlusFour) {
+
+      ctx.fillStyle =
+        "rgba(168,85,247,0.08)";
+
+      ctx.fillRect(
+        column.x,
+        LAYOUT.chartPaddingTop,
+        getColumnWidth(),
+        getGraphHeight()
+      );
+
+    }
+
+  });
+
+}
+
+function drawSelectedColumn(
+  ctx,
+  columns
+) {
+
+  if (!store.selectedColumnKey) {
+    return;
+  }
+
+  const column =
+    columns.find(
+      x =>
+        x.key ===
+        store.selectedColumnKey
+    );
+
+  if (!column) {
+    return;
+  }
+
+  ctx.fillStyle =
+    "rgba(37,99,235,0.08)";
+
+  ctx.fillRect(
+    column.x,
+    0,
+    getColumnWidth(),
+    LAYOUT.chartHeight
+  );
+
+}
+
+function drawHoverLine(
+  ctx,
+  columns
+) {
+
+  if (!store.hoveredColumnKey) {
+    return;
+  }
+
+  const column =
+    columns.find(
+      x =>
+        x.key ===
+        store.hoveredColumnKey
+    );
+
+  if (!column) {
+    return;
+  }
+
+  ctx.beginPath();
+
+  ctx.strokeStyle =
+    "rgba(37,99,235,0.45)";
+
+  ctx.moveTo(
+    column.centerX,
+    0
+  );
+
+  ctx.lineTo(
+    column.centerX,
+    LAYOUT.chartHeight
+  );
+
+  ctx.stroke();
+
+}
+
+function drawTemperatureLine(
+  ctx,
+  columns
+) {
+
+  const valid =
+    columns.filter(
+      column =>
+        column.temp != null
+    );
+
+  if (valid.length < 2) {
+    return;
+  }
+
+  ctx.beginPath();
+
+  valid.forEach((column, index) => {
+
+    const x =
+      column.centerX;
+
+    const y =
+      getChartY(column.temp);
+
+    if (index === 0) {
+
+      ctx.moveTo(x, y);
+
+      return;
+
+    }
+
+    ctx.lineTo(x, y);
+
+  });
+
+  ctx.strokeStyle = "#111";
+  ctx.lineWidth = 2;
+
+  ctx.stroke();
+
+}
+
+function drawTemperaturePoints(
+  ctx,
+  columns
+) {
+
+  columns.forEach(column => {
+
+    if (column.temp == null) {
+      return;
+    }
+
+    ctx.beginPath();
+
+    ctx.arc(
+      column.centerX,
+      getChartY(column.temp),
+      4,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fillStyle =
+      store.selectedColumnKey ===
+      column.key
+        ? "#2563eb"
+        : "#111";
+
+    ctx.fill();
+
+  });
+
+}
+
+function drawCoverline(
+  ctx,
+  cycle
+) {
+
+  const overlays =
+    buildOverlays(cycle.days);
+
+  if (
+    overlays.coverline == null
+  ) {
+    return;
+  }
+
+  const y =
+    getChartY(
+      overlays.coverline
+    );
+
+  ctx.beginPath();
+
+  ctx.setLineDash([6, 4]);
+
+  ctx.strokeStyle =
+    "rgba(220,38,38,0.7)";
+
+  ctx.moveTo(0, y);
+
+  ctx.lineTo(
+    ctx.canvas.width,
+    y
+  );
+
+  ctx.stroke();
+
+  ctx.setLineDash([]);
+
+}
+
+function renderChart(columns) {
+
+  const canvas =
+    qs("tempChart");
+
+  if (!canvas) {
+    return;
+  }
+
+  const width =
+    getChartWidth(columns);
+
+  const ctx =
+    canvas.getContext("2d");
+
+  const dpr =
+    window.devicePixelRatio || 1;
+
+  canvas.style.width =
+    `${width}px`;
+
+  canvas.style.height =
+    `${LAYOUT.chartHeight}px`;
+
+  canvas.width =
+    width * dpr;
+
+  canvas.height =
+    LAYOUT.chartHeight * dpr;
+
+  ctx.setTransform(
+    1, 0, 0, 1, 0, 0
+  );
+
+  ctx.scale(dpr, dpr);
+
+  ctx.clearRect(
+    0,
+    0,
+    width,
+    LAYOUT.chartHeight
+  );
+
+  drawSelectedColumn(
+    ctx,
+    columns
+  );
+
+  drawOverlayLayer(
+    ctx,
+    columns
+  );
+
+  drawVerticalGrid(
+    ctx,
+    columns
+  );
+
+  drawHorizontalGrid(ctx);
+
+  drawHoverLine(
+    ctx,
+    columns
+  );
+
+  drawTemperatureLine(
+    ctx,
+    columns
+  );
+
+  drawTemperaturePoints(
+    ctx,
+    columns
+  );
+
+  const cycle =
+    getLatestCycle();
+
+  if (cycle) {
+
+    drawCoverline(
+      ctx,
+      cycle
+    );
+
+  }
+
 }
 
 /* modal */
 
-function openModal(){
-  if(!store.selectedDate) return;
+function updateUI() {
 
-  const key = formatDateKey(store.selectedDate);
-  const d = store.data[key] || {};
+  qsa(".segmented")
+    .forEach(group => {
+
+      const name =
+        group.dataset.group;
+
+      group
+        .querySelectorAll("button")
+        .forEach(button => {
+
+          const value =
+            button.dataset.value;
+
+          if (name === "sediment") {
+
+            button.classList.toggle(
+              "active",
+              String(
+                store.modal.sediment
+              ) === value
+            );
+
+            return;
+
+          }
+
+          button.classList.toggle(
+            "active",
+            store.modal[name] === value
+          );
+
+        });
+
+    });
+
+}
+
+function openModal() {
+
+  if (!store.selectedColumnKey) {
+    return;
+  }
+
+  const key =
+    store.selectedColumnKey;
+
+  const data =
+    store.entries[key] || {};
+
+  const column =
+    currentColumns.find(
+      x => x.key === key
+    );
 
   store.modal = {
-    temp: d.temp ?? null,
-    bleeding: d.bleeding ?? "none",
-    discharge: d.discharge ?? "none",
-    peak: d.peak ?? false
+    temp: data.temp ?? null,
+    bleeding: data.bleeding ?? "none",
+    discharge: data.discharge ?? "none",
+    sediment: data.sediment ?? false,
+    other: data.other ?? ""
   };
 
-  const cd = d.cycleDay ?? "-";
-  qs("modalTitle").innerText = `${key} (CD ${cd})`;
+  qs("modalTitle").innerText =
+    `${key} (CD ${column?.cycleDay || "-"})`;
 
   qs("tempInput").value =
-    store.modal.temp != null ? Number(store.modal.temp).toFixed(2) : "";
+    store.modal.temp != null
+      ? Number(store.modal.temp).toFixed(2)
+      : "";
+
+  qs("otherInput").value =
+    store.modal.other;
 
   updateUI();
 
-  qs("modal").classList.remove("hidden");
-  setTimeout(()=>qs("modal").classList.add("show"),10);
+  qs("modal")
+    .classList
+    .remove("hidden");
+
+  setTimeout(() => {
+
+    qs("modal")
+      .classList
+      .add("show");
+
+  }, 10);
+
 }
 
-function closeModal(){
-  qs("modal").classList.remove("show");
-  setTimeout(()=>qs("modal").classList.add("hidden"),200);
+function closeModal() {
+
+  qs("modal")
+    .classList
+    .remove("show");
+
+  setTimeout(() => {
+
+    qs("modal")
+      .classList
+      .add("hidden");
+
+  }, 200);
+
 }
 
-function updateUI(){
-  qsa(".segmented").forEach(g=>{
-    const name=g.dataset.group;
+function validateTempInput() {
 
-    g.querySelectorAll("button").forEach(b=>{
-      const v=b.dataset.value;
+  const raw =
+    qs("tempInput")
+      ?.value
+      .trim();
 
-      b.classList.toggle(
-        "active",
-        name==="markers"
-          ? store.modal[v]
-          : store.modal[name]===v
-      );
-    });
-  });
+  if (raw === "") {
+    return true;
+  }
+
+  const value =
+    parseFloat(raw);
+
+  return (
+    !isNaN(value) &&
+    isValidTemp(value)
+  );
+
 }
 
 /* render */
 
-function renderMonth(){
-  qs("monthLabel").innerText =
-    new Date(store.year, store.month)
-      .toLocaleString("en-US", { month: "long", year: "numeric" });
-}
+function render() {
 
-function renderCalendar(){
-  const el = qs("calendar");
-  el.innerHTML = "";
-
-  const days = getDaysInMonth(store.year, store.month);
-  const off = getOffset(store.year, store.month);
-
-  ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].forEach(d=>{
-    const w = document.createElement("div");
-    w.textContent = d;
-    w.style.textAlign = "center";
-    w.style.fontSize = "12px";
-    w.style.opacity = "0.6";
-    el.appendChild(w);
-  });
-
-  for(let i=0;i<off;i++){
-    el.appendChild(document.createElement("div"));
-  }
-
-  for(let d=1; d<=days; d++){
-    const date = new Date(store.year, store.month, d);
-    const key = formatDateKey(date);
-    const data = store.data[key];
-
-    const div = document.createElement("div");
-    div.className = "day";
-    div.textContent = d;
-
-    if(data?.bleeding === "menstruation") div.classList.add("red");
-    else if(data?.fertile) div.classList.add("green");
-
-    if(store.selectedDate && formatDateKey(store.selectedDate) === key){
-      div.classList.add("selected");
-    }
-
-    const cd = data?.cycleDay;
-    if(cd){
-      const label = document.createElement("div");
-      label.style.position = "absolute";
-      label.style.top = "4px";
-      label.style.right = "6px";
-      label.style.fontSize = "10px";
-      label.style.opacity = "0.6";
-      label.textContent = cd;
-      div.appendChild(label);
-    }
-
-    div.onclick = ()=>{
-      store.selectedDate = date;
-      render();
-    };
-
-    el.appendChild(div);
-  }
-}
-
-function renderInfo(){
-  if(!store.selectedDate){
-    qs("infoTitle").innerText = "No day selected";
-    qs("infoTemp").innerText = "-";
-    qs("infoBleeding").innerText = "-";
-    qs("infoDischarge").innerText = "-";
-    return;
-  }
-
-  const key = formatDateKey(store.selectedDate);
-  const d = store.data[key] || {};
-  const cd = d.cycleDay ?? "-";
-
-  qs("infoTitle").innerText = `${key} (CD ${cd})`;
-
-  qs("infoTemp").innerText = formatTemp(d.temp);
-  qs("infoBleeding").innerText = d.bleeding !== "none" ? d.bleeding : "-";
-  qs("infoDischarge").innerText = d.discharge !== "none" ? d.discharge : "-";
-}
-
-function renderChart(){
-  const canvas = qs("tempChart");
-  if(!canvas) return;
-
-  const ctx = canvas.getContext("2d");
-
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = canvas.offsetWidth * dpr;
-  canvas.height = canvas.offsetHeight * dpr;
-
-  ctx.setTransform(1,0,0,1,0,0);
-  ctx.scale(dpr, dpr);
-
-  ctx.clearRect(0,0,canvas.offsetWidth,canvas.offsetHeight);
-
-  const paddingTop = 20;
-  const paddingBottom = 30;
-
-  const height = canvas.offsetHeight - paddingTop - paddingBottom;
-
-  const minTemp = 36.0;
-  const maxTemp = 37.5;
-
-  const latest = Object.values(store.data)
-    .filter(d => d.cycleId != null)
-    .sort((a,b)=>b.cycleId - a.cycleId || b.cycleDay - a.cycleDay)[0];
-
-  if(!latest) return;
-
-  const days = Object.values(store.data)
-    .filter(d => d.cycleId === latest.cycleId)
-    .sort((a,b)=>a.cycleDay - b.cycleDay);
-
-  if(!days.length) return;
-
-  /* FIX: pevná šířka grafu */
-  const totalWidth = LABEL_WIDTH + days.length * DAY_WIDTH;
-
-  if(canvas.offsetWidth < totalWidth){
-    canvas.style.width = totalWidth + "px";
-  }
-
-  const getX = i => LABEL_WIDTH + i * DAY_WIDTH + DAY_WIDTH/2;
-  const getY = t => paddingTop + (maxTemp - t)/(maxTemp - minTemp) * height;
-
-  /* fertile background */
-  days.forEach((d,i)=>{
-    if(d.fertile){
-      const x = LABEL_WIDTH + i * DAY_WIDTH;
-      ctx.fillStyle = "rgba(34,197,94,0.15)";
-      ctx.fillRect(x, paddingTop, DAY_WIDTH, height);
-    }
-  });
-
-  /* vertical grid */
-  for(let i=0;i<=days.length;i++){
-    const x = LABEL_WIDTH + i * DAY_WIDTH;
-
-    ctx.beginPath();
-    ctx.strokeStyle = i % 5 === 0 ? "rgba(0,0,0,0.2)" : "rgba(0,0,0,0.05)";
-    ctx.moveTo(x, paddingTop);
-    ctx.lineTo(x, canvas.offsetHeight - paddingBottom);
-    ctx.stroke();
-  }
-
-  /* horizontal grid */
-  for(let t=minTemp; t<=maxTemp; t+=0.1){
-    const y = getY(t);
-
-    ctx.beginPath();
-    ctx.strokeStyle = (Math.round(t*10) % 5 === 0)
-      ? "rgba(0,0,0,0.2)"
-      : "rgba(0,0,0,0.05)";
-
-    ctx.moveTo(LABEL_WIDTH, y);
-    ctx.lineTo(totalWidth, y);
-    ctx.stroke();
-
-    if(Math.round(t*10) % 5 === 0){
-      ctx.fillStyle = "#6b7280";
-      ctx.font = "11px Inter";
-      ctx.fillText(t.toFixed(1), 5, y+3);
-    }
-  }
-
-  /* line */
-  ctx.beginPath();
-  ctx.strokeStyle = "#111";
-  ctx.lineWidth = 2;
-
-  let started = false;
-
-  days.forEach((d,i)=>{
-    if(d.temp == null) return;
-
-    const x = getX(i);
-    const y = getY(d.temp);
-
-    if(!started){
-      ctx.moveTo(x,y);
-      started = true;
-    }else{
-      ctx.lineTo(x,y);
-    }
-  });
-
-  ctx.stroke();
-
-  /* points */
-  days.forEach((d,i)=>{
-    if(d.temp == null) return;
-
-    const x = getX(i);
-    const y = getY(d.temp);
-
-    ctx.beginPath();
-    ctx.arc(x,y,3,0,Math.PI*2);
-    ctx.fillStyle = "#111";
-    ctx.fill();
-  });
-
-  renderChartTable(days);
-}
-
-function renderChartTable(days){
-  const el = qs("chartTable");
-  if(!el) return;
-
-  el.innerHTML = "";
-
-  const rows = [
-    {
-      label: "Bleeding",
-      get: d => d.bleeding === "menstruation" ? "●" : ""
-    },
-    {
-      label: "Discharge",
-      get: d => d.discharge?.[0]?.toUpperCase() || ""
-    },
-    {
-      label: "Peak",
-      get: d => d.peak ? "▲" : ""
-    }
-  ];
-
-  rows.forEach(r=>{
-    const row = document.createElement("div");
-    row.className = "chart-row";
-
-    row.style.display = "grid";
-    row.style.gridTemplateColumns =
-      `${LABEL_WIDTH}px repeat(${days.length}, ${DAY_WIDTH}px)`;
-
-    const label = document.createElement("div");
-    label.className = "chart-label";
-    label.textContent = r.label;
-
-    row.appendChild(label);
-
-    days.forEach(d=>{
-      const cell = document.createElement("div");
-      cell.className = "chart-cell";
-
-      const val = r.get(d);
-      cell.textContent = val;
-
-      if(r.label === "Bleeding" && val) cell.classList.add("red");
-      if(r.label === "Peak" && val) cell.classList.add("active");
-
-      row.appendChild(cell);
-    });
-
-    el.appendChild(row);
-  });
-}
-
-function render(){
   renderMonth();
+
   renderCalendar();
+
+  renderTempScale();
+
+  const cycle =
+    getLatestCycle();
+
+  currentColumns =
+    buildCycleColumns(cycle);
+
+  renderMapRows(
+    currentColumns
+  );
+
+  renderChart(
+    currentColumns
+  );
+
   renderInfo();
-  renderChart();
+
+}
+/* reset */
+
+function resetApp() {
+
+  localStorage.removeItem(
+    "cycleData"
+  );
+
+  store.entries = {};
+
+  store.selectedColumnKey = null;
+
+  store.hoveredColumnKey = null;
+
+  const now = new Date();
+
+  store.month =
+    now.getMonth();
+
+  store.year =
+    now.getFullYear();
+
+  render();
 
 }
 
 /* init */
 
-function init(){
+function init() {
 
-  qs("tempInput").oninput = validateTempInput;
+  syncLayoutVariables();
 
-  qs("prevMonth").onclick=()=>{
+  qs("tempInput").oninput =
+    validateTempInput;
+
+  qs("prevMonth").onclick = () => {
+
     store.month--;
-    if(store.month<0){store.month=11;store.year--;}
-    store.selectedDate=null;
+
+    if (store.month < 0) {
+
+      store.month = 11;
+
+      store.year--;
+
+    }
+
     render();
+
   };
 
-  qs("nextMonth").onclick=()=>{
+  qs("nextMonth").onclick = () => {
+
     store.month++;
-    if(store.month>11){store.month=0;store.year++;}
-    store.selectedDate=null;
+
+    if (store.month > 11) {
+
+      store.month = 0;
+
+      store.year++;
+
+    }
+
     render();
+
   };
 
-  qs("editBtn").onclick=openModal;
-  qs("closeBtn").onclick=closeModal;
+  qs("editBtn").onclick =
+    openModal;
 
-  qs("saveBtn").onclick=()=>{
-    if(!store.selectedDate) return;
-    if(!validateTempInput()) return;
+  qs("closeBtn").onclick =
+    closeModal;
 
-    const key=formatDateKey(store.selectedDate);
-    const temp=parseFloat(qs("tempInput").value);
+  qs("saveBtn").onclick = () => {
 
-    store.modal.temp = isNaN(temp) ? null : temp;
+    if (!store.selectedColumnKey) {
+      return;
+    }
 
-    const clean = sanitizeModal(store.modal);
+    if (!validateTempInput()) {
+      return;
+    }
 
-    store.data[key] = {
-      ...(store.data[key] || {}),
-      ...clean
+    const key =
+      store.selectedColumnKey;
+
+    const temp =
+      parseFloat(
+        qs("tempInput").value
+      );
+
+    store.modal.temp =
+      isNaN(temp)
+        ? null
+        : temp;
+
+    store.modal.other =
+      qs("otherInput")
+        .value
+        .trim();
+
+    store.entries[key] = {
+      ...(store.entries[key] || {}),
+      ...store.modal
     };
-
-    recalculateCycle();
-    recalculateFertileFromTemps();
 
     store.save();
 
     closeModal();
 
-    setTimeout(()=>{
+    setTimeout(() => {
       render();
     }, 200);
+
   };
 
-  qsa(".segmented button").forEach(b=>{
-    b.onclick=()=>{
-      const g=b.parentElement.dataset.group;
-      const v=b.dataset.value;
+  qsa(".segmented button")
+    .forEach(button => {
 
-      if(g==="markers") store.modal[v]=!store.modal[v];
-      else store.modal[g]=v;
+      button.onclick = () => {
 
-      updateUI();
-    };
-  });
+        const group =
+          button.parentElement
+            .dataset.group;
 
-  qs("devReset").onclick=resetApp;
+        const value =
+          button.dataset.value;
+
+        if (group === "sediment") {
+
+          store.modal.sediment =
+            value === "true";
+
+        } else {
+
+          store.modal[group] =
+            value;
+
+        }
+
+        updateUI();
+
+      };
+
+    });
+
+  qs("devReset").onclick =
+    resetApp;
+
 }
 
-function resetApp(){
-  localStorage.removeItem("cycleData");
-  store.data = {};
-  store.selectedDate = null;
-  store._cycleStarts = null;
+/* boot */
 
-  const n = new Date();
-  store.month = n.getMonth();
-  store.year = n.getFullYear();
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
 
-  render();
-}
+    init();
 
-document.addEventListener("DOMContentLoaded",()=>{
-  recalculateCycle();
-  recalculateFertileFromTemps();
-  init();
-  render();
-});
+    render();
+
+  }
+);

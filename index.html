@@ -2,103 +2,437 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
   <title>Cycle Tracker</title>
 
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  >
+
+  <link
+    rel="stylesheet"
+    href="styles.css"
+  >
 </head>
 
 <body>
 
 <div class="app">
+
   <h1>Cycle Tracker</h1>
 
   <div class="layout">
 
-<div class="calendar-card">
+    <div class="calendar-card">
 
-  <div class="calendar-nav">
-    <button id="prevMonth">‹</button>
+      <div class="calendar-nav">
 
-    <div id="monthLabel"></div>
+        <button
+          id="prevMonth"
+          type="button"
+        >
+          ‹
+        </button>
 
-    <button id="nextMonth">›</button>
-  </div>
+        <div id="monthLabel"></div>
 
-  <div id="calendar"></div>
+        <button
+          id="nextMonth"
+          type="button"
+        >
+          ›
+        </button>
 
-  <div class="legend">
-    <div><span class="dot red"></span> Menstruation</div>
-    <div><span class="dot green"></span> Fertile</div>
-  </div>
-
-</div>
-    <div class="info-card">
-      <h2 id="infoTitle">No day selected</h2>
-
-      <div class="info-content">
-        <div class="info-row">
-          <span>Temperature</span>
-          <span id="infoTemp">-</span>
-        </div>
-
-        <div class="info-row">
-          <span>Bleeding</span>
-          <span id="infoBleeding">-</span>
-        </div>
-
-        <div class="info-row">
-          <span>Discharge</span>
-          <span id="infoDischarge">-</span>
-        </div>
       </div>
 
-      <button id="editBtn" class="edit-btn">Edit day</button>
+      <div id="calendar"></div>
+
+      <div class="legend">
+
+        <div>
+          <span class="dot red"></span>
+          Menstruation
+        </div>
+
+        <div>
+          <span class="dot green"></span>
+          Fertile
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="info-card">
+
+      <h2 id="infoTitle">
+        No day selected
+      </h2>
+
+      <div class="info-content">
+
+        <div class="info-row">
+
+          <span>
+            Temperature
+          </span>
+
+          <span id="infoTemp">
+            -
+          </span>
+
+        </div>
+
+        <div class="info-row">
+
+          <span>
+            Bleeding
+          </span>
+
+          <span id="infoBleeding">
+            -
+          </span>
+
+        </div>
+
+        <div class="info-row">
+
+          <span>
+            Discharge
+          </span>
+
+          <span id="infoDischarge">
+            -
+          </span>
+
+        </div>
+
+      </div>
+
+      <button
+        id="editBtn"
+        class="edit-btn"
+        type="button"
+      >
+        Edit day
+      </button>
+
     </div>
 
   </div>
 
   <div class="chart-card">
-    <canvas id="tempChart"></canvas>
 
-    <div id="chartTable" class="chart-table"></div>
+    <div class="cycle-map">
+
+      <div class="map-scroll">
+
+        <div class="map-grid">
+
+          <!-- header -->
+
+          <div class="map-header-row">
+
+            <div class="map-side-label"></div>
+
+            <div class="map-temp-spacer"></div>
+
+            <div
+              id="dayNumbers"
+              class="map-days"
+            ></div>
+
+          </div>
+
+          <!-- chart -->
+
+          <div class="map-chart-row">
+
+            <div class="map-side-label">
+              Temp (°C)
+            </div>
+
+            <div
+              id="tempScale"
+              class="temp-scale-column"
+            ></div>
+
+            <div class="map-chart-area">
+
+              <canvas id="tempChart"></canvas>
+
+            </div>
+
+          </div>
+
+          <!-- CD -->
+
+          <div class="map-row">
+
+            <div class="map-side-label">
+              CD (days)
+            </div>
+
+            <div class="map-temp-spacer"></div>
+
+            <div
+              id="cycleDayRow"
+              class="map-cells"
+            ></div>
+
+          </div>
+
+          <!-- mucus -->
+
+          <div class="map-row">
+
+            <div class="map-side-label">
+              Mucus
+            </div>
+
+            <div class="map-temp-spacer"></div>
+
+            <div
+              id="mucusRow"
+              class="map-cells"
+            ></div>
+
+          </div>
+
+          <!-- bleeding -->
+
+          <div class="map-row">
+
+            <div class="map-side-label">
+              Bleeding
+            </div>
+
+            <div class="map-temp-spacer"></div>
+
+            <div
+              id="bleedingRow"
+              class="map-cells"
+            ></div>
+
+          </div>
+
+          <!-- spotting -->
+
+          <div class="map-row">
+
+            <div class="map-side-label">
+              Spotting
+            </div>
+
+            <div class="map-temp-spacer"></div>
+
+            <div
+              id="spottingRow"
+              class="map-cells"
+            ></div>
+
+          </div>
+
+          <!-- sediment -->
+
+          <div class="map-row">
+
+            <div class="map-side-label">
+              Sediment
+            </div>
+
+            <div class="map-temp-spacer"></div>
+
+            <div
+              id="sedimentRow"
+              class="map-cells"
+            ></div>
+
+          </div>
+
+          <!-- other -->
+
+          <div class="map-row">
+
+            <div class="map-side-label">
+              Other
+            </div>
+
+            <div class="map-temp-spacer"></div>
+
+            <div
+              id="otherRow"
+              class="map-cells"
+            ></div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
   </div>
 
-<div id="modal" class="modal hidden">
-  <div class="modal-card">
+  <!-- modal -->
 
-    <h2 id="modalTitle"></h2>
+  <div
+    id="modal"
+    class="modal hidden"
+  >
 
-    <input id="tempInput" type="number" step="0.01" min="35" max="38" placeholder="36.50">
+    <div class="modal-card">
 
-    <div class="segmented" data-group="bleeding">
-      <button data-value="none">None</button>
-      <button data-value="spotting">Spotting</button>
-      <button data-value="menstruation">Period</button>
-    </div>
+      <h2 id="modalTitle"></h2>
 
-    <div class="segmented" data-group="discharge">
-      <button data-value="none">None</button>
-      <button data-value="dry">Dry</button>
-      <button data-value="moist">Moist</button>
-      <button data-value="wet">Wet</button>
-    </div>
+      <input
+        id="tempInput"
+        type="number"
+        step="0.01"
+        min="35"
+        max="38"
+        placeholder="36.50"
+      >
 
-    <div class="segmented" data-group="markers">
-      <button data-value="peak">Peak</button>
-    </div>
+      <!-- bleeding -->
 
-    <div class="modal-actions">
-      <button id="closeBtn" class="btn secondary">Close</button>
-      <button id="saveBtn" class="btn primary">Save</button>
+      <div
+        class="segmented"
+        data-group="bleeding"
+      >
+
+        <button
+          type="button"
+          data-value="none"
+        >
+          None
+        </button>
+
+        <button
+          type="button"
+          data-value="spotting"
+        >
+          Spotting
+        </button>
+
+        <button
+          type="button"
+          data-value="menstruation"
+        >
+          Period
+        </button>
+
+      </div>
+
+      <!-- discharge -->
+
+      <div
+        class="segmented"
+        data-group="discharge"
+      >
+
+        <button
+          type="button"
+          data-value="none"
+        >
+          None
+        </button>
+
+        <button
+          type="button"
+          data-value="dry"
+        >
+          Dry
+        </button>
+
+        <button
+          type="button"
+          data-value="moist"
+        >
+          Moist
+        </button>
+
+        <button
+          type="button"
+          data-value="wet"
+        >
+          Wet
+        </button>
+
+      </div>
+
+      <!-- sediment -->
+
+      <div
+        class="segmented"
+        data-group="sediment"
+      >
+
+        <button
+          type="button"
+          data-value="false"
+        >
+          No sediment
+        </button>
+
+        <button
+          type="button"
+          data-value="true"
+        >
+          Sediment
+        </button>
+
+      </div>
+
+      <input
+        id="otherInput"
+        type="text"
+        placeholder="Other"
+      >
+
+      <div class="modal-actions">
+
+        <button
+          id="closeBtn"
+          class="btn secondary"
+          type="button"
+        >
+          Close
+        </button>
+
+        <button
+          id="saveBtn"
+          class="btn primary"
+          type="button"
+        >
+          Save
+        </button>
+
+      </div>
+
     </div>
 
   </div>
-</div>
 
-<div class="dev-panel">
-  <button id="devReset">DEV RESET</button>
+  <!-- dev -->
+
+  <div class="dev-panel">
+
+    <button
+      id="devReset"
+      type="button"
+    >
+      DEV RESET
+    </button>
+
+  </div>
+
 </div>
 
 <script src="app.js"></script>
