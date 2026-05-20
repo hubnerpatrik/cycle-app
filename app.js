@@ -1,1658 +1,867 @@
-// app.js
+// app.js — Cycle Tracker
+// ─────────────────────────────────────────────
+// Architecture:
+//   CONSTANTS  →  utils  →  Store  →  domain logic
+//   →  render helpers  →  render  →  init  →  boot
+// ─────────────────────────────────────────────
 
-const qs = id => document.getElementById(id);
+"use strict";
+
+/* ─── helpers ─────────────────────────────── */
+
+const qs  = id       => document.getElementById(id);
 const qsa = selector => document.querySelectorAll(selector);
 
-/* layout */
+/* ─── constants ───────────────────────────── */
 
 const LAYOUT = {
-  columnWidth: 36,
-  sideLabelWidth: 68,
-  tempScaleWidth: 52,
-
-  chartHeight: 260,
-  chartPaddingTop: 20,
+  columnWidth:        36,
+  sideLabelWidth:     68,
+  tempScaleWidth:     52,
+  chartHeight:        260,
+  chartPaddingTop:    20,
   chartPaddingBottom: 24,
-
-  minTemp: 36.0,
-  maxTemp: 37.5
+  minTemp:            36.0,
+  maxTemp:            37.5,
 };
 
-/* utils */
+const CYCLE = {
+  maxDays:        90,   // safety cap for cycle iteration
+  ovulationLag:    6,   // low-temp window size before thermal shift
+  minLowTemps:     4,   // min valid readings to confirm ovulation
+  coverlineShift:  0.05 // degrees above max-low = coverline
+};
+
+const MUCUS_LABELS = { dry: "D", moist: "M", wet: "W" };
+
+const STORAGE_KEY = "cycleData";
+
+/* ─── utils ───────────────────────────────── */
 
 function normalize(date) {
   const d = new Date(date);
-
   d.setHours(0, 0, 0, 0);
-
   return d;
 }
 
 function parseDateKey(key) {
   const [y, m, d] = key.split("-").map(Number);
-
   return new Date(y, m - 1, d);
 }
 
 function formatDateKey(date) {
-  const d = normalize(date);
-
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const d  = normalize(date);
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
 function getDaysInMonth(year, month) {
   return new Date(year, month + 1, 0).getDate();
 }
 
-function getOffset(year, month) {
+/** Monday-based week offset (0 = Mon, 6 = Sun) */
+function getMonthOffset(year, month) {
   return (new Date(year, month, 1).getDay() + 6) % 7;
 }
 
 function formatTemp(temp) {
-  return temp != null
-    ? Number(temp).toFixed(2)
-    : "-";
+  return temp != null ? Number(temp).toFixed(2) : "-";
 }
 
 function isValidTemp(temp) {
-  return (
-    temp == null ||
-    (temp >= 34 && temp <= 42)
-  );
+  return temp == null || (temp >= 34 && temp <= 42);
 }
 
-function getColumnWidth() {
-  return LAYOUT.columnWidth;
+/* ─── layout geometry ─────────────────────── */
+
+function columnX(index)       { return index * LAYOUT.columnWidth; }
+function columnCenterX(index) { return columnX(index) + LAYOUT.columnWidth / 2; }
+function chartWidth(columns)  { return columns.length * LAYOUT.columnWidth; }
+
+function graphHeight() {
+  return LAYOUT.chartHeight - LAYOUT.chartPaddingTop - LAYOUT.chartPaddingBottom;
 }
 
-function getColumnX(index) {
-  return index * getColumnWidth();
-}
-
-function getColumnCenterX(index) {
-  return getColumnX(index) + getColumnWidth() / 2;
-}
-
-function getChartWidth(columns) {
-  return columns.length * getColumnWidth();
-}
-
-function getGraphHeight() {
-  return (
-    LAYOUT.chartHeight -
-    LAYOUT.chartPaddingTop -
-    LAYOUT.chartPaddingBottom
-  );
-}
-
-function getChartY(temp) {
+function chartY(temp) {
   return (
     LAYOUT.chartPaddingTop +
-    (
-      (LAYOUT.maxTemp - temp) /
-      (LAYOUT.maxTemp - LAYOUT.minTemp)
-    ) * getGraphHeight()
+    ((LAYOUT.maxTemp - temp) / (LAYOUT.maxTemp - LAYOUT.minTemp)) * graphHeight()
   );
 }
 
-function syncLayoutVariables() {
-  document.documentElement.style.setProperty(
-    "--column-width",
-    `${LAYOUT.columnWidth}px`
-  );
-
-  document.documentElement.style.setProperty(
-    "--label-width",
-    `${LAYOUT.sideLabelWidth}px`
-  );
-
-  document.documentElement.style.setProperty(
-    "--temp-scale-width",
-    `${LAYOUT.tempScaleWidth}px`
-  );
-
-  document.documentElement.style.setProperty(
-    "--chart-height",
-    `${LAYOUT.chartHeight}px`
-  );
+function syncCSSVariables() {
+  const root = document.documentElement;
+  root.style.setProperty("--column-width",     `${LAYOUT.columnWidth}px`);
+  root.style.setProperty("--label-width",      `${LAYOUT.sideLabelWidth}px`);
+  root.style.setProperty("--temp-scale-width", `${LAYOUT.tempScaleWidth}px`);
+  root.style.setProperty("--chart-height",     `${LAYOUT.chartHeight}px`);
 }
 
-/* store */
+/* ─── store ───────────────────────────────── */
 
 class Store {
-
   constructor() {
+    this.entries     = this._load();
+    this.selectedKey = null;
+    this.hoveredKey  = null;
+    this.month       = new Date().getMonth();
+    this.year        = new Date().getFullYear();
+    this.modal       = this._emptyModal();
+  }
 
-    this.entries = JSON.parse(
-      localStorage.getItem("cycleData") || "{}"
-    );
+  _emptyModal() {
+    return { temp: null, bleeding: "none", discharge: "none", sediment: false, other: "" };
+  }
 
-    this.selectedColumnKey = null;
-
-    this.hoveredColumnKey = null;
-
-    const now = new Date();
-
-    this.month = now.getMonth();
-
-    this.year = now.getFullYear();
-
-    this.modal = {
-      temp: null,
-      bleeding: "none",
-      discharge: "none",
-      sediment: false,
-      other: ""
-    };
-
+  _load() {
+    try {
+      const raw    = localStorage.getItem(STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      return typeof parsed === "object" && parsed !== null ? parsed : {};
+    } catch {
+      console.warn("cycleData corrupted — resetting.");
+      return {};
+    }
   }
 
   save() {
-
-    localStorage.setItem(
-      "cycleData",
-      JSON.stringify(this.entries)
-    );
-
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.entries));
   }
 
+  reset() {
+    localStorage.removeItem(STORAGE_KEY);
+    this.entries     = {};
+    this.selectedKey = null;
+    this.hoveredKey  = null;
+    const now        = new Date();
+    this.month       = now.getMonth();
+    this.year        = now.getFullYear();
+  }
 }
 
 const store = new Store();
 
-/* state */
+/* ─── domain: cycle detection ─────────────── */
 
-function selectColumn(key) {
-
-  store.selectedColumnKey = key;
-
-  render();
-
-}
-
-function hoverColumn(key) {
-
-  store.hoveredColumnKey = key;
-
-  renderChart(currentColumns);
-
-}
-
-function clearHover() {
-
-  store.hoveredColumnKey = null;
-
-  renderChart(currentColumns);
-
-}
-
-/* cycles */
-
+/** Returns sorted Date[] of cycle start dates (first day of each menstruation run). */
 function getCycleStartDates() {
-
-  const keys = Object.keys(store.entries)
-    .sort();
-
+  const keys   = Object.keys(store.entries).sort();
   const starts = [];
 
-  keys.forEach((key, index) => {
-
-    const current = store.entries[key];
-
-    if (current?.bleeding !== "menstruation") {
-      return;
-    }
-
-    const prevKey = keys[index - 1];
-
-    const prev = store.entries[prevKey];
-
-    const previousWasPeriod =
-      prev?.bleeding === "menstruation";
-
-    if (!previousWasPeriod) {
-
-      starts.push(
-        normalize(
-          parseDateKey(key)
-        )
-      );
-
-    }
-
+  keys.forEach((key, i) => {
+    if (store.entries[key]?.bleeding !== "menstruation") return;
+    const prevIsPeriod = store.entries[keys[i - 1]]?.bleeding === "menstruation";
+    if (!prevIsPeriod) starts.push(normalize(parseDateKey(key)));
   });
 
   return starts;
-
 }
 
-function buildCycles() {
+/**
+ * Returns the cycle-day number for a given date relative to the most
+ * recent cycle start that is ≤ that date.  Falls back to entry index + 1.
+ */
+function resolveCycleDay(date, starts, fallbackIndex) {
+  const d            = normalize(date);
+  const latestStart  = [...starts].reverse().find(s => normalize(s) <= d);
+  if (latestStart) {
+    return Math.floor((d - normalize(latestStart)) / 86_400_000) + 1;
+  }
+  return fallbackIndex + 1;
+}
+
+/* ─── domain: cycle segmentation ──────────── */
+
+function segmentCycles(days) {
+  if (!days.length) return [];
+
+  const cycles = [];
+  let currentCycle = null;
+
+  days.forEach((day, index) => {
+    const isMenstruation = day.bleeding === "menstruation";
+
+    const previousDay = days[index - 1];
+
+    const previousWasMenstruation =
+      previousDay?.bleeding === "menstruation";
+
+    const isCycleStart =
+      isMenstruation && !previousWasMenstruation;
+
+    if (!currentCycle || isCycleStart) {
+      currentCycle = {
+        id: `cycle-${cycles.length + 1}`,
+        startDate: day.date,
+        endDate: day.date,
+        entries: [],
+        overlays: null,
+      };
+      
+      cycles.push(currentCycle);
+    }
+
+    currentCycle.entries.push(day);
+    currentCycle.endDate = day.date;
+  });
+
+  return cycles.map(deriveCycleState);
+}
+
+/* ─── domain: overlays ────────────────────── */
+
+/**
+ * Detect ovulation using the three-over-six thermal shift rule.
+ * Returns the index of the first confirmed high temperature, or null.
+ */
+function detectOvulationIndex(days) {
+  const temps = days.map(d => d.temp);
+
+  for (let i = CYCLE.ovulationLag; i < temps.length - 2; i++) {
+    const validLows = temps.slice(i - CYCLE.ovulationLag, i).filter(t => t != null);
+    if (validLows.length < CYCLE.minLowTemps) continue;
+
+    const cover = Math.max(...validLows) + CYCLE.coverlineShift;
+    const t1 = temps[i], t2 = temps[i + 1], t3 = temps[i + 2];
+
+    if (t1 != null && t2 != null && t3 != null && t1 > cover && t2 > cover && t3 > cover) {
+      return Math.max(0, i - 1);
+    }
+  }
+  return null;
+}
+
+/**
+ * Build all overlay data for a flat days array.
+ * Returns { fertile, threeHighs, peakPlusFour: Set<key>, coverline: number|null }
+ */
+function buildOverlays(days) {
+  const fertile      = new Set();
+  const threeHighs   = new Set();
+  const peakPlusFour = new Set();
+  let   coverline    = null;
+
+  const ovIdx = detectOvulationIndex(days);
+
+  if (ovIdx != null) {
+    const windowStart = ovIdx - (CYCLE.ovulationLag - 1);
+    const lows = days.slice(windowStart, ovIdx + 1).map(d => d.temp).filter(t => t != null);
+
+    if (lows.length >= CYCLE.minLowTemps) {
+      coverline = Math.max(...lows) + CYCLE.coverlineShift;
+    }
+
+    for (let i = windowStart; i <= ovIdx; i++)     if (days[i]) fertile.add(days[i].key);
+    for (let i = ovIdx + 1; i <= ovIdx + 3; i++)   if (days[i]) threeHighs.add(days[i].key);
+  }
+
+  // Billings peak + 4
+  let peakIndex = -1;
+  days.forEach((day, i) => { if (day.discharge === "wet") peakIndex = i; });
+  if (peakIndex !== -1) {
+    for (let i = peakIndex; i <= peakIndex + 3; i++) if (days[i]) peakPlusFour.add(days[i].key);
+  }
+
+  return { fertile, threeHighs, peakPlusFour, coverline };
+}
+
+/* ─── domain: cycle interpretation ────────── */
+
+function deriveCycleState(cycle) {
+  const overlays = buildOverlays(cycle.entries);
+
+  return {
+    ...cycle,
+
+    derived: {
+      coverline: overlays.coverline,
+
+      fertileWindow: overlays.fertile,
+
+      threeHighs: overlays.threeHighs,
+
+      peakPlusFour: overlays.peakPlusFour,
+    },
+  };
+}
+
+/* ─── domain: timeline columns ────────────── */
+
+/** Runtime columns — built once per render(), consumed by all render fns. */
+let currentColumns = [];
+
+function buildColumns() {
+  const keys = Object.keys(store.entries).sort();
+  if (!keys.length) return [];
 
   const starts = getCycleStartDates();
 
-  if (!starts.length) {
-    return [];
-  }
+  const days = keys.map((key, i) => {
+    const raw  = store.entries[key];
+    const date = parseDateKey(key);
+    return {
+      key,
+      date,
+      cycleDay:  resolveCycleDay(date, starts, i),
+      temp:      raw.temp      ?? null,
+      bleeding:  raw.bleeding  ?? "none",
+      discharge: raw.discharge ?? "none",
+      sediment:  raw.sediment  ?? false,
+      other:     raw.other     ?? "",
+    };
+  });
 
-  const cycles = [];
+const cycles = segmentCycles(days);
 
-  starts.forEach((start, index) => {
+console.log("Cycles", cycles);
 
-    const next =
-      starts[index + 1] || null;
+let globalIndex = 0;
 
-    const cycle = {
-      id: index + 1,
-      startDate: new Date(start),
-      days: []
+return cycles.flatMap(cycle => {
+  return cycle.entries.map(day => {
+    const column = {
+      index: globalIndex,
+      x: columnX(globalIndex),
+      centerX: columnCenterX(globalIndex),
+
+      cycleId: cycle.id,
+
+      ...day,
+
+      overlays: {
+        fertile: cycle.derived.fertileWindow.has(day.key),
+
+        threeHigh:
+          cycle.derived.threeHighs.has(day.key),
+
+        peakPlusFour:
+          cycle.derived.peakPlusFour.has(day.key),
+
+        coverline:
+          cycle.derived.coverline,
+      },
     };
 
-    let d = new Date(start);
+    globalIndex++;
 
-    let cycleDay = 1;
-
-    let safety = 0;
-
-    while (
-      (!next || d < next) &&
-      safety < 90
-    ) {
-
-      const key = formatDateKey(d);
-
-      const raw =
-        store.entries[key] || {};
-
-      cycle.days.push({
-        key,
-        date: new Date(d),
-        cycleDay,
-
-        temp: raw.temp ?? null,
-        bleeding: raw.bleeding ?? "none",
-        discharge: raw.discharge ?? "none",
-        sediment: raw.sediment ?? false,
-        other: raw.other ?? ""
-      });
-
-      d.setDate(
-        d.getDate() + 1
-      );
-
-      cycleDay++;
-      safety++;
-
-    }
-
-    cycles.push(cycle);
-
+    return column;
   });
-
-  return cycles;
-
+});
 }
 
-function getLatestCycle() {
+/* ─── state mutations ─────────────────────── */
 
-  const cycles = buildCycles();
+function selectColumn(key) { store.selectedKey = key; render(); }
+function hoverColumn(key)  { store.hoveredKey  = key; renderChart(currentColumns); }
+function clearHover()      { store.hoveredKey  = null; renderChart(currentColumns); }
 
-  if (cycles.length) {
-
-    return cycles[
-      cycles.length - 1
-    ];
-
-  }
-
-  const keys =
-    Object.keys(store.entries)
-      .sort();
-
-  if (!keys.length) {
-    return null;
-  }
-
-  return {
-    id: 1,
-    startDate: parseDateKey(keys[0]),
-
-    days: keys.map((key, index) => {
-
-      const raw = store.entries[key];
-
-      return {
-        key,
-        date: parseDateKey(key),
-        cycleDay: index + 1,
-
-        temp: raw.temp ?? null,
-        bleeding: raw.bleeding ?? "none",
-        discharge: raw.discharge ?? "none",
-        sediment: raw.sediment ?? false,
-        other: raw.other ?? ""
-      };
-
-    })
-
-  };
-
-}
-
-/* overlays */
-
-function detectOvulation(days) {
-
-  const temps =
-    days.map(day => day.temp);
-
-  for (let i = 6; i < temps.length - 2; i++) {
-
-    const lows =
-      temps.slice(i - 6, i);
-
-    const valid =
-      lows.filter(
-        temp => temp != null
-      );
-
-    if (valid.length < 4) {
-      continue;
-    }
-
-    const maxLow =
-      Math.max(...valid);
-
-    const cover =
-      maxLow + 0.05;
-
-    const t1 = temps[i];
-    const t2 = temps[i + 1];
-    const t3 = temps[i + 2];
-
-    if (
-      t1 == null ||
-      t2 == null ||
-      t3 == null
-    ) {
-      continue;
-    }
-
-    if (
-      t1 > cover &&
-      t2 > cover &&
-      t3 > cover
-    ) {
-
-      return Math.max(0, i - 1);
-
-    }
-
-  }
-
-  return null;
-
-}
-
-function buildOverlays(days) {
-
-  const fertile = new Set();
-
-  const threeHighs = new Set();
-
-  const peakPlusFour = new Set();
-
-  const ovulationIndex =
-    detectOvulation(days);
-
-  let coverline = null;
-
-  if (ovulationIndex != null) {
-
-    const lows = days
-      .slice(
-        ovulationIndex - 5,
-        ovulationIndex + 1
-      )
-      .map(day => day.temp)
-      .filter(Boolean);
-
-    if (lows.length >= 4) {
-
-      coverline =
-        Math.max(...lows) + 0.05;
-
-    }
-
-    for (
-      let i = ovulationIndex - 5;
-      i <= ovulationIndex;
-      i++
-    ) {
-
-      if (days[i]) {
-        fertile.add(days[i].key);
-      }
-
-    }
-
-    for (
-      let i = ovulationIndex + 1;
-      i <= ovulationIndex + 3;
-      i++
-    ) {
-
-      if (days[i]) {
-        threeHighs.add(days[i].key);
-      }
-
-    }
-
-  }
-
-  let peakIndex = -1;
-
-  days.forEach((day, index) => {
-
-    if (day.discharge === "wet") {
-      peakIndex = index;
-    }
-
-  });
-
-  if (peakIndex !== -1) {
-
-    for (
-      let i = peakIndex;
-      i <= peakIndex + 3;
-      i++
-    ) {
-
-      if (days[i]) {
-        peakPlusFour.add(days[i].key);
-      }
-
-    }
-
-  }
-
-  return {
-    fertile,
-    threeHighs,
-    peakPlusFour,
-    coverline
-  };
-
-}
-
-/* columns */
-
-function buildCycleColumns(cycle) {
-
-  if (!cycle) {
-    return [];
-  }
-
-  const overlays =
-    buildOverlays(cycle.days);
-
-  return cycle.days.map((day, index) => ({
-    index,
-
-    x: getColumnX(index),
-
-    centerX:
-      getColumnCenterX(index),
-
-    key: day.key,
-    date: day.date,
-    cycleDay: day.cycleDay,
-
-    temp: day.temp,
-    bleeding: day.bleeding,
-    discharge: day.discharge,
-    sediment: day.sediment,
-    other: day.other,
-
-    overlays: {
-      fertile:
-        overlays.fertile.has(day.key),
-
-      threeHigh:
-        overlays.threeHighs.has(day.key),
-
-      peakPlusFour:
-        overlays.peakPlusFour.has(day.key)
-    }
-  }));
-
-}
-
-let currentColumns = [];
-
-/* calendar */
+/* ─── render: month label ─────────────────── */
 
 function renderMonth() {
-
-  qs("monthLabel").innerText =
-    new Date(
-      store.year,
-      store.month
-    ).toLocaleString("en-US", {
-      month: "long",
-      year: "numeric"
-    });
-
+  qs("monthLabel").innerText = new Date(store.year, store.month)
+    .toLocaleString("en-US", { month: "long", year: "numeric" });
 }
+
+/* ─── render: temperature scale ──────────── */
 
 function renderTempScale() {
-
-  const scale =
-    qs("tempScale");
-
-  if (!scale) {
-    return;
-  }
-
+  const scale = qs("tempScale");
+  if (!scale) return;
   scale.innerHTML = "";
 
-  for (
-    let temp = LAYOUT.maxTemp;
-    temp >= LAYOUT.minTemp;
-    temp -= 0.5
-  ) {
-
-    const label =
-      document.createElement("div");
-
-    label.className =
-      "temp-scale-label";
-
-    label.textContent =
-      Number(temp).toFixed(1);
-
-    const y =
-      getChartY(temp);
-
-    label.style.top =
-      `${y - 9}px`;
-
+  for (let temp = LAYOUT.maxTemp; temp >= LAYOUT.minTemp - 0.001; temp -= 0.5) {
+    const label       = document.createElement("div");
+    label.className   = "temp-scale-label";
+    label.textContent = Number(temp).toFixed(1);
+    label.style.top   = `${chartY(temp) - 9}px`;
     scale.appendChild(label);
-
   }
-
 }
+
+/* ─── render: calendar ────────────────────── */
 
 function renderCalendar() {
-
   const el = qs("calendar");
-
   el.innerHTML = "";
 
-  [
-    "Mon",
-    "Tue",
-    "Wed",
-    "Thu",
-    "Fri",
-    "Sat",
-    "Sun"
-  ].forEach(day => {
-
-    const w =
-      document.createElement("div");
-
-    w.textContent = day;
-
+  ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].forEach(day => {
+    const w           = document.createElement("div");
+    w.textContent     = day;
     w.style.textAlign = "center";
-    w.style.fontSize = "12px";
-    w.style.opacity = "0.6";
-
+    w.style.fontSize  = "12px";
+    w.style.opacity   = "0.6";
     el.appendChild(w);
-
   });
 
-  const days =
-    getDaysInMonth(
-      store.year,
-      store.month
-    );
+  const totalDays = getDaysInMonth(store.year, store.month);
+  const offset    = getMonthOffset(store.year, store.month);
 
-  const off =
-    getOffset(
-      store.year,
-      store.month
-    );
+  for (let i = 0; i < offset; i++) el.appendChild(document.createElement("div"));
 
-  for (let i = 0; i < off; i++) {
+  for (let d = 1; d <= totalDays; d++) {
+    const date  = new Date(store.year, store.month, d);
+    const key   = formatDateKey(date);
+    const entry = store.entries[key];
 
-    el.appendChild(
-      document.createElement("div")
-    );
-
-  }
-
-  for (let d = 1; d <= days; d++) {
-
-    const date = new Date(
-      store.year,
-      store.month,
-      d
-    );
-
-    const key =
-      formatDateKey(date);
-
-    const entry =
-      store.entries[key];
-
-    const div =
-      document.createElement("div");
-
-    div.className = "day";
-
+    const div       = document.createElement("div");
+    div.className   = "day";
     div.textContent = d;
 
-    if (
-      entry?.bleeding ===
-      "menstruation"
-    ) {
+    if (entry?.bleeding === "menstruation") div.classList.add("red");
+    if (store.selectedKey === key)          div.classList.add("selected");
 
-      div.classList.add("red");
-
-    }
-
-    if (
-      store.selectedColumnKey === key
-    ) {
-
-      div.classList.add("selected");
-
-    }
-
-    div.onclick = () => {
-      selectColumn(key);
-    };
-
+    div.onclick = () => selectColumn(key);
     el.appendChild(div);
-
   }
-
 }
 
-/* info */
+/* ─── render: info panel ──────────────────── */
 
 function renderInfo() {
-
-  if (!store.selectedColumnKey) {
-
-    qs("infoTitle").innerText =
-      "No day selected";
-
-    qs("infoTemp").innerText = "-";
-    qs("infoBleeding").innerText = "-";
+  if (!store.selectedKey) {
+    qs("infoTitle").innerText     = "No day selected";
+    qs("infoTemp").innerText      = "-";
+    qs("infoBleeding").innerText  = "-";
     qs("infoDischarge").innerText = "-";
-
     return;
-
   }
 
-  const key =
-    store.selectedColumnKey;
+  const key    = store.selectedKey;
+  const data   = store.entries[key] || {};
+  const column = currentColumns.find(c => c.key === key);
 
-  const data =
-    store.entries[key] || {};
-
-  const column =
-    currentColumns.find(
-      x => x.key === key
-    );
-
-  qs("infoTitle").innerText =
-    `${key} (CD ${column?.cycleDay || "-"})`;
-
-  qs("infoTemp").innerText =
-    formatTemp(data.temp);
-
-  qs("infoBleeding").innerText =
-    data.bleeding !== "none"
-      ? data.bleeding
-      : "-";
-
-  qs("infoDischarge").innerText =
-    data.discharge !== "none"
-      ? data.discharge
-      : "-";
-
+  qs("infoTitle").innerText     = `${key} (CD ${column?.cycleDay ?? "-"})`;
+  qs("infoTemp").innerText      = formatTemp(data.temp);
+  qs("infoBleeding").innerText  = data.bleeding  !== "none" ? data.bleeding  : "-";
+  qs("infoDischarge").innerText = data.discharge !== "none" ? data.discharge : "-";
 }
 
-/* map */
+/* ─── render: map rows ────────────────────── */
 
-function createMapCell(
-  text = "",
-  className = ""
-) {
-
-  const cell =
-    document.createElement("div");
-
-  cell.className =
-    `map-cell ${className}`;
-
+function makeCell(text = "", ...classes) {
+  const cell     = document.createElement("div");
+  cell.className = ["map-cell", ...classes].filter(Boolean).join(" ");
   cell.textContent = text;
-
   return cell;
-
 }
 
 function attachColumnEvents(el, column) {
-
-  el.onmouseenter = () => {
-    hoverColumn(column.key);
-  };
-
-  el.onmouseleave = () => {
-    clearHover();
-  };
-
-  el.onclick = () => {
-    selectColumn(column.key);
-  };
-
+  el.onmouseenter = () => hoverColumn(column.key);
+  el.onmouseleave = () => clearHover();
+  el.onclick      = () => selectColumn(column.key);
 }
 
 function renderMapRows(columns) {
+  const rowIds = ["dayNumbers","cycleDayRow","mucusRow","bleedingRow","spottingRow","sedimentRow","otherRow"];
+  const rows   = Object.fromEntries(rowIds.map(id => [id, qs(id)]));
+  const width  = chartWidth(columns);
 
-  const rows = {
-    dayNumbers: qs("dayNumbers"),
-    cycleDayRow: qs("cycleDayRow"),
-    mucusRow: qs("mucusRow"),
-    bleedingRow: qs("bleedingRow"),
-    spottingRow: qs("spottingRow"),
-    sedimentRow: qs("sedimentRow"),
-    otherRow: qs("otherRow")
-  };
+  Object.values(rows).forEach(row => { row.innerHTML = ""; row.style.width = `${width}px`; });
 
-  const width =
-    getChartWidth(columns);
+  columns.forEach(col => {
+    const sel = store.selectedKey === col.key ? "selected-column" : "";
 
-  Object.values(rows).forEach(row => {
+    // header day number
+    const dayCell       = document.createElement("div");
+    dayCell.className   = ["map-day", sel].filter(Boolean).join(" ");
+    dayCell.textContent = col.date.getDate();
+    attachColumnEvents(dayCell, col);
+    rows.dayNumbers.appendChild(dayCell);
 
-    row.innerHTML = "";
+    // cycle day
+    const cdCell = makeCell(col.cycleDay, sel);
+    attachColumnEvents(cdCell, col);
+    rows.cycleDayRow.appendChild(cdCell);
 
-    row.style.width =
-      `${width}px`;
+    // mucus
+    const mucusCell = makeCell(
+      MUCUS_LABELS[col.discharge] || "", sel,
+      col.discharge === "wet"    ? "fertile"     : "",
+      col.overlays.peakPlusFour  ? "peak-helper" : ""
+    );
+    attachColumnEvents(mucusCell, col);
+    rows.mucusRow.appendChild(mucusCell);
 
+    // bleeding
+    const bleedCell = makeCell(
+      col.bleeding === "menstruation" ? "●" : "", sel,
+      col.bleeding === "menstruation" ? "period" : ""
+    );
+    attachColumnEvents(bleedCell, col);
+    rows.bleedingRow.appendChild(bleedCell);
+
+    // spotting
+    const spottingCell = makeCell(
+      col.bleeding === "spotting" ? "◐" : "", sel,
+      col.bleeding === "spotting" ? "spotting" : ""
+    );
+    attachColumnEvents(spottingCell, col);
+    rows.spottingRow.appendChild(spottingCell);
+
+    // sediment
+    const sedimentCell = makeCell(col.sediment ? "S" : "", sel);
+    attachColumnEvents(sedimentCell, col);
+    rows.sedimentRow.appendChild(sedimentCell);
+
+    // other
+    const otherCell = makeCell(col.other, sel);
+    attachColumnEvents(otherCell, col);
+    rows.otherRow.appendChild(otherCell);
   });
-
-  columns.forEach(column => {
-
-    const selected =
-      store.selectedColumnKey ===
-      column.key;
-
-    const selectedClass =
-      selected
-        ? "selected-column"
-        : "";
-
-    const dayCell =
-      document.createElement("div");
-
-    dayCell.className =
-      `map-day ${selectedClass}`;
-
-    dayCell.textContent =
-      column.date.getDate();
-
-    attachColumnEvents(
-      dayCell,
-      column
-    );
-
-    rows.dayNumbers.appendChild(
-      dayCell
-    );
-
-    const cycleCell =
-      createMapCell(
-        column.cycleDay,
-        selectedClass
-      );
-
-    attachColumnEvents(
-      cycleCell,
-      column
-    );
-
-    rows.cycleDayRow.appendChild(
-      cycleCell
-    );
-
-    const mucusMap = {
-      dry: "D",
-      moist: "M",
-      wet: "W"
-    };
-
-    const mucusCell =
-      createMapCell(
-        mucusMap[column.discharge] || "",
-        `
-        ${selectedClass}
-        ${column.discharge === "wet" ? "fertile" : ""}
-        ${column.overlays.peakPlusFour ? "peak-helper" : ""}
-        `
-      );
-
-    attachColumnEvents(
-      mucusCell,
-      column
-    );
-
-    rows.mucusRow.appendChild(
-      mucusCell
-    );
-
-    const bleedCell =
-      createMapCell(
-        column.bleeding === "menstruation"
-          ? "●"
-          : "",
-        `
-        ${selectedClass}
-        ${column.bleeding === "menstruation" ? "period" : ""}
-        `
-      );
-
-    attachColumnEvents(
-      bleedCell,
-      column
-    );
-
-    rows.bleedingRow.appendChild(
-      bleedCell
-    );
-
-    const spottingCell =
-      createMapCell(
-        column.bleeding === "spotting"
-          ? "◐"
-          : "",
-        `
-        ${selectedClass}
-        ${column.bleeding === "spotting" ? "spotting" : ""}
-        `
-      );
-
-    attachColumnEvents(
-      spottingCell,
-      column
-    );
-
-    rows.spottingRow.appendChild(
-      spottingCell
-    );
-
-    const sedimentCell =
-      createMapCell(
-        column.sediment ? "S" : "",
-        selectedClass
-      );
-
-    attachColumnEvents(
-      sedimentCell,
-      column
-    );
-
-    rows.sedimentRow.appendChild(
-      sedimentCell
-    );
-
-    const otherCell =
-      createMapCell(
-        column.other,
-        selectedClass
-      );
-
-    attachColumnEvents(
-      otherCell,
-      column
-    );
-
-    rows.otherRow.appendChild(
-      otherCell
-    );
-
-  });
-
 }
 
-/* chart */
+/* ─── render: canvas chart ────────────────── */
 
-function drawVerticalGrid(
-  ctx,
-  columns
-) {
-
-  columns.forEach(column => {
-
-    const x =
-      Math.round(column.x) + 0.5;
-
+function drawVerticalGrid(ctx, columns) {
+  columns.forEach(col => {
+    const x = Math.round(col.x) + 0.5;
     ctx.beginPath();
-
-    ctx.strokeStyle =
-      column.index % 5 === 0
-        ? "rgba(0,0,0,0.15)"
-        : "rgba(0,0,0,0.05)";
-
-    ctx.moveTo(
-      x,
-      LAYOUT.chartPaddingTop
-    );
-
-    ctx.lineTo(
-      x,
-      LAYOUT.chartHeight -
-      LAYOUT.chartPaddingBottom
-    );
-
+    ctx.strokeStyle = col.index % 5 === 0 ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0.05)";
+    ctx.moveTo(x, LAYOUT.chartPaddingTop);
+    ctx.lineTo(x, LAYOUT.chartHeight - LAYOUT.chartPaddingBottom);
     ctx.stroke();
-
   });
-
-  const lastX =
-    getChartWidth(columns) + 0.5;
-
+  const lastX = chartWidth(columns) + 0.5;
   ctx.beginPath();
-
-  ctx.strokeStyle =
-    "rgba(0,0,0,0.15)";
-
-  ctx.moveTo(
-    lastX,
-    LAYOUT.chartPaddingTop
-  );
-
-  ctx.lineTo(
-    lastX,
-    LAYOUT.chartHeight -
-    LAYOUT.chartPaddingBottom
-  );
-
+  ctx.strokeStyle = "rgba(0,0,0,0.15)";
+  ctx.moveTo(lastX, LAYOUT.chartPaddingTop);
+  ctx.lineTo(lastX, LAYOUT.chartHeight - LAYOUT.chartPaddingBottom);
   ctx.stroke();
-
 }
 
-function drawHorizontalGrid(ctx) {
-
-  const steps =
-    Math.round(
-      (LAYOUT.maxTemp - LAYOUT.minTemp) * 10
-    );
-
+function drawHorizontalGrid(ctx, canvasWidth) {
+  const steps = Math.round((LAYOUT.maxTemp - LAYOUT.minTemp) * 10);
   for (let i = 0; i <= steps; i++) {
+    const y = Math.round(chartY(LAYOUT.minTemp + i / 10)) + 0.5;
+    ctx.beginPath();
+    ctx.strokeStyle = i % 5 === 0 ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0.05)";
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvasWidth, y);
+    ctx.stroke();
+  }
+}
 
-    const temp =
-      LAYOUT.minTemp + i / 10;
+function drawOverlayBands(ctx, columns) {
+  columns.forEach(col => {
+    if (col.overlays.fertile) {
+      ctx.fillStyle = "rgba(34,197,94,0.12)";
+      ctx.fillRect(col.x, LAYOUT.chartPaddingTop, LAYOUT.columnWidth, graphHeight());
+    }
+    if (col.overlays.peakPlusFour) {
+      ctx.fillStyle = "rgba(168,85,247,0.08)";
+      ctx.fillRect(col.x, LAYOUT.chartPaddingTop, LAYOUT.columnWidth, graphHeight());
+    }
+  });
+}
 
-    const y =
-      Math.round(
-        getChartY(temp)
-      ) + 0.5;
+function drawSelectedHighlight(ctx, columns) {
+  if (!store.selectedKey) return;
+  const col = columns.find(c => c.key === store.selectedKey);
+  if (!col) return;
+  ctx.fillStyle = "rgba(37,99,235,0.08)";
+  ctx.fillRect(col.x, 0, LAYOUT.columnWidth, LAYOUT.chartHeight);
+}
+
+function drawHoverLine(ctx, columns) {
+  if (!store.hoveredKey) return;
+  const col = columns.find(c => c.key === store.hoveredKey);
+  if (!col) return;
+  ctx.beginPath();
+  ctx.strokeStyle = "rgba(37,99,235,0.45)";
+  ctx.moveTo(col.centerX, 0);
+  ctx.lineTo(col.centerX, LAYOUT.chartHeight);
+  ctx.stroke();
+}
+
+function drawCoverlines(ctx, columns) {
+  const cycles = [];
+
+  columns.forEach(col => {
+    const lastCycle = cycles[cycles.length - 1];
+
+    const currentCoverline =
+      col.overlays.coverline;
+
+    if (
+      !lastCycle ||
+      lastCycle.coverline !== currentCoverline
+    ) {
+      cycles.push({
+        coverline: currentCoverline,
+        columns: [col],
+      });
+
+      return;
+    }
+
+    lastCycle.columns.push(col);
+  });
+
+  cycles.forEach(cycle => {
+    if (cycle.coverline == null) return;
+
+    const startX = cycle.columns[0].x;
+
+    const endX =
+      cycle.columns[cycle.columns.length - 1].x +
+      LAYOUT.columnWidth;
 
     ctx.beginPath();
+    ctx.setLineDash([6, 4]);
 
-    ctx.strokeStyle =
-      i % 5 === 0
-        ? "rgba(0,0,0,0.15)"
-        : "rgba(0,0,0,0.05)";
+    ctx.strokeStyle = "rgba(220,38,38,0.7)";
+    ctx.lineWidth = 1.5;
 
-    ctx.moveTo(0, y);
-
-    ctx.lineTo(
-      ctx.canvas.width,
-      y
-    );
+    ctx.moveTo(startX, chartY(cycle.coverline));
+    ctx.lineTo(endX, chartY(cycle.coverline));
 
     ctx.stroke();
 
-  }
-
-}
-
-function drawOverlayLayer(
-  ctx,
-  columns
-) {
-
-  columns.forEach(column => {
-
-    if (column.overlays.fertile) {
-
-      ctx.fillStyle =
-        "rgba(34,197,94,0.12)";
-
-      ctx.fillRect(
-        column.x,
-        LAYOUT.chartPaddingTop,
-        getColumnWidth(),
-        getGraphHeight()
-      );
-
-    }
-
-    if (column.overlays.peakPlusFour) {
-
-      ctx.fillStyle =
-        "rgba(168,85,247,0.08)";
-
-      ctx.fillRect(
-        column.x,
-        LAYOUT.chartPaddingTop,
-        getColumnWidth(),
-        getGraphHeight()
-      );
-
-    }
-
+    ctx.setLineDash([]);
+    ctx.lineWidth = 1;
   });
-
 }
 
-function drawSelectedColumn(
-  ctx,
-  columns
-) {
+function drawCycleSeparators(ctx, cycleGroups) {
+  cycleGroups.slice(1).forEach(group => {
+    const firstColumn = group.columns[0];
 
-  if (!store.selectedColumnKey) {
-    return;
-  }
-
-  const column =
-    columns.find(
-      x =>
-        x.key ===
-        store.selectedColumnKey
-    );
-
-  if (!column) {
-    return;
-  }
-
-  ctx.fillStyle =
-    "rgba(37,99,235,0.08)";
-
-  ctx.fillRect(
-    column.x,
-    0,
-    getColumnWidth(),
-    LAYOUT.chartHeight
-  );
-
-}
-
-function drawHoverLine(
-  ctx,
-  columns
-) {
-
-  if (!store.hoveredColumnKey) {
-    return;
-  }
-
-  const column =
-    columns.find(
-      x =>
-        x.key ===
-        store.hoveredColumnKey
-    );
-
-  if (!column) {
-    return;
-  }
-
-  ctx.beginPath();
-
-  ctx.strokeStyle =
-    "rgba(37,99,235,0.45)";
-
-  ctx.moveTo(
-    column.centerX,
-    0
-  );
-
-  ctx.lineTo(
-    column.centerX,
-    LAYOUT.chartHeight
-  );
-
-  ctx.stroke();
-
-}
-
-function drawTemperatureLine(
-  ctx,
-  columns
-) {
-
-  const valid =
-    columns.filter(
-      column =>
-        column.temp != null
-    );
-
-  if (valid.length < 2) {
-    return;
-  }
-
-  ctx.beginPath();
-
-  valid.forEach((column, index) => {
-
-    const x =
-      column.centerX;
-
-    const y =
-      getChartY(column.temp);
-
-    if (index === 0) {
-
-      ctx.moveTo(x, y);
-
-      return;
-
-    }
-
-    ctx.lineTo(x, y);
-
-  });
-
-  ctx.strokeStyle = "#111";
-  ctx.lineWidth = 2;
-
-  ctx.stroke();
-
-}
-
-function drawTemperaturePoints(
-  ctx,
-  columns
-) {
-
-  columns.forEach(column => {
-
-    if (column.temp == null) {
-      return;
-    }
+    const x = firstColumn.x - 0.5;
 
     ctx.beginPath();
 
-    ctx.arc(
-      column.centerX,
-      getChartY(column.temp),
-      4,
-      0,
-      Math.PI * 2
-    );
+    ctx.strokeStyle = "rgba(0,0,0,0.22)";
+    ctx.lineWidth = 2;
 
-    ctx.fillStyle =
-      store.selectedColumnKey ===
-      column.key
-        ? "#2563eb"
-        : "#111";
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, LAYOUT.chartHeight);
 
-    ctx.fill();
-
+    ctx.stroke();
   });
-
 }
 
-function drawCoverline(
-  ctx,
-  cycle
-) {
+function drawTemperatureLine(ctx, cycleGroups) {
+  cycleGroups.forEach(group => {
+    const valid =
+      group.columns.filter(c => c.temp != null);
 
-  const overlays =
-    buildOverlays(cycle.days);
+    if (valid.length < 2) return;
 
-  if (
-    overlays.coverline == null
-  ) {
-    return;
-  }
+    ctx.beginPath();
 
-  const y =
-    getChartY(
-      overlays.coverline
-    );
+    valid.forEach((col, i) => {
+      if (i === 0) {
+        ctx.moveTo(
+          col.centerX,
+          chartY(col.temp)
+        );
 
-  ctx.beginPath();
+        return;
+      }
 
-  ctx.setLineDash([6, 4]);
+      ctx.lineTo(
+        col.centerX,
+        chartY(col.temp)
+      );
+    });
 
-  ctx.strokeStyle =
-    "rgba(220,38,38,0.7)";
+    ctx.strokeStyle = "#111";
+    ctx.lineWidth = 2;
 
-  ctx.moveTo(0, y);
+    ctx.stroke();
+  });
 
-  ctx.lineTo(
-    ctx.canvas.width,
-    y
-  );
+  ctx.lineWidth = 1;
+}
 
-  ctx.stroke();
+function drawTemperaturePoints(ctx, columns) {
+  columns.forEach(col => {
+    if (col.temp == null) return;
+    ctx.beginPath();
+    ctx.arc(col.centerX, chartY(col.temp), 4, 0, Math.PI * 2);
+    ctx.fillStyle = store.selectedKey === col.key ? "#2563eb" : "#111";
+    ctx.fill();
+  });
+}
+function groupColumnsByCycle(columns) {
+  const groups = [];
 
-  ctx.setLineDash([]);
+  columns.forEach(column => {
+    const lastGroup = groups[groups.length - 1];
 
+    if (!lastGroup || lastGroup.id !== column.cycleId) {
+      groups.push({
+        id: column.cycleId,
+        columns: [column],
+      });
+
+      return;
+    }
+
+    lastGroup.columns.push(column);
+  });
+
+  return groups;
 }
 
 function renderChart(columns) {
+  const canvas = qs("tempChart");
+  if (!canvas) return;
 
-  const canvas =
-    qs("tempChart");
+  const width = chartWidth(columns);
+  const dpr   = window.devicePixelRatio || 1;
+  const ctx   = canvas.getContext("2d");
+  const cycleGroups =
+    groupColumnsByCycle(columns);
 
-  if (!canvas) {
-    return;
-  }
+    console.log("Cycle groups", cycleGroups);
 
-  const width =
-    getChartWidth(columns);
+  canvas.style.width  = `${width}px`;
+  canvas.style.height = `${LAYOUT.chartHeight}px`;
+  canvas.width        = width * dpr;
+  canvas.height       = LAYOUT.chartHeight * dpr;
 
-  const ctx =
-    canvas.getContext("2d");
-
-  const dpr =
-    window.devicePixelRatio || 1;
-
-  canvas.style.width =
-    `${width}px`;
-
-  canvas.style.height =
-    `${LAYOUT.chartHeight}px`;
-
-  canvas.width =
-    width * dpr;
-
-  canvas.height =
-    LAYOUT.chartHeight * dpr;
-
-  ctx.setTransform(
-    1, 0, 0, 1, 0, 0
-  );
-
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, width, LAYOUT.chartHeight);
 
-  ctx.clearRect(
-    0,
-    0,
-    width,
-    LAYOUT.chartHeight
-  );
-
-  drawSelectedColumn(
-    ctx,
-    columns
-  );
-
-  drawOverlayLayer(
-    ctx,
-    columns
-  );
-
-  drawVerticalGrid(
-    ctx,
-    columns
-  );
-
-  drawHorizontalGrid(ctx);
-
-  drawHoverLine(
-    ctx,
-    columns
-  );
-
-  drawTemperatureLine(
-    ctx,
-    columns
-  );
-
-  drawTemperaturePoints(
-    ctx,
-    columns
-  );
-
-  const cycle =
-    getLatestCycle();
-
-  if (cycle) {
-
-    drawCoverline(
-      ctx,
-      cycle
-    );
-
-  }
-
+  // draw order matters: bg → overlays → grid → annotations → data
+  drawSelectedHighlight(ctx, columns);
+  drawOverlayBands(ctx, columns);
+  drawVerticalGrid(ctx, columns);
+  drawHorizontalGrid(ctx, width);
+  drawCycleSeparators(ctx, cycleGroups);
+  drawHoverLine(ctx, columns);
+  drawCoverlines(ctx, columns);
+  drawTemperatureLine(ctx, cycleGroups);
+  drawTemperaturePoints(ctx, columns);
 }
 
-/* modal */
+/* ─── modal ───────────────────────────────── */
 
-function updateUI() {
-
-  qsa(".segmented")
-    .forEach(group => {
-
-      const name =
-        group.dataset.group;
-
-      group
-        .querySelectorAll("button")
-        .forEach(button => {
-
-          const value =
-            button.dataset.value;
-
-          if (name === "sediment") {
-
-            button.classList.toggle(
-              "active",
-              String(
-                store.modal.sediment
-              ) === value
-            );
-
-            return;
-
-          }
-
-          button.classList.toggle(
-            "active",
-            store.modal[name] === value
-          );
-
-        });
-
+function syncModalUI() {
+  qsa(".segmented").forEach(group => {
+    const name = group.dataset.group;
+    group.querySelectorAll("button").forEach(btn => {
+      const active = name === "sediment"
+        ? String(store.modal.sediment) === btn.dataset.value
+        : store.modal[name] === btn.dataset.value;
+      btn.classList.toggle("active", active);
     });
-
+  });
 }
 
 function openModal() {
+  if (!store.selectedKey) return;
 
-  if (!store.selectedColumnKey) {
-    return;
-  }
-
-  const key =
-    store.selectedColumnKey;
-
-  const data =
-    store.entries[key] || {};
-
-  const column =
-    currentColumns.find(
-      x => x.key === key
-    );
+  const key    = store.selectedKey;
+  const data   = store.entries[key] || {};
+  const column = currentColumns.find(c => c.key === key);
 
   store.modal = {
-    temp: data.temp ?? null,
-    bleeding: data.bleeding ?? "none",
+    temp:      data.temp      ?? null,
+    bleeding:  data.bleeding  ?? "none",
     discharge: data.discharge ?? "none",
-    sediment: data.sediment ?? false,
-    other: data.other ?? ""
+    sediment:  data.sediment  ?? false,
+    other:     data.other     ?? "",
   };
 
-  qs("modalTitle").innerText =
-    `${key} (CD ${column?.cycleDay || "-"})`;
+  qs("modalTitle").innerText = `${key} (CD ${column?.cycleDay ?? "-"})`;
+  qs("tempInput").value      = store.modal.temp != null ? Number(store.modal.temp).toFixed(2) : "";
+  qs("otherInput").value     = store.modal.other;
 
-  qs("tempInput").value =
-    store.modal.temp != null
-      ? Number(store.modal.temp).toFixed(2)
-      : "";
+  syncModalUI();
 
-  qs("otherInput").value =
-    store.modal.other;
-
-  updateUI();
-
-  qs("modal")
-    .classList
-    .remove("hidden");
-
-  setTimeout(() => {
-
-    qs("modal")
-      .classList
-      .add("show");
-
-  }, 10);
-
+  const modal = qs("modal");
+  modal.classList.remove("hidden");
+  requestAnimationFrame(() => modal.classList.add("show"));
 }
 
 function closeModal() {
-
-  qs("modal")
-    .classList
-    .remove("show");
-
-  setTimeout(() => {
-
-    qs("modal")
-      .classList
-      .add("hidden");
-
-  }, 200);
-
+  const modal = qs("modal");
+  modal.classList.remove("show");
+  modal.addEventListener("transitionend", () => modal.classList.add("hidden"), { once: true });
 }
 
 function validateTempInput() {
-
-  const raw =
-    qs("tempInput")
-      ?.value
-      .trim();
-
-  if (raw === "") {
-    return true;
-  }
-
-  const value =
-    parseFloat(raw);
-
-  return (
-    !isNaN(value) &&
-    isValidTemp(value)
-  );
-
+  const raw = qs("tempInput")?.value.trim();
+  if (!raw) return true;
+  const value = parseFloat(raw);
+  return !isNaN(value) && isValidTemp(value);
 }
 
-/* render */
+function saveModal() {
+  if (!store.selectedKey || !validateTempInput()) return;
+
+  const temp = parseFloat(qs("tempInput").value);
+  store.modal.temp  = isNaN(temp) ? null : temp;
+  store.modal.other = qs("otherInput").value.trim();
+
+  store.entries[store.selectedKey] = {
+    ...(store.entries[store.selectedKey] || {}),
+    ...store.modal,
+  };
+
+  store.save();
+  closeModal();
+  setTimeout(render, 200);
+}
+
+/* ─── top-level render ────────────────────── */
 
 function render() {
-
   renderMonth();
-
   renderCalendar();
-
   renderTempScale();
-
-  const cycle =
-    getLatestCycle();
-
-  currentColumns =
-    buildCycleColumns(cycle);
-
-  renderMapRows(
-    currentColumns
-  );
-
-  renderChart(
-    currentColumns
-  );
-
+  currentColumns = buildColumns();
+  renderMapRows(currentColumns);
+  renderChart(currentColumns);
   renderInfo();
-
-}
-/* reset */
-
-function resetApp() {
-
-  localStorage.removeItem(
-    "cycleData"
-  );
-
-  store.entries = {};
-
-  store.selectedColumnKey = null;
-
-  store.hoveredColumnKey = null;
-
-  const now = new Date();
-
-  store.month =
-    now.getMonth();
-
-  store.year =
-    now.getFullYear();
-
-  render();
-
 }
 
-/* init */
+/* ─── init ────────────────────────────────── */
 
 function init() {
-
-  syncLayoutVariables();
-
-  qs("tempInput").oninput =
-    validateTempInput;
+  syncCSSVariables();
 
   qs("prevMonth").onclick = () => {
-
     store.month--;
-
-    if (store.month < 0) {
-
-      store.month = 11;
-
-      store.year--;
-
-    }
-
+    if (store.month < 0) { store.month = 11; store.year--; }
     render();
-
   };
 
   qs("nextMonth").onclick = () => {
-
     store.month++;
-
-    if (store.month > 11) {
-
-      store.month = 0;
-
-      store.year++;
-
-    }
-
+    if (store.month > 11) { store.month = 0; store.year++; }
     render();
-
   };
 
-  qs("editBtn").onclick =
-    openModal;
+  qs("editBtn").onclick  = openModal;
+  qs("closeBtn").onclick = closeModal;
+  qs("saveBtn").onclick  = saveModal;
 
-  qs("closeBtn").onclick =
-    closeModal;
+  qs("tempInput").oninput = validateTempInput;
 
-  qs("saveBtn").onclick = () => {
-
-    if (!store.selectedColumnKey) {
-      return;
-    }
-
-    if (!validateTempInput()) {
-      return;
-    }
-
-    const key =
-      store.selectedColumnKey;
-
-    const temp =
-      parseFloat(
-        qs("tempInput").value
-      );
-
-    store.modal.temp =
-      isNaN(temp)
-        ? null
-        : temp;
-
-    store.modal.other =
-      qs("otherInput")
-        .value
-        .trim();
-
-    store.entries[key] = {
-      ...(store.entries[key] || {}),
-      ...store.modal
+  qsa(".segmented button").forEach(btn => {
+    btn.onclick = () => {
+      const group = btn.parentElement.dataset.group;
+      const value = btn.dataset.value;
+      if (group === "sediment") {
+        store.modal.sediment = value === "true";
+      } else {
+        store.modal[group] = value;
+      }
+      syncModalUI();
     };
+  });
 
-    store.save();
-
-    closeModal();
-
-    setTimeout(() => {
-      render();
-    }, 200);
-
-  };
-
-  qsa(".segmented button")
-    .forEach(button => {
-
-      button.onclick = () => {
-
-        const group =
-          button.parentElement
-            .dataset.group;
-
-        const value =
-          button.dataset.value;
-
-        if (group === "sediment") {
-
-          store.modal.sediment =
-            value === "true";
-
-        } else {
-
-          store.modal[group] =
-            value;
-
-        }
-
-        updateUI();
-
-      };
-
-    });
-
-  qs("devReset").onclick =
-    resetApp;
-
+  qs("devReset").onclick = () => { store.reset(); render(); };
 }
 
-/* boot */
+/* ─── boot ────────────────────────────────── */
 
-document.addEventListener(
-  "DOMContentLoaded",
-  () => {
-
-    init();
-
-    render();
-
-  }
-);
+document.addEventListener("DOMContentLoaded", () => {
+  init();
+  render();
+});
