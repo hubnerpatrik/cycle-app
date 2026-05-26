@@ -1,115 +1,141 @@
-# Cycle Tracker (Demo)
+# Cycle Tracker
 
-A minimalist web application for manual cycle tracking based on the symptothermal method.
+Educational symptothermal cycle tracking application focused on interpretation, visualization and information clarity.
 
-The goal is not automatic evaluation, but to provide tools that allow the user to interpret their own data.
+The application is designed as a visual observation tool, not an automated fertility evaluator.  
+Its purpose is to support manual interpretation while preserving ambiguity, context and user judgment.
+
+---
+
+## Philosophy
+
+The project is built around several core ideas:
+
+- interpretation over automation
+- visualization over prediction
+- information density over simplified dashboards
+- user judgment over algorithmic authority
+- transparency over hidden calculations
+
+The cycle map acts as a working surface for observation and interpretation rather than a decision engine.
+
+The goal is not to tell the user what their cycle means, but to provide a structured environment where observations can be analyzed manually.
+
+---
+
+## Core Concepts
+
+### Cycle Map First
+
+The cycle map is the primary layer of the application.
+
+Instead of separating observations into disconnected screens, the project focuses on a shared timeline structure inspired by:
+- paper symptothermal charts
+- spreadsheets
+- long-form observation tracking
+
+The calendar exists mainly as:
+- navigation
+- quick editing
+- secondary overview
+
+---
+
+### Manual Interpretation
+
+The application intentionally avoids automatic fertility evaluation.
+
+The user manually defines:
+- fertile window
+- peak day
+- coverline
+- interpretation context
+
+Visual overlays exist only as interpretation aids.
+
+The system does not attempt to replace symptothermal reasoning with automated conclusions.
+
+---
+
+### Information Structure
+
+The UI prioritizes:
+- clarity
+- consistency
+- low visual noise
+- dense but readable information
+
+The project avoids:
+- excessive dashboard styling
+- oversized mobile-app UI patterns
+- aggressive automation
+- gamification
 
 ---
 
 ## Features
 
+### Cycle Tracking
+
+Daily observations include:
+- basal body temperature
+- bleeding
+- discharge / mucus observations
+- peak marker
+- fertile range markers
+- anomaly markers (planned)
+
+All observations are manually editable.
+
+---
+
+### Visualization System
+
+The chart is designed as an interpretation surface rather than a statistics display.
+
+Features include:
+- temperature line visualization
+- shared cycle timeline
+- fertile overlays
+- peak indicators
+- coverline rendering
+- cycle segmentation
+- tooltip-based observation detail
+
+The visualization system is built around layered overlays instead of isolated widgets.
+
+---
+
+### Manual Coverline
+
+The coverline is manually placed by the user.
+
+The project intentionally avoids automatic temperature shift detection in order to preserve:
+- interpretive flexibility
+- educational value
+- symptothermal methodology principles
+
+---
+
 ### Calendar
 
-* 30-day cycle overview
-* Color coding:
+The calendar acts as a secondary interaction layer.
 
-  * Red → menstruation
-  * Green → manually selected fertile range
-  * Yellow → data exists but not marked as fertile
-* Day selection via click
-* Peak day indicated with a small marker
+It provides:
+- navigation
+- quick day selection
+- editing access
+- compact cycle overview
 
----
-
-### Day Detail (Info Panel)
-
-Displays data for the selected day:
-
-* temperature
-* bleeding
-* discharge
-
----
-
-### Edit Modal
-
-Manual input for:
-
-* temperature (text input)
-* bleeding (none / spotting / menstruation)
-* discharge (none / dry / moist / wet)
-* peak marker (toggle)
-
-All data is stored in localStorage.
-
----
-
-### Temperature Chart (Canvas)
-
-#### Visualization
-
-* line chart of temperatures
-* grid (minor + major lines)
-* axes:
-
-  * X → days
-  * Y → temperature (°C)
-
-#### Interaction
-
-* click on chart → select day
-* hover → tooltip with:
-
-  * day
-  * temperature
-  * bleeding
-  * discharge
-  * peak status
-
-#### Points
-
-* normal → black
-* selected → blue + ring
-* peak → red circle
-
----
-
-### Fertile Range
-
-* manual range selection (range modal)
-* visualization:
-
-  * calendar → green days
-  * chart → green background
-
----
-
-### Coverline (Manual)
-
-* SHIFT + click on chart sets coverline
-* displayed as dashed horizontal line
-* used for manual interpretation of temperature shift
-
----
-
-### Tooltip
-
-* custom DOM-based tooltip (not browser default)
-* follows cursor
-* displays detailed point data
-
----
-
-### Dev Tools
-
-* Dev reset → clears all stored data
-* Seed → generates test data
+The calendar is not intended to replace the cycle map as the primary source of interpretation.
 
 ---
 
 ## Data Model
 
-Data is stored in localStorage as:
+Cycle observations are currently stored locally using localStorage.
+
+Example structure:
 
 ```json
 {
@@ -122,57 +148,18 @@ Data is stored in localStorage as:
   }
 }
 ```
+## Current Status
 
----
+Prototype / experimental project.
 
-## Design Principles
+The project is primarily focused on:
 
-* no automatic fertility evaluation
-* user-driven interpretation:
+UI experimentation
+visualization systems
+symptothermal interpretation workflows
+long-term architecture iteration
 
-  * peak is marked manually
-  * fertile window is selected manually
-  * coverline is set manually
-
-The chart acts as a visual tool, not a decision engine.
-
----
-
-## Current Limitations
-
-* no backend (localStorage only)
-* fixed 30-day cycle
-* coverline only via click (no drag)
-* basic tooltip styling
-* no strict input validation
-
----
-
-## Next Steps 
-
-* draggable coverline
-* ovulation marker (vertical line)
-* temperature validation
-* export / import functionality
-* separation of data vs analysis layer
-* mobile UX improvements
-
----
-
-## Tech Stack
-
-* Vanilla JavaScript
-* HTML5 Canvas
-* CSS (Inter font)
-
----
-
-## Goal
-
-To build a simple, transparent cycle tracking tool that respects the principles of the symptothermal method without automating interpretation.
-
----
-
-## Status
-
-Prototype / Demo (functional, not production-ready)
+##Tech Stack
+JavaScript
+HTML5 Canvas
+CSS
