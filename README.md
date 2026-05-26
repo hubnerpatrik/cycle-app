@@ -74,9 +74,9 @@ The project avoids:
 
 ---
 
-## Features
+## Features  
 
-### Cycle Tracking
+### Cycle Tracking (WORK IN PROGRESS)
 
 Daily observations include:
 - basal body temperature
@@ -90,7 +90,7 @@ All observations are manually editable.
 
 ---
 
-### Visualization System
+### Visualization System (WORK IN PROGRESS)
 
 The chart is designed as an interpretation surface rather than a statistics display.
 
@@ -107,7 +107,7 @@ The visualization system is built around layered overlays instead of isolated wi
 
 ---
 
-### Manual Coverline
+### Manual Coverline (WORK IN PROGRESS)
 
 The coverline is manually placed by the user.
 
