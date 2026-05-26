@@ -6,6 +6,7 @@ The application is designed as a visual observation tool, not an automated ferti
 Its purpose is to support manual interpretation while preserving ambiguity, context and user judgment.
 
 ---
+<img width="1920" height="999" alt="Screenshot 2026-05-26 at 13-22-36 Cycle Tracker" src="https://github.com/user-attachments/assets/11f76ad6-d6eb-4ffe-b15c-26871f81c77c" />
 
 ## Philosophy
 
