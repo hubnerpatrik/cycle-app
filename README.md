@@ -111,7 +111,7 @@ The visualization system is built around layered overlays instead of isolated wi
 
 ---
 
-### Manual Coverline (WORK IN PROGRESS)
+### Manual Coverline 
 
 The coverline is manually placed by the user.
 
