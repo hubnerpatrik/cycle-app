@@ -1,4 +1,3 @@
-
 :root{
   --bg:#f3f4f6;
   --card:#ffffff;
@@ -17,14 +16,18 @@
   --chart-height:260px;
 }
 
+/* ─── reset ──────────────────────────────── */
+
 *{
   box-sizing:border-box;
 }
 
 body{
   margin:0;
+
   background:var(--bg);
   color:var(--text);
+
   font-family:'Inter',sans-serif;
 }
 
@@ -33,8 +36,11 @@ input{
   font-family:'Inter',sans-serif;
 }
 
+/* ─── app layout ─────────────────────────── */
+
 .app{
   max-width:1100px;
+
   margin:auto;
   padding:28px 18px;
 }
@@ -46,29 +52,41 @@ input{
 }
 
 .calendar-card,
-.info-card,
-.chart-card{
+.chart-card,
+.info-card{
   background:var(--card);
-  border-radius:12px;
-  padding:18px;
+
   border:1px solid #e5e7eb;
+  border-radius:12px;
 }
+
+/* ─── typography ─────────────────────────── */
 
 h1{
   margin:0 0 18px;
+
   font-size:22px;
   font-weight:600;
+}
+
+/* ─── calendar ───────────────────────────── */
+
+.calendar-card{
+  padding:18px;
 }
 
 .calendar-nav{
   display:grid;
   grid-template-columns:40px 1fr 40px;
+
   align-items:center;
+
   margin-bottom:10px;
 }
 
 #monthLabel{
   text-align:center;
+
   font-size:16px;
   font-weight:600;
 }
@@ -88,6 +106,7 @@ h1{
 #calendar{
   display:grid;
   grid-template-columns:repeat(7,1fr);
+
   gap:8px;
 }
 
@@ -105,10 +124,13 @@ h1{
   cursor:pointer;
 
   font-size:13px;
+
+  transition:0.15s;
 }
 
 .day.selected{
-  box-shadow:0 0 0 2px rgba(37,99,235,0.6);
+  box-shadow:
+    0 0 0 2px rgba(37,99,235,0.55);
 }
 
 .day.red{
@@ -116,10 +138,12 @@ h1{
   color:white;
 }
 
-.day.green{
+.day.fertile-day{
   background:rgba(34,197,94,0.75);
   color:white;
 }
+
+/* ─── legend ─────────────────────────────── */
 
 .legend{
   display:flex;
@@ -152,30 +176,62 @@ h1{
   background:var(--green);
 }
 
+/* ─── info panel ─────────────────────────── */
+
 .info-card{
   display:flex;
   flex-direction:column;
+
+  padding:18px;
 }
 
-.info-card h2{
-  margin:2px 0 18px;
+.info-title{
+  margin:0 0 22px;
+
   font-size:16px;
+  font-weight:700;
+
+  color:#0f172a;
 }
 
-.info-row{
+.info-panel{
   display:flex;
-  justify-content:space-between;
+  flex-direction:column;
+  gap:18px;
 
-  margin-bottom:14px;
+  flex:1;
+}
 
-  font-size:14px;
+.info-group{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.info-label{
+  font-size:11px;
+  font-weight:700;
+
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+
+  color:#64748b;
+}
+
+.info-value{
+  min-height:18px;
+
+  font-size:15px;
+  line-height:1.35;
+
+  color:#111827;
 }
 
 .edit-btn{
-  margin-top:auto;
+  margin-top:24px;
 
   width:100%;
-  height:36px;
+  height:38px;
 
   border:none;
   border-radius:8px;
@@ -186,17 +242,23 @@ h1{
   cursor:pointer;
 }
 
+/* ─── chart card ─────────────────────────── */
+
 .chart-card{
   margin-top:16px;
+
+  padding:18px;
 }
 
-.cycle-map{
-  border:1px solid #cfd8e3;
-  border-radius:10px;
+/* ─── cycle map ──────────────────────────── */
 
+.cycle-map{
   overflow:hidden;
 
   background:white;
+
+  border:1px solid #cfd8e3;
+  border-radius:10px;
 
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.9),
@@ -210,8 +272,54 @@ h1{
 
 .map-grid{
   min-width:max-content;
+
   align-items:start;
 }
+
+/* ─── chart tools ────────────────────────── */
+
+.chart-tools{
+  display:flex;
+  gap:10px;
+
+  margin-bottom:14px;
+}
+
+.tool-btn{
+  height:34px;
+
+  padding:0 14px;
+
+  border:1px solid #d7dee7;
+  border-radius:8px;
+
+  background:#f8fafc;
+
+  color:#334155;
+
+  cursor:pointer;
+
+  font-size:13px;
+  font-weight:500;
+
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.tool-btn:hover{
+  background:#eef2f7;
+}
+
+.tool-btn.active{
+  background:#dbeafe;
+
+  border-color:#93c5fd;
+
+  color:#1d4ed8;
+}
+/* ─── map structure ──────────────────────── */
 
 .map-header-row{
   display:grid;
@@ -238,8 +346,6 @@ h1{
 
   min-height:var(--chart-height);
   max-height:var(--chart-height);
-
-  background:white;
 }
 
 .map-row{
@@ -252,13 +358,12 @@ h1{
 
   height:26px;
 
-  min-height:26px;
-  max-height:26px;
-
   border-bottom:1px solid #edf2f7;
 
   overflow:hidden;
 }
+
+/* ─── side labels ────────────────────────── */
 
 .map-side-label{
   position:sticky;
@@ -279,8 +384,6 @@ h1{
   font-weight:600;
 
   color:#64748b;
-
-  letter-spacing:0.01em;
 }
 
 .map-temp-spacer{
@@ -290,11 +393,13 @@ h1{
   z-index:4;
 
   background:
-    linear-gradient(to right, #f8fafc 0%, #ffffff 100%);
+    linear-gradient(
+      to right,
+      #f8fafc 0%,
+      #ffffff 100%
+    );
 
   border-right:1px solid #dbe4ee;
-
-  height:26px;
 }
 
 .temp-scale-column{
@@ -307,22 +412,23 @@ h1{
   height:var(--chart-height);
 
   background:
-    linear-gradient(to right, #f8fafc 0%, #ffffff 100%);
+    linear-gradient(
+      to right,
+      #f8fafc 0%,
+      #ffffff 100%
+    );
 
   border-right:1px solid #cfd8e3;
-
-  box-shadow:
-    inset -1px 0 0 rgba(255,255,255,0.8);
 }
 
 .temp-scale-label{
   position:absolute;
 
-  right:8px;
+  right:12px;
 
   transform:translateY(-50%);
 
-  font-size:11px;
+  font-size:12px;
   font-weight:600;
 
   color:#475569;
@@ -331,6 +437,8 @@ h1{
 
   pointer-events:none;
 }
+
+/* ─── map cells ──────────────────────────── */
 
 .map-days,
 .map-cells{
@@ -353,17 +461,17 @@ h1{
   align-items:center;
   justify-content:center;
 
+  position:relative;
+
   border-right:1px solid #eef3f8;
 
   font-size:10px;
-
-  position:relative;
 }
 
 .map-day{
   background:#f8fafc;
-  color:#64748b;
 
+  color:#64748b;
   font-weight:500;
 }
 
@@ -372,60 +480,11 @@ h1{
   border-right:1px solid #d8e1ea;
 }
 
-.map-chart-area{
-  position:relative;
-  overflow:hidden;
-
-  height:var(--chart-height);
-
-  background:
-    repeating-linear-gradient(
-      to bottom,
-      rgba(148,163,184,0.035) 0,
-      rgba(148,163,184,0.035) 1px,
-      transparent 1px,
-      transparent 34px
-    ),
-    repeating-linear-gradient(
-      to bottom,
-      rgba(100,116,139,0.16) 0,
-      rgba(100,116,139,0.16) 1px,
-      transparent 1px,
-      transparent 68px
-    ),
-    repeating-linear-gradient(
-      to right,
-      rgba(148,163,184,0.07) 0,
-      rgba(148,163,184,0.07) 1px,
-      transparent 1px,
-      transparent var(--column-width)
-    );
-}
-
-.map-chart-area::after{
-  content:'';
-
-  position:absolute;
-  inset:0;
-
-  background:
-    linear-gradient(
-      to bottom,
-      rgba(255,255,255,0.25),
-      rgba(255,255,255,0)
-    );
-
-  pointer-events:none;
-}
-
-#tempChart{
-  display:block;
-  image-rendering:auto;
-}
-
 .selected-column{
   background:rgba(37,99,235,0.08);
 }
+
+/* ─── cell states ────────────────────────── */
 
 .map-cell.period{
   color:#dc2626;
@@ -444,6 +503,8 @@ h1{
   box-shadow:
     inset 0 -2px 0 rgba(168,85,247,0.7);
 }
+
+/* ─── modal ──────────────────────────────── */
 
 .modal{
   position:fixed;
@@ -466,53 +527,120 @@ h1{
   pointer-events:auto;
 }
 
+.hidden{
+  display:none;
+}
+
 .modal-card{
-  width:320px;
+  width:340px;
 
   background:white;
 
-  border-radius:12px;
+  border-radius:14px;
 
-  padding:18px;
+  padding:22px;
 
+  display:flex;
+  flex-direction:column;
+  gap:22px;
+}
+
+.modal-section{
   display:flex;
   flex-direction:column;
   gap:10px;
 }
 
-.hidden{
-  display:none;
+.section-title,
+.input-label{
+  font-size:12px;
+  font-weight:700;
+
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+
+  color:#64748b;
 }
 
-input{
+select{
   width:100%;
-  height:36px;
+  height:38px;
 
-  padding:0 10px;
+  padding:0 12px;
 
   border:1px solid #dbe1e8;
   border-radius:8px;
+
+  background:white;
+
+  font-size:14px;
 }
 
-.segmented{
+/* ─── form elements ──────────────────────── */
+
+input{
+  width:100%;
+  height:38px;
+
+  padding:0 12px;
+
+  border:1px solid #dbe1e8;
+  border-radius:8px;
+
+  font-size:14px;
+}
+
+.checkbox-group{
   display:flex;
-  gap:6px;
-  flex-wrap:wrap;
+  flex-direction:column;
+  gap:12px;
+}
+
+.checkbox-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.checkbox-row input{
+  width:18px;
+  height:18px;
+
+  margin:0;
+}
+
+/* ─── segmented buttons ──────────────────── */
+
+.segmented{
+  display:grid;
+  gap:8px;
+}
+
+.segmented.three{
+  grid-template-columns:repeat(3,1fr);
+}
+
+.segmented.four{
+  grid-template-columns:repeat(4,1fr);
+}
+
+.segmented.two{
+  grid-template-columns:repeat(2,1fr);
 }
 
 .segmented button{
-  flex:1;
-
-  min-height:34px;
+  min-height:36px;
 
   border:none;
-  border-radius:7px;
+  border-radius:8px;
 
   background:#f1f5f9;
 
   cursor:pointer;
 
   font-size:12px;
+
+  transition:0.15s;
 }
 
 .segmented button.active{
@@ -520,19 +648,23 @@ input{
   color:#1d4ed8;
 }
 
+/* ─── modal actions ──────────────────────── */
+
 .modal-actions{
   display:flex;
-  gap:8px;
+  gap:10px;
 }
 
 .btn{
   flex:1;
-  height:36px;
+  height:38px;
 
   border:none;
   border-radius:8px;
 
   cursor:pointer;
+
+  font-size:14px;
 }
 
 .btn.primary{
@@ -544,12 +676,15 @@ input{
   background:#e5e7eb;
 }
 
+/* ─── dev panel ──────────────────────────── */
+
 .dev-panel{
   margin-top:10px;
 }
 
 #devReset{
   height:28px;
+
   padding:0 10px;
 
   border:none;
@@ -559,6 +694,8 @@ input{
 
   font-size:11px;
 }
+
+/* ─── responsive ─────────────────────────── */
 
 @media (max-width:900px){
 

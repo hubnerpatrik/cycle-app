@@ -15,12 +15,12 @@ const qsa = selector => document.querySelectorAll(selector);
 /* ─── constants ───────────────────────────── */
 
 const LAYOUT = {
-  columnWidth:        36,
+  columnWidth:        50,
   sideLabelWidth:     68,
-  tempScaleWidth:     52,
-  chartHeight:        260,
-  chartPaddingTop:    20,
-  chartPaddingBottom: 24,
+  tempScaleWidth:     72,
+  chartHeight:        360,
+  chartPaddingTop:    12,
+  chartPaddingBottom: 8,
   minTemp:            36.0,
   maxTemp:            37.5,
 };
@@ -103,11 +103,17 @@ function syncCSSVariables() {
 class Store {
   constructor() {
     this.entries     = this._load();
+
     this.selectedKey = null;
     this.hoveredKey  = null;
+
     this.month       = new Date().getMonth();
     this.year        = new Date().getFullYear();
+
     this.modal       = this._emptyModal();
+
+    this.horizontalCoverlineMode = false;
+    this.verticalCoverlineMode = false;
   }
 
   _emptyModal() {
@@ -171,119 +177,20 @@ function resolveCycleDay(date, starts, fallbackIndex) {
   return fallbackIndex + 1;
 }
 
-/* ─── domain: cycle segmentation ──────────── */
+/* ─── domain: cycle ids ───────────────────── */
 
-function segmentCycles(days) {
-  if (!days.length) return [];
+function resolveCycleId(date) {
+  const starts = getCycleStartDates();
 
-  const cycles = [];
-  let currentCycle = null;
+  let cycleIndex = 0;
 
-  days.forEach((day, index) => {
-    const isMenstruation = day.bleeding === "menstruation";
-
-    const previousDay = days[index - 1];
-
-    const previousWasMenstruation =
-      previousDay?.bleeding === "menstruation";
-
-    const isCycleStart =
-      isMenstruation && !previousWasMenstruation;
-
-    if (!currentCycle || isCycleStart) {
-      currentCycle = {
-        id: `cycle-${cycles.length + 1}`,
-        startDate: day.date,
-        endDate: day.date,
-        entries: [],
-        overlays: null,
-      };
-      
-      cycles.push(currentCycle);
-    }
-
-    currentCycle.entries.push(day);
-    currentCycle.endDate = day.date;
-  });
-
-  return cycles.map(deriveCycleState);
-}
-
-/* ─── domain: overlays ────────────────────── */
-
-/**
- * Detect ovulation using the three-over-six thermal shift rule.
- * Returns the index of the first confirmed high temperature, or null.
- */
-function detectOvulationIndex(days) {
-  const temps = days.map(d => d.temp);
-
-  for (let i = CYCLE.ovulationLag; i < temps.length - 2; i++) {
-    const validLows = temps.slice(i - CYCLE.ovulationLag, i).filter(t => t != null);
-    if (validLows.length < CYCLE.minLowTemps) continue;
-
-    const cover = Math.max(...validLows) + CYCLE.coverlineShift;
-    const t1 = temps[i], t2 = temps[i + 1], t3 = temps[i + 2];
-
-    if (t1 != null && t2 != null && t3 != null && t1 > cover && t2 > cover && t3 > cover) {
-      return Math.max(0, i - 1);
+  for (let i = 0; i < starts.length; i++) {
+    if (normalize(starts[i]) <= normalize(date)) {
+      cycleIndex = i + 1;
     }
   }
-  return null;
-}
 
-/**
- * Build all overlay data for a flat days array.
- * Returns { fertile, threeHighs, peakPlusFour: Set<key>, coverline: number|null }
- */
-function buildOverlays(days) {
-  const fertile      = new Set();
-  const threeHighs   = new Set();
-  const peakPlusFour = new Set();
-  let   coverline    = null;
-
-  const ovIdx = detectOvulationIndex(days);
-
-  if (ovIdx != null) {
-    const windowStart = ovIdx - (CYCLE.ovulationLag - 1);
-    const lows = days.slice(windowStart, ovIdx + 1).map(d => d.temp).filter(t => t != null);
-
-    if (lows.length >= CYCLE.minLowTemps) {
-      coverline = Math.max(...lows) + CYCLE.coverlineShift;
-    }
-
-    for (let i = windowStart; i <= ovIdx; i++)     if (days[i]) fertile.add(days[i].key);
-    for (let i = ovIdx + 1; i <= ovIdx + 3; i++)   if (days[i]) threeHighs.add(days[i].key);
-  }
-
-  // Billings peak + 4
-  let peakIndex = -1;
-  days.forEach((day, i) => { if (day.discharge === "wet") peakIndex = i; });
-  if (peakIndex !== -1) {
-    for (let i = peakIndex; i <= peakIndex + 3; i++) if (days[i]) peakPlusFour.add(days[i].key);
-  }
-
-  return { fertile, threeHighs, peakPlusFour, coverline };
-}
-
-/* ─── domain: cycle interpretation ────────── */
-
-function deriveCycleState(cycle) {
-  const overlays = buildOverlays(cycle.entries);
-
-  return {
-    ...cycle,
-
-    derived: {
-      coverline: overlays.coverline,
-
-      fertileWindow: overlays.fertile,
-
-      threeHighs: overlays.threeHighs,
-
-      peakPlusFour: overlays.peakPlusFour,
-    },
-  };
+  return `cycle-${cycleIndex || 1}`;
 }
 
 /* ─── domain: timeline columns ────────────── */
@@ -293,61 +200,66 @@ let currentColumns = [];
 
 function buildColumns() {
   const keys = Object.keys(store.entries).sort();
-  if (!keys.length) return [];
+
+  if (!keys.length) {
+    return [];
+  }
 
   const starts = getCycleStartDates();
 
-  const days = keys.map((key, i) => {
-    const raw  = store.entries[key];
+  return keys.map((key, index) => {
+    const raw = store.entries[key];
+
     const date = parseDateKey(key);
+
     return {
       key,
       date,
-      cycleDay:  resolveCycleDay(date, starts, i),
-      temp:      raw.temp      ?? null,
-      bleeding:  raw.bleeding  ?? "none",
-      discharge: raw.discharge ?? "none",
-      sediment:  raw.sediment  ?? false,
-      other:     raw.other     ?? "",
+
+      index,
+
+      x: columnX(index),
+
+      centerX: columnCenterX(index),
+
+      cycleId: resolveCycleId(date),
+
+      cycleDay: resolveCycleDay(
+        date,
+        starts,
+        index
+      ),
+
+      temp:
+        raw.temp ?? null,
+
+      bleeding:
+        raw.bleeding ?? "none",
+
+      discharge:
+        raw.discharge ?? "none",
+
+      sediment:
+        raw.sediment ?? false,
+
+      other:
+        raw.other ?? "",
+
+      isFertile:
+        raw.isFertile ?? false,
+
+      isPeak:
+        raw.isPeak ?? false,
+      marker:
+        raw.marker ?? "",
+
+      manualCoverline:
+        raw.manualCoverline ?? null,
+
+      coverlineStart:
+        raw.coverlineStart ?? false,
     };
   });
-
-const cycles = segmentCycles(days);
-
-console.log("Cycles", cycles);
-
-let globalIndex = 0;
-
-return cycles.flatMap(cycle => {
-  return cycle.entries.map(day => {
-    const column = {
-      index: globalIndex,
-      x: columnX(globalIndex),
-      centerX: columnCenterX(globalIndex),
-
-      cycleId: cycle.id,
-
-      ...day,
-
-      overlays: {
-        fertile: cycle.derived.fertileWindow.has(day.key),
-
-        threeHigh:
-          cycle.derived.threeHighs.has(day.key),
-
-        peakPlusFour:
-          cycle.derived.peakPlusFour.has(day.key),
-
-        coverline:
-          cycle.derived.coverline,
-      },
-    };
-
-    globalIndex++;
-
-    return column;
-  });
-});
 }
 
 /* ─── state mutations ─────────────────────── */
@@ -370,10 +282,10 @@ function renderTempScale() {
   if (!scale) return;
   scale.innerHTML = "";
 
-  for (let temp = LAYOUT.maxTemp; temp >= LAYOUT.minTemp - 0.001; temp -= 0.5) {
+  for (let temp = LAYOUT.maxTemp; temp >= LAYOUT.minTemp - 0.001; temp -= 0.1) {
     const label       = document.createElement("div");
     label.className   = "temp-scale-label";
-    label.textContent = Number(temp).toFixed(1);
+    label.textContent = Number(temp).toFixed(2);
     label.style.top   = `${chartY(temp) - 9}px`;
     scale.appendChild(label);
   }
@@ -409,6 +321,8 @@ function renderCalendar() {
     div.textContent = d;
 
     if (entry?.bleeding === "menstruation") div.classList.add("red");
+    if (entry?.isFertile)
+      div.classList.add("fertile-day");
     if (store.selectedKey === key)          div.classList.add("selected");
 
     div.onclick = () => selectColumn(key);
@@ -419,24 +333,62 @@ function renderCalendar() {
 /* ─── render: info panel ──────────────────── */
 
 function renderInfo() {
+
   if (!store.selectedKey) {
-    qs("infoTitle").innerText     = "No day selected";
-    qs("infoTemp").innerText      = "-";
-    qs("infoBleeding").innerText  = "-";
-    qs("infoDischarge").innerText = "-";
+
+    qs("infoTitle").innerText =
+      "No day selected";
+
+    qs("infoTemp").innerText =
+      "-";
+
+    qs("infoBleeding").innerText =
+      "-";
+
+    qs("infoDischarge").innerText =
+      "-";
+
+    qs("infoSediment").innerText =
+      "-";
+
+    qs("infoOther").innerText =
+      "-";
+
     return;
   }
 
-  const key    = store.selectedKey;
-  const data   = store.entries[key] || {};
-  const column = currentColumns.find(c => c.key === key);
+  const data =
+    store.entries[store.selectedKey] || {};
 
-  qs("infoTitle").innerText     = `${key} (CD ${column?.cycleDay ?? "-"})`;
-  qs("infoTemp").innerText      = formatTemp(data.temp);
-  qs("infoBleeding").innerText  = data.bleeding  !== "none" ? data.bleeding  : "-";
-  qs("infoDischarge").innerText = data.discharge !== "none" ? data.discharge : "-";
+  const column =
+    currentColumns.find(
+      c => c.key === store.selectedKey
+    );
+
+  qs("infoTitle").innerText =
+    `${store.selectedKey} (CD ${column?.cycleDay ?? "-"})`;
+
+  qs("infoTemp").innerText =
+    data.temp ?? "-";
+
+  qs("infoBleeding").innerText =
+    data.bleeding !== "none"
+      ? data.bleeding
+      : "-";
+
+  qs("infoDischarge").innerText =
+    data.discharge !== "none"
+      ? data.discharge
+      : "-";
+
+  qs("infoSediment").innerText =
+    data.sediment
+      ? "yes"
+      : "-";
+
+  qs("infoOther").innerText =
+    data.other || "-";
 }
-
 /* ─── render: map rows ────────────────────── */
 
 function makeCell(text = "", ...classes) {
@@ -451,9 +403,18 @@ function attachColumnEvents(el, column) {
   el.onmouseleave = () => clearHover();
   el.onclick      = () => selectColumn(column.key);
 }
-
 function renderMapRows(columns) {
-  const rowIds = ["dayNumbers","cycleDayRow","mucusRow","bleedingRow","spottingRow","sedimentRow","otherRow"];
+
+  const rowIds = [
+    "dayNumbers",
+    "cycleDayRow",
+    "mucusRow",
+    "bleedingRow",
+    "spottingRow",
+    "sedimentRow",
+    "otherRow",
+  ];
+
   const rows   = Object.fromEntries(rowIds.map(id => [id, qs(id)]));
   const width  = chartWidth(columns);
 
@@ -476,12 +437,15 @@ function renderMapRows(columns) {
 
     // mucus
     const mucusCell = makeCell(
-      MUCUS_LABELS[col.discharge] || "", sel,
-      col.discharge === "wet"    ? "fertile"     : "",
-      col.overlays.peakPlusFour  ? "peak-helper" : ""
+      MUCUS_LABELS[col.discharge] || "",
+      sel,
+      col.isPeak
+        ? "peak-helper"
+        : ""
     );
-    attachColumnEvents(mucusCell, col);
-    rows.mucusRow.appendChild(mucusCell);
+      attachColumnEvents(mucusCell, col);
+
+      rows.mucusRow.appendChild(mucusCell);
 
     // bleeding
     const bleedCell = makeCell(
@@ -531,26 +495,53 @@ function drawVerticalGrid(ctx, columns) {
 }
 
 function drawHorizontalGrid(ctx, canvasWidth) {
-  const steps = Math.round((LAYOUT.maxTemp - LAYOUT.minTemp) * 10);
+  const steps = 15;
+
   for (let i = 0; i <= steps; i++) {
-    const y = Math.round(chartY(LAYOUT.minTemp + i / 10)) + 0.5;
+    const y =
+      Math.floor(
+        chartY(LAYOUT.minTemp + i / 10)
+      ) + 0.5;
+
     ctx.beginPath();
-    ctx.strokeStyle = i % 5 === 0 ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0.05)";
+
+    ctx.strokeStyle =
+      i % 5 === 0
+        ? "rgba(0,0,0,0.15)"
+        : "rgba(0,0,0,0.05)";
+
     ctx.moveTo(0, y);
     ctx.lineTo(canvasWidth, y);
+
     ctx.stroke();
   }
 }
 
 function drawOverlayBands(ctx, columns) {
   columns.forEach(col => {
-    if (col.overlays.fertile) {
-      ctx.fillStyle = "rgba(34,197,94,0.12)";
-      ctx.fillRect(col.x, LAYOUT.chartPaddingTop, LAYOUT.columnWidth, graphHeight());
+
+    if (col.isFertile) {
+      ctx.fillStyle =
+        "rgba(34,197,94,0.12)";
+
+      ctx.fillRect(
+        col.x,
+        LAYOUT.chartPaddingTop,
+        LAYOUT.columnWidth,
+        graphHeight()
+      );
     }
-    if (col.overlays.peakPlusFour) {
-      ctx.fillStyle = "rgba(168,85,247,0.08)";
-      ctx.fillRect(col.x, LAYOUT.chartPaddingTop, LAYOUT.columnWidth, graphHeight());
+
+    if (col.isPeak) {
+      ctx.fillStyle =
+        "rgba(168,85,247,0.10)";
+
+      ctx.fillRect(
+        col.x,
+        LAYOUT.chartPaddingTop,
+        LAYOUT.columnWidth,
+        graphHeight()
+      );
     }
   });
 }
@@ -574,53 +565,84 @@ function drawHoverLine(ctx, columns) {
   ctx.stroke();
 }
 
-function drawCoverlines(ctx, columns) {
-  const cycles = [];
+function drawHorizontalCoverline(ctx, columns) {
+  if (!columns.length) return;
 
-  columns.forEach(col => {
-    const lastCycle = cycles[cycles.length - 1];
+  const first =
+    columns.find(
+      c => c.manualCoverline != null
+    );
 
-    const currentCoverline =
-      col.overlays.coverline;
+  if (!first) return;
 
-    if (
-      !lastCycle ||
-      lastCycle.coverline !== currentCoverline
-    ) {
-      cycles.push({
-        coverline: currentCoverline,
-        columns: [col],
-      });
+  const coverline =
+    first.manualCoverline;
 
-      return;
-    }
+  const startX = 0;
 
-    lastCycle.columns.push(col);
-  });
+  const endX =
+    chartWidth(columns);
 
-  cycles.forEach(cycle => {
-    if (cycle.coverline == null) return;
+  ctx.beginPath();
 
-    const startX = cycle.columns[0].x;
+  ctx.setLineDash([6, 4]);
 
-    const endX =
-      cycle.columns[cycle.columns.length - 1].x +
-      LAYOUT.columnWidth;
+  ctx.strokeStyle =
+    "rgba(180,20,20,0.8)";
 
-    ctx.beginPath();
-    ctx.setLineDash([6, 4]);
+  ctx.lineWidth = 1.5;
 
-    ctx.strokeStyle = "rgba(220,38,38,0.7)";
-    ctx.lineWidth = 1.5;
+  ctx.moveTo(
+    startX,
+    chartY(coverline)
+  );
 
-    ctx.moveTo(startX, chartY(cycle.coverline));
-    ctx.lineTo(endX, chartY(cycle.coverline));
+  ctx.lineTo(
+    endX,
+    chartY(coverline)
+  );
 
-    ctx.stroke();
+  ctx.stroke();
 
-    ctx.setLineDash([]);
-    ctx.lineWidth = 1;
-  });
+  ctx.setLineDash([]);
+
+  ctx.lineWidth = 1;
+}
+
+function drawVerticalCoverline(ctx, columns) {
+
+  const active =
+    columns.find(
+      c => c.coverlineStart
+    );
+
+  if (!active) {
+    return;
+  }
+
+  ctx.beginPath();
+
+  ctx.setLineDash([6, 4]);
+
+  ctx.strokeStyle =
+    "rgba(180,20,20,0.8)";
+
+  ctx.lineWidth = 1.5;
+
+  ctx.moveTo(
+  active.centerX,
+  LAYOUT.chartPaddingTop
+);
+
+  ctx.lineTo(
+    active.centerX,
+    LAYOUT.chartHeight - LAYOUT.chartPaddingBottom
+  );
+  ctx.stroke();
+
+  ctx.setLineDash([]);
+
+  ctx.lineWidth = 1;
 }
 
 function drawCycleSeparators(ctx, cycleGroups) {
@@ -684,6 +706,35 @@ function drawTemperaturePoints(ctx, columns) {
     ctx.fill();
   });
 }
+
+function drawMarkers(ctx, columns) {
+
+  columns.forEach(col => {
+
+    if (
+      col.temp == null ||
+      !col.marker
+    ) {
+      return;
+    }
+
+    ctx.font =
+      "bold 14px Inter";
+
+    ctx.fillStyle =
+      "#dc2626";
+
+    ctx.textAlign =
+      "center";
+
+    ctx.fillText(
+      col.marker,
+      col.centerX,
+      chartY(col.temp) - 14
+    );
+  });
+}
+
 function groupColumnsByCycle(columns) {
   const groups = [];
 
@@ -733,22 +784,142 @@ function renderChart(columns) {
   drawHorizontalGrid(ctx, width);
   drawCycleSeparators(ctx, cycleGroups);
   drawHoverLine(ctx, columns);
-  drawCoverlines(ctx, columns);
+  drawHorizontalCoverline(ctx, columns);
+  drawVerticalCoverline(ctx, columns);
   drawTemperatureLine(ctx, cycleGroups);
   drawTemperaturePoints(ctx, columns);
+  drawMarkers(ctx, columns);
+  
+  canvas.onclick = event => {
+    if (
+      !store.horizontalCoverlineMode &&
+      !store.verticalCoverlineMode
+  ) {
+    return;
+  }
+  const rect = canvas.getBoundingClientRect();
+
+  const y =
+    event.clientY - rect.top;
+
+  const ratio =
+    (y - LAYOUT.chartPaddingTop) /
+    graphHeight();
+
+  const temp =
+    LAYOUT.maxTemp -
+    ratio * (LAYOUT.maxTemp - LAYOUT.minTemp);
+
+  const snappedTemp =
+    Math.round(temp * 20) / 20;
+
+  columns.forEach(col => {
+
+    if (!store.entries[col.key]) {
+      return;
+    }
+
+    store.entries[col.key].coverlineStart =
+      false;
+  });
+
+  const clickedColumn =
+    columns.find(col => {
+
+      return (
+        event.offsetX >= col.x &&
+        event.offsetX <= col.x + LAYOUT.columnWidth
+      );
+    });
+
+  if (!clickedColumn) {
+    return;
+  }
+
+  const existing =
+    store.entries[clickedColumn.key] || {};
+
+  store.entries[clickedColumn.key] = {
+    ...existing,
+  };
+
+  if (store.horizontalCoverlineMode) {
+
+    columns.forEach(col => {
+
+      if (!store.entries[col.key]) {
+        return;
+      }
+
+      store.entries[col.key].manualCoverline =
+        null;
+    });
+
+    store.entries[clickedColumn.key]
+      .manualCoverline = snappedTemp;
+  }
+
+  if (store.verticalCoverlineMode) {
+
+    columns.forEach(col => {
+
+      if (!store.entries[col.key]) {
+        return;
+      }
+
+      store.entries[col.key].coverlineStart =
+        false;
+    });
+
+    store.entries[clickedColumn.key]
+      .coverlineStart = true;
+  }
+
+  store.horizontalCoverlineMode = false;
+  store.verticalCoverlineMode = false;
+
+  qs("horizontalCoverlineBtn")
+    .classList.remove("active");
+
+  qs("verticalCoverlineBtn")
+    .classList.remove("active");
+  
+  qs("horizontalCoverlineBtn").innerText = "Set horizontal coverline";
+  qs("verticalCoverlineBtn").innerText = "Set vertical coverline";
+
+  store.save();
+
+  render();
+};
 }
 
 /* ─── modal ───────────────────────────────── */
 
 function syncModalUI() {
-  qsa(".segmented").forEach(group => {
-    const name = group.dataset.group;
-    group.querySelectorAll("button").forEach(btn => {
-      const active = name === "sediment"
-        ? String(store.modal.sediment) === btn.dataset.value
-        : store.modal[name] === btn.dataset.value;
-      btn.classList.toggle("active", active);
-    });
+
+  qsa(".segmented button").forEach(btn => {
+
+    const group =
+      btn.dataset.group;
+
+    let value =
+      btn.dataset.value;
+
+    if (value === "true") {
+      value = true;
+    }
+
+    if (value === "false") {
+      value = false;
+    }
+
+    const active =
+      store.modal[group] === value;
+
+    btn.classList.toggle(
+      "active",
+      active
+    );
   });
 }
 
@@ -765,11 +936,23 @@ function openModal() {
     discharge: data.discharge ?? "none",
     sediment:  data.sediment  ?? false,
     other:     data.other     ?? "",
+    isFertile: data.isFertile ?? false,
+    isPeak:    data.isPeak ?? false,
+    marker:    data.marker ?? "",
   };
 
   qs("modalTitle").innerText = `${key} (CD ${column?.cycleDay ?? "-"})`;
   qs("tempInput").value      = store.modal.temp != null ? Number(store.modal.temp).toFixed(2) : "";
   qs("otherInput").value     = store.modal.other;
+  qs("modalFertile").checked =
+    store.modal.isFertile;
+
+  qs("modalPeak").checked =
+    store.modal.isPeak;
+
+  qs("modalMarker").value =
+    store.modal.marker;
+
 
   syncModalUI();
 
@@ -797,6 +980,12 @@ function saveModal() {
   const temp = parseFloat(qs("tempInput").value);
   store.modal.temp  = isNaN(temp) ? null : temp;
   store.modal.other = qs("otherInput").value.trim();
+  store.modal.isFertile =
+    qs("modalFertile").checked;
+  store.modal.isPeak =
+    qs("modalPeak").checked;
+  store.modal.marker =
+    qs("modalMarker").value;
 
   store.entries[store.selectedKey] = {
     ...(store.entries[store.selectedKey] || {}),
@@ -818,6 +1007,7 @@ function render() {
   renderMapRows(currentColumns);
   renderChart(currentColumns);
   renderInfo();
+  
 }
 
 /* ─── init ────────────────────────────────── */
@@ -844,17 +1034,56 @@ function init() {
   qs("tempInput").oninput = validateTempInput;
 
   qsa(".segmented button").forEach(btn => {
-    btn.onclick = () => {
-      const group = btn.parentElement.dataset.group;
-      const value = btn.dataset.value;
-      if (group === "sediment") {
-        store.modal.sediment = value === "true";
-      } else {
-        store.modal[group] = value;
-      }
-      syncModalUI();
-    };
-  });
+
+  btn.onclick = () => {
+
+    const group =
+      btn.dataset.group;
+
+    let value =
+      btn.dataset.value;
+
+    if (value === "true") {
+      value = true;
+    }
+
+    if (value === "false") {
+      value = false;
+    }
+
+    store.modal[group] =
+      value;
+
+    syncModalUI();
+  };
+});
+  qs("horizontalCoverlineBtn").onclick = () => {
+
+  store.horizontalCoverlineMode =
+    !store.horizontalCoverlineMode;
+
+  store.verticalCoverlineMode =
+    false;
+
+  qs("horizontalCoverlineBtn").innerText =
+    store.horizontalCoverlineMode
+      ? "Click chart to set horizontal coverline"
+      : "Set horizontal coverline";
+};
+
+  qs("verticalCoverlineBtn").onclick = () => {
+
+    store.verticalCoverlineMode =
+      !store.verticalCoverlineMode;
+
+    store.horizontalCoverlineMode =
+      false;
+
+    qs("verticalCoverlineBtn").innerText =
+      store.verticalCoverlineMode
+        ? "Click chart to set vertical coverline"
+        : "Set vertical coverline";
+  };
 
   qs("devReset").onclick = () => { store.reset(); render(); };
 }
