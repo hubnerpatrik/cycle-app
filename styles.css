@@ -75,6 +75,12 @@ h1{
   padding:18px;
 }
 
+.calendar-weekday {
+  text-align: center;
+  font-size: 12px;
+  opacity: 0.6;
+}
+
 .calendar-nav{
   display:grid;
   grid-template-columns:40px 1fr 40px;

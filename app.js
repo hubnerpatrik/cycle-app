@@ -298,11 +298,9 @@ function renderCalendar() {
   el.innerHTML = "";
 
   ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].forEach(day => {
-    const w           = document.createElement("div");
-    w.textContent     = day;
-    w.style.textAlign = "center";
-    w.style.fontSize  = "12px";
-    w.style.opacity   = "0.6";
+    const w       = document.createElement("div");
+    w.textContent = day;
+    w.className   = "calendar-weekday";
     el.appendChild(w);
   });
 
@@ -333,62 +331,29 @@ function renderCalendar() {
 /* ─── render: info panel ──────────────────── */
 
 function renderInfo() {
+  const set = (id, val) => qs(id).innerText = val;
 
   if (!store.selectedKey) {
-
-    qs("infoTitle").innerText =
-      "No day selected";
-
-    qs("infoTemp").innerText =
-      "-";
-
-    qs("infoBleeding").innerText =
-      "-";
-
-    qs("infoDischarge").innerText =
-      "-";
-
-    qs("infoSediment").innerText =
-      "-";
-
-    qs("infoOther").innerText =
-      "-";
-
+    set("infoTitle",    "No day selected");
+    set("infoTemp",     "-");
+    set("infoBleeding", "-");
+    set("infoDischarge","-");
+    set("infoSediment", "-");
+    set("infoOther",    "-");
     return;
   }
 
-  const data =
-    store.entries[store.selectedKey] || {};
+  const data   = store.entries[store.selectedKey] || {};
+  const column = currentColumns.find(c => c.key === store.selectedKey);
 
-  const column =
-    currentColumns.find(
-      c => c.key === store.selectedKey
-    );
-
-  qs("infoTitle").innerText =
-    `${store.selectedKey} (CD ${column?.cycleDay ?? "-"})`;
-
-  qs("infoTemp").innerText =
-    data.temp ?? "-";
-
-  qs("infoBleeding").innerText =
-    data.bleeding !== "none"
-      ? data.bleeding
-      : "-";
-
-  qs("infoDischarge").innerText =
-    data.discharge !== "none"
-      ? data.discharge
-      : "-";
-
-  qs("infoSediment").innerText =
-    data.sediment
-      ? "yes"
-      : "-";
-
-  qs("infoOther").innerText =
-    data.other || "-";
+  set("infoTitle",     `${store.selectedKey} (CD ${column?.cycleDay ?? "-"})`);
+  set("infoTemp",      data.temp ?? "-");
+  set("infoBleeding",  data.bleeding  !== "none" ? data.bleeding  : "-");
+  set("infoDischarge", data.discharge !== "none" ? data.discharge : "-");
+  set("infoSediment",  data.sediment ? "yes" : "-");
+  set("infoOther",     data.other || "-");
 }
+
 /* ─── render: map rows ────────────────────── */
 
 function makeCell(text = "", ...classes) {
@@ -763,10 +728,7 @@ function renderChart(columns) {
   const width = chartWidth(columns);
   const dpr   = window.devicePixelRatio || 1;
   const ctx   = canvas.getContext("2d");
-  const cycleGroups =
-    groupColumnsByCycle(columns);
-
-    console.log("Cycle groups", cycleGroups);
+  const cycleGroups = groupColumnsByCycle(columns);
 
   canvas.style.width  = `${width}px`;
   canvas.style.height = `${LAYOUT.chartHeight}px`;
@@ -777,7 +739,6 @@ function renderChart(columns) {
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, width, LAYOUT.chartHeight);
 
-  // draw order matters: bg → overlays → grid → annotations → data
   drawSelectedHighlight(ctx, columns);
   drawOverlayBands(ctx, columns);
   drawVerticalGrid(ctx, columns);
@@ -789,108 +750,59 @@ function renderChart(columns) {
   drawTemperatureLine(ctx, cycleGroups);
   drawTemperaturePoints(ctx, columns);
   drawMarkers(ctx, columns);
+}
   
-  canvas.onclick = event => {
-    if (
-      !store.horizontalCoverlineMode &&
-      !store.verticalCoverlineMode
-  ) {
-    return;
-  }
+function handleCanvasClick(event) {
+  if (!store.horizontalCoverlineMode && !store.verticalCoverlineMode) return;
+
+  const canvas = qs("tempChart");
   const rect = canvas.getBoundingClientRect();
+  const y = event.clientY - rect.top;
+  const ratio = (y - LAYOUT.chartPaddingTop) / graphHeight();
+  const temp = LAYOUT.maxTemp - ratio * (LAYOUT.maxTemp - LAYOUT.minTemp);
+  const snappedTemp = Math.round(temp * 20) / 20;
 
-  const y =
-    event.clientY - rect.top;
-
-  const ratio =
-    (y - LAYOUT.chartPaddingTop) /
-    graphHeight();
-
-  const temp =
-    LAYOUT.maxTemp -
-    ratio * (LAYOUT.maxTemp - LAYOUT.minTemp);
-
-  const snappedTemp =
-    Math.round(temp * 20) / 20;
-
-  columns.forEach(col => {
-
-    if (!store.entries[col.key]) {
-      return;
-    }
-
-    store.entries[col.key].coverlineStart =
-      false;
+  currentColumns.forEach(col => {
+    if (!store.entries[col.key]) return;
+    store.entries[col.key].coverlineStart = false;
   });
 
-  const clickedColumn =
-    columns.find(col => {
+  const clickedColumn = currentColumns.find(col =>
+    event.offsetX >= col.x &&
+    event.offsetX <= col.x + LAYOUT.columnWidth
+  );
 
-      return (
-        event.offsetX >= col.x &&
-        event.offsetX <= col.x + LAYOUT.columnWidth
-      );
-    });
+  if (!clickedColumn) return;
 
-  if (!clickedColumn) {
-    return;
-  }
-
-  const existing =
-    store.entries[clickedColumn.key] || {};
-
-  store.entries[clickedColumn.key] = {
-    ...existing,
-  };
+  const existing = store.entries[clickedColumn.key] || {};
+  store.entries[clickedColumn.key] = { ...existing };
 
   if (store.horizontalCoverlineMode) {
-
-    columns.forEach(col => {
-
-      if (!store.entries[col.key]) {
-        return;
-      }
-
-      store.entries[col.key].manualCoverline =
-        null;
+    currentColumns.forEach(col => {
+      if (!store.entries[col.key]) return;
+      store.entries[col.key].manualCoverline = null;
     });
-
-    store.entries[clickedColumn.key]
-      .manualCoverline = snappedTemp;
+    store.entries[clickedColumn.key].manualCoverline = snappedTemp;
   }
 
   if (store.verticalCoverlineMode) {
-
-    columns.forEach(col => {
-
-      if (!store.entries[col.key]) {
-        return;
-      }
-
-      store.entries[col.key].coverlineStart =
-        false;
+    currentColumns.forEach(col => {
+      if (!store.entries[col.key]) return;
+      store.entries[col.key].coverlineStart = false;
     });
-
-    store.entries[clickedColumn.key]
-      .coverlineStart = true;
+    store.entries[clickedColumn.key].coverlineStart = true;
   }
 
   store.horizontalCoverlineMode = false;
   store.verticalCoverlineMode = false;
 
-  qs("horizontalCoverlineBtn")
-    .classList.remove("active");
-
-  qs("verticalCoverlineBtn")
-    .classList.remove("active");
-  
+  qs("horizontalCoverlineBtn").classList.remove("active");
+  qs("verticalCoverlineBtn").classList.remove("active");
   qs("horizontalCoverlineBtn").innerText = "Set horizontal coverline";
   qs("verticalCoverlineBtn").innerText = "Set vertical coverline";
 
   store.save();
-
   render();
-};
 }
 
 /* ─── modal ───────────────────────────────── */
@@ -992,9 +904,9 @@ function saveModal() {
     ...store.modal,
   };
 
-  store.save();
-  closeModal();
-  setTimeout(render, 200);
+store.save();
+closeModal();
+qs("modal").addEventListener("transitionend", render, { once: true });
 }
 
 /* ─── top-level render ────────────────────── */
@@ -1085,8 +997,13 @@ function init() {
         : "Set vertical coverline";
   };
 
-  qs("devReset").onclick = () => { store.reset(); render(); };
-}
+  qs("devReset").onclick = () => {
+    if (!confirm("Opravdu smazat všechna data?")) return;
+    store.reset(); render();
+  };
+
+  qs("tempChart").addEventListener("click", handleCanvasClick);
+}  
 
 /* ─── boot ────────────────────────────────── */
 
