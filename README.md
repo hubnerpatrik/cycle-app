@@ -2,6 +2,9 @@
 
 Educational symptothermal cycle tracking application focused on interpretation, visualization and information clarity. Designed as a visual observation tool, not an automated fertility evaluator. Its purpose is to support manual interpretation while preserving ambiguity, context and user judgment.
 
+Demo:
+https://cycle-6mf61zw3o-hubnerpatriks-projects.vercel.app/
+
 <img width="1920" height="1200" alt="obrazek" src="https://github.com/user-attachments/assets/d8bda5e4-e699-4fb2-a53d-721e7bb4ace7" />
 <img width="340" height="775" alt="obrazek" src="https://github.com/user-attachments/assets/a78a2937-806b-428c-b051-cc6b09bddac8" />
 
