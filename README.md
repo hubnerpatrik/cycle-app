@@ -81,11 +81,11 @@ Observations stored locally via localStorage, keyed by date string.
 ---
 
 ## Architecture
-app.js      constants, utils, layout geometry, render, init
-store.js    Store class, localStorage persistence
-domain.js   cycle detection, column building
-chart.js    canvas rendering, coverline interaction
-ui.js       calendar, info panel, map rows, modal
+-app.js      constants, utils, layout geometry, render, init
+-store.js    Store class, localStorage persistence
+-domain.js   cycle detection, column building
+-chart.js    canvas rendering, coverline interaction
+-ui.js       calendar, info panel, map rows, modal
 ---
 
 ## Tech Stack
