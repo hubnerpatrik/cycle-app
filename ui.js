@@ -1,13 +1,26 @@
+// ui.js — UI rendering and modal
+// ─────────────────────────────────────────────
+// Owns calendar, info panel, cycle map rows,
+// temperature scale, and the edit modal.
+
 import { store } from "./store.js";
-import { LAYOUT, MUCUS_LABELS, qs, qsa, chartY, chartWidth, getDaysInMonth, getMonthOffset, formatDateKey } from "./app.js";
-import { renderChart } from "./chart.js";
+import {
+  LAYOUT, MUCUS_LABELS, qs, qsa,
+  chartY, chartWidth,
+  getDaysInMonth, getMonthOffset, formatDateKey,
+} from "./app.js";
 
+/* ─── month label ─────────────────────────── */
 
+/** Renders the current month and year label above the calendar. */
 export function renderMonth() {
   qs("monthLabel").innerText = new Date(store.year, store.month)
     .toLocaleString("en-US", { month: "long", year: "numeric" });
 }
 
+/* ─── temperature scale ───────────────────── */
+
+/** Renders the fixed temperature scale labels alongside the chart. */
 export function renderTempScale() {
   const scale = qs("tempScale");
   if (!scale) return;
@@ -21,10 +34,17 @@ export function renderTempScale() {
   }
 }
 
+/* ─── calendar ────────────────────────────── */
+
+/**
+ * Renders the month calendar grid.
+ * Accepts selectColumn as a callback to avoid a circular import with app.js.
+ */
 export function renderCalendar(selectColumn) {
   const el = qs("calendar");
   el.innerHTML = "";
 
+  // weekday headers
   ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].forEach(day => {
     const w       = document.createElement("div");
     w.textContent = day;
@@ -35,6 +55,7 @@ export function renderCalendar(selectColumn) {
   const totalDays = getDaysInMonth(store.year, store.month);
   const offset    = getMonthOffset(store.year, store.month);
 
+  // empty cells before the first day
   for (let i = 0; i < offset; i++) el.appendChild(document.createElement("div"));
 
   for (let d = 1; d <= totalDays; d++) {
@@ -47,14 +68,17 @@ export function renderCalendar(selectColumn) {
     div.textContent = d;
 
     if (entry?.bleeding === "menstruation") div.classList.add("red");
-    if (entry?.isFertile) div.classList.add("fertile-day");
-    if (store.selectedKey === key) div.classList.add("selected");
+    if (entry?.isFertile)                   div.classList.add("fertile-day");
+    if (store.selectedKey === key)          div.classList.add("selected");
 
     div.onclick = () => selectColumn(key);
     el.appendChild(div);
   }
 }
 
+/* ─── info panel ──────────────────────────── */
+
+/** Renders the selected day summary in the info panel. */
 export function renderInfo(currentColumns) {
   const set = (id, val) => qs(id).innerText = val;
 
@@ -79,20 +103,31 @@ export function renderInfo(currentColumns) {
   set("infoOther",     data.other || "-");
 }
 
+/* ─── cycle map rows ──────────────────────── */
+
+/** Creates a single map cell div with optional CSS classes. */
 export function makeCell(text = "", ...classes) {
-  const cell     = document.createElement("div");
-  cell.className = ["map-cell", ...classes].filter(Boolean).join(" ");
+  const cell       = document.createElement("div");
+  cell.className   = ["map-cell", ...classes].filter(Boolean).join(" ");
   cell.textContent = text;
   return cell;
 }
 
+/**
+ * Renders all cycle map rows (day numbers, cycle day, mucus, bleeding, etc.).
+ * Interaction callbacks are passed in to avoid circular imports with app.js.
+ */
 export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
-  const rowIds = ["dayNumbers","cycleDayRow","mucusRow","bleedingRow","spottingRow","sedimentRow","otherRow"];
-  const rows   = Object.fromEntries(rowIds.map(id => [id, qs(id)]));
-  const width  = chartWidth(columns);
+  const rowIds = [
+    "dayNumbers", "cycleDayRow", "mucusRow",
+    "bleedingRow", "spottingRow", "sedimentRow", "otherRow",
+  ];
+  const rows  = Object.fromEntries(rowIds.map(id => [id, qs(id)]));
+  const width = chartWidth(columns);
 
   Object.values(rows).forEach(row => { row.innerHTML = ""; row.style.width = `${width}px`; });
 
+  // attaches hover and click handlers to a map cell
   const attach = (el, col) => {
     el.onmouseenter = () => hoverColumn(col.key);
     el.onmouseleave = () => clearHover();
@@ -102,8 +137,8 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
   columns.forEach(col => {
     const sel = store.selectedKey === col.key ? "selected-column" : "";
 
-    const dayCell     = document.createElement("div");
-    dayCell.className = ["map-day", sel].filter(Boolean).join(" ");
+    const dayCell       = document.createElement("div");
+    dayCell.className   = ["map-day", sel].filter(Boolean).join(" ");
     dayCell.textContent = col.date.getDate();
     attach(dayCell, col);
     rows.dayNumbers.appendChild(dayCell);
@@ -116,11 +151,17 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
     attach(mucusCell, col);
     rows.mucusRow.appendChild(mucusCell);
 
-    const bleedCell = makeCell(col.bleeding === "menstruation" ? "●" : "", sel, col.bleeding === "menstruation" ? "period" : "");
+    const bleedCell = makeCell(
+      col.bleeding === "menstruation" ? "●" : "", sel,
+      col.bleeding === "menstruation" ? "period" : ""
+    );
     attach(bleedCell, col);
     rows.bleedingRow.appendChild(bleedCell);
 
-    const spottingCell = makeCell(col.bleeding === "spotting" ? "◐" : "", sel, col.bleeding === "spotting" ? "spotting" : "");
+    const spottingCell = makeCell(
+      col.bleeding === "spotting" ? "◐" : "", sel,
+      col.bleeding === "spotting" ? "spotting" : ""
+    );
     attach(spottingCell, col);
     rows.spottingRow.appendChild(spottingCell);
 
@@ -134,6 +175,9 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
   });
 }
 
+/* ─── modal ───────────────────────────────── */
+
+/** Syncs segmented button active states to current store.modal values. */
 export function syncModalUI() {
   qsa(".segmented button").forEach(btn => {
     let value = btn.dataset.value;
@@ -143,6 +187,7 @@ export function syncModalUI() {
   });
 }
 
+/** Opens the edit modal for the currently selected day. */
 export function openModal(currentColumns) {
   if (!store.selectedKey) return;
 
@@ -175,12 +220,14 @@ export function openModal(currentColumns) {
   requestAnimationFrame(() => modal.classList.add("show"));
 }
 
+/** Closes the modal with a CSS transition. */
 export function closeModal() {
   const modal = qs("modal");
   modal.classList.remove("show");
   modal.addEventListener("transitionend", () => modal.classList.add("hidden"), { once: true });
 }
 
+/** Returns true if the temperature input is empty or within valid BBT range. */
 export function validateTempInput() {
   const raw = qs("tempInput")?.value.trim();
   if (!raw) return true;
@@ -188,6 +235,10 @@ export function validateTempInput() {
   return !isNaN(value) && (value == null || (value >= 34 && value <= 42));
 }
 
+/**
+ * Saves modal data to store and triggers a re-render after the close transition.
+ * Accepts render as a callback to avoid a circular import with app.js.
+ */
 export function saveModal(render) {
   if (!store.selectedKey || !validateTempInput()) return;
 

@@ -1,6 +1,14 @@
+// chart.js — Canvas rendering and coverline interaction
+// ─────────────────────────────────────────────
+// Owns all draw* functions, renderChart, and handleCanvasClick.
+// Draw order: bg → overlays → grid → annotations → data
+
 import { store } from "./store.js";
 import { LAYOUT, qs, chartY, graphHeight, chartWidth } from "./app.js";
 
+/* ─── cycle grouping ──────────────────────── */
+
+/** Groups columns by cycleId — used to draw temperature lines per cycle. */
 export function groupColumnsByCycle(columns) {
   const groups = [];
   columns.forEach(column => {
@@ -14,6 +22,9 @@ export function groupColumnsByCycle(columns) {
   return groups;
 }
 
+/* ─── grid ────────────────────────────────── */
+
+/** Draws vertical column separators. Every 5th line is darker. */
 export function drawVerticalGrid(ctx, columns) {
   columns.forEach(col => {
     const x = Math.round(col.x) + 0.5;
@@ -31,6 +42,7 @@ export function drawVerticalGrid(ctx, columns) {
   ctx.stroke();
 }
 
+/** Draws horizontal temperature grid lines. Every 5th line is darker. */
 export function drawHorizontalGrid(ctx, canvasWidth) {
   for (let i = 0; i <= 15; i++) {
     const y = Math.floor(chartY(LAYOUT.minTemp + i / 10)) + 0.5;
@@ -42,6 +54,9 @@ export function drawHorizontalGrid(ctx, canvasWidth) {
   }
 }
 
+/* ─── overlays ────────────────────────────── */
+
+/** Fills fertile and peak day columns with a color band. */
 export function drawOverlayBands(ctx, columns) {
   columns.forEach(col => {
     if (col.isFertile) {
@@ -55,6 +70,7 @@ export function drawOverlayBands(ctx, columns) {
   });
 }
 
+/** Highlights the currently selected column. */
 export function drawSelectedHighlight(ctx, columns) {
   if (!store.selectedKey) return;
   const col = columns.find(c => c.key === store.selectedKey);
@@ -63,6 +79,7 @@ export function drawSelectedHighlight(ctx, columns) {
   ctx.fillRect(col.x, 0, LAYOUT.columnWidth, LAYOUT.chartHeight);
 }
 
+/** Draws a vertical hover line on the currently hovered column. */
 export function drawHoverLine(ctx, columns) {
   if (!store.hoveredKey) return;
   const col = columns.find(c => c.key === store.hoveredKey);
@@ -74,6 +91,9 @@ export function drawHoverLine(ctx, columns) {
   ctx.stroke();
 }
 
+/* ─── coverlines ──────────────────────────── */
+
+/** Draws the manually placed horizontal coverline as a dashed red line. */
 export function drawHorizontalCoverline(ctx, columns) {
   if (!columns.length) return;
   const first = columns.find(c => c.manualCoverline != null);
@@ -89,6 +109,7 @@ export function drawHorizontalCoverline(ctx, columns) {
   ctx.lineWidth = 1;
 }
 
+/** Draws the manually placed vertical coverline as a dashed red line. */
 export function drawVerticalCoverline(ctx, columns) {
   const active = columns.find(c => c.coverlineStart);
   if (!active) return;
@@ -103,6 +124,7 @@ export function drawVerticalCoverline(ctx, columns) {
   ctx.lineWidth = 1;
 }
 
+/** Draws vertical separators between cycle groups. */
 export function drawCycleSeparators(ctx, cycleGroups) {
   cycleGroups.slice(1).forEach(group => {
     const x = group.columns[0].x - 0.5;
@@ -115,6 +137,9 @@ export function drawCycleSeparators(ctx, cycleGroups) {
   });
 }
 
+/* ─── temperature data ────────────────────── */
+
+/** Draws the temperature line — one path per cycle group to avoid cross-cycle connections. */
 export function drawTemperatureLine(ctx, cycleGroups) {
   cycleGroups.forEach(group => {
     const valid = group.columns.filter(c => c.temp != null);
@@ -132,6 +157,7 @@ export function drawTemperatureLine(ctx, cycleGroups) {
   ctx.lineWidth = 1;
 }
 
+/** Draws a dot at each temperature reading. Selected day dot is highlighted in blue. */
 export function drawTemperaturePoints(ctx, columns) {
   columns.forEach(col => {
     if (col.temp == null) return;
@@ -142,6 +168,7 @@ export function drawTemperaturePoints(ctx, columns) {
   });
 }
 
+/** Draws anomaly marker labels above temperature dots. */
 export function drawMarkers(ctx, columns) {
   columns.forEach(col => {
     if (col.temp == null || !col.marker) return;
@@ -152,13 +179,16 @@ export function drawMarkers(ctx, columns) {
   });
 }
 
+/* ─── render ──────────────────────────────── */
+
+/** Main chart render — sets up canvas, scales for DPR, and runs the full draw pipeline. */
 export function renderChart(columns) {
   const canvas = qs("tempChart");
   if (!canvas) return;
 
-  const width = chartWidth(columns);
-  const dpr   = window.devicePixelRatio || 1;
-  const ctx   = canvas.getContext("2d");
+  const width       = chartWidth(columns);
+  const dpr         = window.devicePixelRatio || 1;
+  const ctx         = canvas.getContext("2d");
   const cycleGroups = groupColumnsByCycle(columns);
 
   canvas.style.width  = `${width}px`;
@@ -170,6 +200,7 @@ export function renderChart(columns) {
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, width, LAYOUT.chartHeight);
 
+  // draw order matters: bg → overlays → grid → annotations → data
   drawSelectedHighlight(ctx, columns);
   drawOverlayBands(ctx, columns);
   drawVerticalGrid(ctx, columns);
@@ -183,17 +214,25 @@ export function renderChart(columns) {
   drawMarkers(ctx, columns);
 }
 
+/* ─── coverline interaction ───────────────── */
+
+/**
+ * Handles canvas clicks when a coverline mode is active.
+ * Snaps the clicked temperature to the nearest 0.05°C step.
+ * Deactivates coverline mode after placement.
+ */
 export function handleCanvasClick(event) {
   if (!store.horizontalCoverlineMode && !store.verticalCoverlineMode) return;
 
-  const canvas = qs("tempChart");
-  const rect = canvas.getBoundingClientRect();
-  const y = event.clientY - rect.top;
-  const ratio = (y - LAYOUT.chartPaddingTop) / graphHeight();
-  const temp = LAYOUT.maxTemp - ratio * (LAYOUT.maxTemp - LAYOUT.minTemp);
+  const canvas      = qs("tempChart");
+  const rect        = canvas.getBoundingClientRect();
+  const y           = event.clientY - rect.top;
+  const ratio       = (y - LAYOUT.chartPaddingTop) / graphHeight();
+  const temp        = LAYOUT.maxTemp - ratio * (LAYOUT.maxTemp - LAYOUT.minTemp);
   const snappedTemp = Math.round(temp * 20) / 20;
 
   import("./app.js").then(({ currentColumns, render }) => {
+    // clear all coverline start markers before placing a new one
     currentColumns.forEach(col => {
       if (!store.entries[col.key]) return;
       store.entries[col.key].coverlineStart = false;
@@ -209,6 +248,7 @@ export function handleCanvasClick(event) {
     store.entries[clickedColumn.key] = { ...(store.entries[clickedColumn.key] || {}) };
 
     if (store.horizontalCoverlineMode) {
+      // clear previous horizontal coverline, then set new one
       currentColumns.forEach(col => {
         if (!store.entries[col.key]) return;
         store.entries[col.key].manualCoverline = null;
@@ -217,20 +257,17 @@ export function handleCanvasClick(event) {
     }
 
     if (store.verticalCoverlineMode) {
-      currentColumns.forEach(col => {
-        if (!store.entries[col.key]) return;
-        store.entries[col.key].coverlineStart = false;
-      });
       store.entries[clickedColumn.key].coverlineStart = true;
     }
 
+    // deactivate coverline mode and reset button labels
     store.horizontalCoverlineMode = false;
-    store.verticalCoverlineMode = false;
+    store.verticalCoverlineMode   = false;
 
     qs("horizontalCoverlineBtn").classList.remove("active");
     qs("verticalCoverlineBtn").classList.remove("active");
     qs("horizontalCoverlineBtn").innerText = "Set horizontal coverline";
-    qs("verticalCoverlineBtn").innerText = "Set vertical coverline";
+    qs("verticalCoverlineBtn").innerText   = "Set vertical coverline";
 
     store.save();
     render();

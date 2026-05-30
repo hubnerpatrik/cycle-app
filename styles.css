@@ -1,3 +1,10 @@
+/* styles.css — Cycle Tracker
+   ─────────────────────────────────────────────
+   Layout, components, and cycle map styles.
+   CSS custom properties are synced from LAYOUT
+   in app.js via syncCSSVariables().
+   ───────────────────────────────────────────── */
+
 :root{
   --bg:#f3f4f6;
   --card:#ffffff;
