@@ -234,3 +234,26 @@ export function saveModal(render) {
   closeModal();
   qs("modal").addEventListener("transitionend", render, { once: true });
 }
+
+export function openActionModal() {
+  if (!store.selectedKey) return;
+
+  const modal = qs("actionModal");
+  modal.classList.remove("hidden");
+
+  requestAnimationFrame(() => {
+    modal.classList.add("show");
+  });
+}
+
+export function closeActionModal() {
+  const modal = qs("actionModal");
+
+  modal.classList.remove("show");
+
+  modal.addEventListener(
+    "transitionend",
+    () => modal.classList.add("hidden"),
+    { once: true }
+  );
+}

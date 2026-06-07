@@ -13,13 +13,18 @@
 
 "use strict";
 
-import { store } from "./store.js";
-import { buildColumns } from "./domain.js";
-import { renderChart, handleCanvasClick } from "./chart.js";
 import {
-  renderMonth, renderTempScale, renderCalendar,
-  renderMapRows, openModal, closeModal,
-  saveModal, validateTempInput, syncModalUI,
+  renderMonth,
+  renderTempScale,
+  renderCalendar,
+  renderMapRows,
+  openModal,
+  closeModal,
+  openActionModal,
+  closeActionModal,
+  saveModal,
+  validateTempInput,
+  syncModalUI,
 } from "./ui.js";
 
 /* ─── DOM helpers ─────────────────────────── */
@@ -174,11 +179,24 @@ function init() {
   };
 
   // modal
-  qs("editBtn").onclick  = () => openModal(currentColumns);
+  qs("editBtn").onclick = openActionModal;
   qs("closeBtn").onclick = closeModal;
   qs("saveBtn").onclick  = () => saveModal(render);
 
   qs("tempInput").oninput = validateTempInput;
+
+  qs("temperatureActionBtn").onclick = () => {
+  closeActionModal();
+  setTimeout(() => openModal(currentColumns), 200);
+};
+  // action modals (placeholders for future features)
+qs("bleedingActionBtn").onclick  = () => alert("Coming soon");
+qs("dischargeActionBtn").onclick = () => alert("Coming soon");
+qs("sedimentActionBtn").onclick  = () => alert("Coming soon");
+qs("markersActionBtn").onclick   = () => alert("Coming soon");
+qs("otherActionBtn").onclick     = () => alert("Coming soon");
+
+qs("closeActionBtn").onclick = closeActionModal;
 
   // segmented controls — generic handler driven by data-group / data-value
   qsa(".segmented button").forEach(btn => {
