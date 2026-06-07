@@ -84,6 +84,7 @@ export function buildColumns() {
 
       // observation data
       temp:            raw.temp             ?? null,
+      tempFactors:   raw.tempFactors        ?? "",
       bleeding:        raw.bleeding         ?? "none",
       discharge:       raw.discharge        ?? "none",
       sediment:        raw.sediment         ?? false,

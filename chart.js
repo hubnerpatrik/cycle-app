@@ -157,15 +157,28 @@ export function drawTemperatureLine(ctx, cycleGroups) {
   ctx.lineWidth = 1;
 }
 
-/** Draws a dot at each temperature reading. Selected day dot is highlighted in blue. */
+/** Draws a dot at each temperature reading. Selected day dot is highlighted in blue. If influence factors are present, a larger red dot is drawn. */
 export function drawTemperaturePoints(ctx, columns) {
   columns.forEach(col => {
     if (col.temp == null) return;
+
+    const hasFactors = Boolean(col.tempFactors?.trim());
+
+    if (hasFactors) {
+    ctx.beginPath();
+    ctx.arc(col.centerX, chartY(col.temp), 9, 0, Math.PI * 2);
+    ctx.strokeStyle = "#ff0000";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
     ctx.beginPath();
     ctx.arc(col.centerX, chartY(col.temp), 4, 0, Math.PI * 2);
     ctx.fillStyle = store.selectedKey === col.key ? "#2563eb" : "#111";
     ctx.fill();
   });
+
+  ctx.lineWidth = 1;
 }
 
 /** Draws anomaly marker labels above temperature dots. */

@@ -76,33 +76,6 @@ export function renderCalendar(selectColumn) {
   }
 }
 
-/* ─── info panel ──────────────────────────── */
-
-/** Renders the selected day summary in the info panel. */
-export function renderInfo(currentColumns) {
-  const set = (id, val) => qs(id).innerText = val;
-
-  if (!store.selectedKey) {
-    set("infoTitle",     "No day selected");
-    set("infoTemp",      "-");
-    set("infoBleeding",  "-");
-    set("infoDischarge", "-");
-    set("infoSediment",  "-");
-    set("infoOther",     "-");
-    return;
-  }
-
-  const data   = store.entries[store.selectedKey] || {};
-  const column = currentColumns.find(c => c.key === store.selectedKey);
-
-  set("infoTitle",     `${store.selectedKey} (CD ${column?.cycleDay ?? "-"})`);
-  set("infoTemp",      data.temp ?? "-");
-  set("infoBleeding",  data.bleeding  !== "none" ? data.bleeding  : "-");
-  set("infoDischarge", data.discharge !== "none" ? data.discharge : "-");
-  set("infoSediment",  data.sediment ? "yes" : "-");
-  set("infoOther",     data.other || "-");
-}
-
 /* ─── cycle map rows ──────────────────────── */
 
 /** Creates a single map cell div with optional CSS classes. */
@@ -195,16 +168,17 @@ export function openModal(currentColumns) {
   const data   = store.entries[key] || {};
   const column = currentColumns.find(c => c.key === key);
 
-  store.modal = {
-    temp:      data.temp      ?? null,
-    bleeding:  data.bleeding  ?? "none",
-    discharge: data.discharge ?? "none",
-    sediment:  data.sediment  ?? false,
-    other:     data.other     ?? "",
-    isFertile: data.isFertile ?? false,
-    isPeak:    data.isPeak    ?? false,
-    marker:    data.marker    ?? "",
-  };
+store.modal = {
+  temp: data.temp ?? null,
+  tempFactors: data.tempFactors ?? "",
+  bleeding: data.bleeding ?? "none",
+  discharge: data.discharge ?? "none",
+  sediment: data.sediment ?? false,
+  other: data.other ?? "",
+  isFertile: data.isFertile ?? false,
+  isPeak: data.isPeak ?? false,
+  marker: data.marker ?? "",
+};
 
   qs("modalTitle").innerText = `${key} (CD ${column?.cycleDay ?? "-"})`;
   qs("tempInput").value      = store.modal.temp != null ? Number(store.modal.temp).toFixed(2) : "";
@@ -212,6 +186,7 @@ export function openModal(currentColumns) {
   qs("modalFertile").checked = store.modal.isFertile;
   qs("modalPeak").checked    = store.modal.isPeak;
   qs("modalMarker").value    = store.modal.marker;
+  qs("tempFactorsInput").value = store.modal.tempFactors;
 
   syncModalUI();
 
@@ -248,6 +223,7 @@ export function saveModal(render) {
   store.modal.isFertile = qs("modalFertile").checked;
   store.modal.isPeak    = qs("modalPeak").checked;
   store.modal.marker    = qs("modalMarker").value;
+  store.modal.tempFactors = qs("tempFactorsInput").value.trim();
 
   store.entries[store.selectedKey] = {
     ...(store.entries[store.selectedKey] || {}),

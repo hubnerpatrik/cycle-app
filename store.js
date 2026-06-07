@@ -26,9 +26,16 @@ export class Store {
   }
 
   /** Returns a blank modal state object. */
-  _emptyModal() {
-    return { temp: null, bleeding: "none", discharge: "none", sediment: false, other: "" };
-  }
+ _emptyModal() {
+  return {
+    temp: null,
+    tempFactors: "",
+    bleeding: "none",
+    discharge: "none",
+    sediment: false,
+    other: "",
+  };
+}
 
   /** Loads entries from localStorage. Returns empty object on parse failure. */
   _load() {

@@ -82,115 +82,46 @@
 
     <!-- info panel -->
 
-    <div class="info-card">
+   <div class="info-card">
 
-      <h2
-        class="info-title"
-        id="infoTitle"
-      >
-        No day selected
-      </h2>
+  <h2 class="info-title">
+    Actions
+  </h2>
 
-      <div class="info-panel">
+  <button
+    id="editBtn"
+    class="action-btn"
+    type="button"
+  >
+    Edit Day
+  </button>
 
-        <!-- temperature -->
+  <button
+    id="coverlineActionBtn"
+    class="action-btn"
+    type="button"
+  >
+    Coverlines
+  </button>
 
-        <div class="info-group">
+  <button
+    id="markerActionBtn"
+    class="action-btn"
+    type="button"
+  >
+    Markers
+  </button>
 
-          <div class="info-label">
-            Temperature
-          </div>
+  <button
+    id="cycleActionBtn"
+    class="action-btn"
+    type="button"
+  >
+    Cycle
+  </button>
+</div>
 
-          <div
-            class="info-value"
-            id="infoTemp"
-          >
-            -
-          </div>
-
-        </div>
-
-        <!-- bleeding -->
-
-        <div class="info-group">
-
-          <div class="info-label">
-            Bleeding
-          </div>
-
-          <div
-            class="info-value"
-            id="infoBleeding"
-          >
-            -
-          </div>
-
-        </div>
-
-        <!-- discharge -->
-
-        <div class="info-group">
-
-          <div class="info-label">
-            Discharge
-          </div>
-
-          <div
-            class="info-value"
-            id="infoDischarge"
-          >
-            -
-          </div>
-
-        </div>
-
-        <!-- sediment -->
-
-        <div class="info-group">
-
-          <div class="info-label">
-            Sediment
-          </div>
-
-          <div
-            class="info-value"
-            id="infoSediment"
-          >
-            -
-          </div>
-
-        </div>
-
-        <!-- other -->
-
-        <div class="info-group">
-
-          <div class="info-label">
-            Other
-          </div>
-
-          <div
-            class="info-value"
-            id="infoOther"
-          >
-            -
-          </div>
-
-        </div>
-
-      </div>
-
-      <button
-        id="editBtn"
-        class="edit-btn"
-        type="button"
-      >
-        Edit day
-      </button>
-
-    </div>
-
-  </div>
+</div>
 
 <!-- chart -->
 
@@ -398,6 +329,15 @@
           min="35"
           max="38"
           placeholder="36.50"
+        >
+        <label class="input-label">
+          Influence factors
+        </label>
+
+        <input
+          id="tempFactorsInput"
+          type="text"
+          placeholder="Alcohol, poor sleep, illness..."
         >
 
       </div>

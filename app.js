@@ -18,7 +18,7 @@ import { buildColumns } from "./domain.js";
 import { renderChart, handleCanvasClick } from "./chart.js";
 import {
   renderMonth, renderTempScale, renderCalendar,
-  renderInfo, renderMapRows, openModal, closeModal,
+  renderMapRows, openModal, closeModal,
   saveModal, validateTempInput, syncModalUI,
 } from "./ui.js";
 
@@ -152,7 +152,6 @@ export function render() {
   currentColumns = buildColumns();
   renderMapRows(currentColumns, selectColumn, hoverColumn, clearHover);
   renderChart(currentColumns);
-  renderInfo(currentColumns);
 }
 
 /* ─── init ────────────────────────────────── */
