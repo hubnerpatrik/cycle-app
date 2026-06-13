@@ -253,7 +253,7 @@
           <div class="map-row">
 
             <div class="map-side-label">
-              Sediment
+              Clots
             </div>
 
             <div class="map-temp-spacer"></div>
@@ -285,7 +285,7 @@
           <div class="map-row">
 
             <div class="map-side-label">
-              Stretch
+              Slippery
             </div>
 
             <div class="map-temp-spacer"></div>
@@ -300,7 +300,7 @@
           <div class="map-row">
 
             <div class="map-side-label">
-              Visible
+              Discharge
             </div>
 
             <div class="map-temp-spacer"></div>
@@ -397,7 +397,7 @@
 
 </div>
 
-<!-- modály mimo .app aby position:fixed fungoval správně -->
+<!-- modal -->
 
 <div
   id="modal"
@@ -580,7 +580,7 @@
     </div>
 
     <div class="modal-section">
-      <div class="section-title">Stretch</div>
+      <div class="section-title">Slippery when wiping?</div>
       <div class="segmented two">
 
         <button type="button" data-group="stretch" data-value="false">No</button>
@@ -590,7 +590,7 @@
     </div>
 
     <div class="modal-section">
-      <div class="section-title">Visible</div>
+      <div class="section-title">Presence of discharge?</div>
       <div class="segmented two">
 
         <button type="button" data-group="visible" data-value="false">No</button>
@@ -604,9 +604,9 @@
       <div class="segmented four">
 
         <button type="button" data-group="consistency" data-value="none">None</button>
-        <button type="button" data-group="consistency" data-value="sticky">Sticky</button>
-        <button type="button" data-group="consistency" data-value="creamy">Creamy</button>
-        <button type="button" data-group="consistency" data-value="eggwhite">Eggwhite</button>
+        <button type="button" data-group="consistency" data-value="sticky">Creamy</button>
+        <button type="button" data-group="consistency" data-value="creamy">Slightly stretchy</button>
+        <button type="button" data-group="consistency" data-value="eggwhite">Strechy</button>
 
       </div>
     </div>
@@ -616,29 +616,19 @@
       <div class="segmented four">
 
         <button type="button" data-group="color" data-value="none">None</button>
-        <button type="button" data-group="color" data-value="clear">Clear</button>
-        <button type="button" data-group="color" data-value="white">White</button>
-        <button type="button" data-group="color" data-value="yellow">Yellow</button>
+        <button type="button" data-group="color" data-value="clear">White</button>
+        <button type="button" data-group="color" data-value="white">Clear</button>
+        <button type="button" data-group="color" data-value="yellow">Other</button>
 
       </div>
     </div>
 
     <div class="modal-section">
-      <div class="section-title">Sediment</div>
+      <div class="section-title">Clots</div>
       <div class="segmented two">
 
         <button type="button" data-group="sediment" data-value="false">No</button>
         <button type="button" data-group="sediment" data-value="true">Yes</button>
-
-      </div>
-    </div>
-
-    <div class="modal-section">
-      <div class="section-title">Peak</div>
-      <div class="segmented two">
-
-        <button type="button" data-group="isPeak" data-value="false">No</button>
-        <button type="button" data-group="isPeak" data-value="true">Yes</button>
 
       </div>
     </div>
