@@ -10,29 +10,48 @@ export const STORAGE_KEY = "cycleData";
 /* ─── store ───────────────────────────────── */
 
 export class Store {
-  constructor() {
-    this.entries     = this._load();
+constructor() {
+  this.entries = this._load();
 
-    this.selectedKey = null; // currently selected day key
-    this.hoveredKey  = null; // currently hovered day key
+  this.selectedKey = null;
+  this.hoveredKey = null;
 
-    this.month = new Date().getMonth();
-    this.year  = new Date().getFullYear();
+  this.month = new Date().getMonth();
+  this.year = new Date().getFullYear();
 
-    this.modal = this._emptyModal();
+  this.modal = this._emptyModal();
 
-    this.horizontalCoverlineMode = false; // true while user is placing horizontal coverline
-    this.verticalCoverlineMode   = false; // true while user is placing vertical coverline
-  }
+  this.horizontalCoverlineMode = false;
+  this.verticalCoverlineMode = false;
+
+  // visual guides only
+  this.horizontalGuideY = null;
+  this.verticalGuideX = null;
+}
 
   /** Returns a blank modal state object. */
- _emptyModal() {
+_emptyModal() {
   return {
     temp: null,
     tempFactors: "",
+
     bleeding: "none",
     discharge: "none",
+
+    sensation: "none",
+
+    stretch: false,
+    visible: false,
+
+    consistency: "none",
+    color: "none",
+
     sediment: false,
+
+    marker: "",
+    isFertile: false,
+    isPeak: false,
+
     other: "",
   };
 }
@@ -40,9 +59,20 @@ export class Store {
   /** Loads entries from localStorage. Returns empty object on parse failure. */
   _load() {
     try {
-      const raw    = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(STORAGE_KEY);
       const parsed = raw ? JSON.parse(raw) : {};
-      return typeof parsed === "object" && parsed !== null ? parsed : {};
+
+      if (typeof parsed !== "object" || parsed === null) {
+        return {};
+      }
+
+      if (parsed.entries) {
+        this.horizontalGuideY = parsed.horizontalGuideY ?? null;
+        this.verticalGuideX = parsed.verticalGuideX ?? null;
+        return parsed.entries;
+      }
+
+      return parsed;
     } catch {
       console.warn("cycleData corrupted — resetting.");
       return {};
@@ -51,7 +81,11 @@ export class Store {
 
   /** Persists current entries to localStorage. */
   save() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.entries));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      entries: this.entries,
+      horizontalGuideY: this.horizontalGuideY,
+      verticalGuideX: this.verticalGuideX,
+    }));
   }
 
   /** Clears all data and resets state to defaults. */
@@ -63,6 +97,9 @@ export class Store {
     const now        = new Date();
     this.month       = now.getMonth();
     this.year        = now.getFullYear();
+    this.horizontalCoverlineTemp = null;
+    this.verticalCoverlineX      = null;
+    this.currentCycleIndex = null;
   }
 }
 

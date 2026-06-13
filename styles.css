@@ -156,6 +156,22 @@ h1{
   color:white;
 }
 
+/* ─── cycle day number in calendar cell ──── */
+
+.day{
+  position: relative;
+}
+
+.day-cycle-num{
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  font-size: 8px;
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1;
+}
+
 /* ─── legend ─────────────────────────────── */
 
 .legend{
@@ -311,6 +327,15 @@ h1{
   align-items:start;
 }
 
+.cycle-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
 /* ─── chart tools ────────────────────────── */
 
 .chart-tools{
@@ -396,6 +421,21 @@ h1{
   border-bottom:1px solid #edf2f7;
 
   overflow:hidden;
+}
+
+/* ─── zoom controls ────────────────────────── */
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+#zoomLabel {
+  min-width: 42px;
+  text-align: center;
 }
 
 /* ─── side labels ────────────────────────── */
@@ -539,22 +579,20 @@ h1{
     inset 0 -2px 0 rgba(168,85,247,0.7);
 }
 
+
 /* ─── modal ──────────────────────────────── */
 
-.modal{
-  position:fixed;
-  inset:0;
-
-  display:flex;
-  align-items:center;
-  justify-content:center;
-
-  background:rgba(0,0,0,0.3);
-
-  opacity:0;
-  pointer-events:none;
-
-  transition:0.2s;
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.3);
+  opacity: 0;
+  pointer-events: none;
+  transition: 0.2s;
 }
 
 .modal.show{

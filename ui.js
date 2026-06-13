@@ -55,6 +55,15 @@ export function renderCalendar(selectColumn) {
   const totalDays = getDaysInMonth(store.year, store.month);
   const offset    = getMonthOffset(store.year, store.month);
 
+  // compute cycle start dates for cycle day calculation
+  const starts = Object.keys(store.entries)
+    .sort()
+    .filter((k, i, arr) => {
+      if (store.entries[k]?.bleeding !== "menstruation") return false;
+      const prev = store.entries[arr[i - 1]];
+      return !prev || prev.bleeding !== "menstruation";
+    });
+
   // empty cells before the first day
   for (let i = 0; i < offset; i++) el.appendChild(document.createElement("div"));
 
@@ -63,9 +72,28 @@ export function renderCalendar(selectColumn) {
     const key   = formatDateKey(date);
     const entry = store.entries[key];
 
-    const div       = document.createElement("div");
-    div.className   = "day";
-    div.textContent = d;
+    const div     = document.createElement("div");
+    div.className = "day";
+
+    // cycle day number as superscript — only if a cycle start exists before this date
+    const dateNorm = new Date(date); dateNorm.setHours(0, 0, 0, 0);
+    const latest   = [...starts].reverse().find(s => {
+      const sd = new Date(s); sd.setHours(0, 0, 0, 0);
+      return sd <= dateNorm;
+    });
+    if (latest) {
+      const sd       = new Date(latest); sd.setHours(0, 0, 0, 0);
+      const cycleDay = Math.floor((dateNorm - sd) / 86_400_000) + 1;
+      const sup      = document.createElement("span");
+      sup.className  = "day-cycle-num";
+      sup.textContent = cycleDay;
+      div.appendChild(sup);
+    }
+
+    // day number
+    const dayNum       = document.createElement("span");
+    dayNum.textContent = d;
+    div.appendChild(dayNum);
 
     if (entry?.bleeding === "menstruation") div.classList.add("red");
     if (entry?.isFertile)                   div.classList.add("fertile-day");
@@ -91,10 +119,22 @@ export function makeCell(text = "", ...classes) {
  * Interaction callbacks are passed in to avoid circular imports with app.js.
  */
 export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
-  const rowIds = [
-    "dayNumbers", "cycleDayRow", "mucusRow",
-    "bleedingRow", "spottingRow", "sedimentRow", "otherRow",
-  ];
+const rowIds = [
+  "dayNumbers",
+  "cycleDayRow",
+
+  "sensationRow",
+  "stretchRow",
+  "visibleRow",
+  "consistencyRow",
+  "colorRow",
+  "peakRow",
+
+  "bleedingRow",
+  "spottingRow",
+  "sedimentRow",
+  "otherRow",
+];
   const rows  = Object.fromEntries(rowIds.map(id => [id, qs(id)]));
   const width = chartWidth(columns);
 
@@ -106,6 +146,19 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
     el.onmouseleave = () => clearHover();
     el.onclick      = () => selectColumn(col.key);
   };
+
+  const CONSISTENCY_LABELS = {
+  none: "",
+  sticky: "ST",
+  creamy: "CR",
+  eggwhite: "EW",
+};
+  const COLOR_LABELS = {
+    none: "",
+    white: "W",
+    yellow: "Y",
+    clear: "C",
+};
 
   columns.forEach(col => {
     const sel = store.selectedKey === col.key ? "selected-column" : "";
@@ -120,9 +173,29 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
     attach(cdCell, col);
     rows.cycleDayRow.appendChild(cdCell);
 
-    const mucusCell = makeCell(MUCUS_LABELS[col.discharge] || "", sel, col.isPeak ? "peak-helper" : "");
-    attach(mucusCell, col);
-    rows.mucusRow.appendChild(mucusCell);
+    const sensationCell = makeCell(col.sensation || "", sel);
+    attach(sensationCell, col);
+    rows.sensationRow.appendChild(sensationCell);
+
+    const stretchCell = makeCell(col.stretch ? "✓" : "", sel);
+    attach(stretchCell, col);
+    rows.stretchRow.appendChild(stretchCell);
+
+    const visibleCell = makeCell(col.visible ? "✓" : "", sel);
+    attach(visibleCell, col);
+    rows.visibleRow.appendChild(visibleCell);
+
+    const consistencyCell = makeCell(CONSISTENCY_LABELS[col.consistency] || "", sel);
+    attach(consistencyCell, col);
+    rows.consistencyRow.appendChild(consistencyCell);
+
+    const colorCell = makeCell(COLOR_LABELS[col.color] || "", sel);
+    attach(colorCell, col);
+    rows.colorRow.appendChild(colorCell);
+
+    const peakCell = makeCell(col.isPeak ? "P" : "", sel);
+    attach(peakCell, col);
+    rows.peakRow.appendChild(peakCell);
 
     const bleedCell = makeCell(
       col.bleeding === "menstruation" ? "●" : "", sel,
@@ -138,7 +211,7 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
     attach(spottingCell, col);
     rows.spottingRow.appendChild(spottingCell);
 
-    const sedimentCell = makeCell(col.sediment ? "S" : "", sel);
+    const sedimentCell = makeCell(col.sediment ? "✓" : "", sel);
     attach(sedimentCell, col);
     rows.sedimentRow.appendChild(sedimentCell);
 
@@ -153,6 +226,7 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
 /** Syncs segmented button active states to current store.modal values. */
 export function syncModalUI() {
   qsa(".segmented button").forEach(btn => {
+    if (btn.closest(".modal")?.classList.contains("hidden")) return;
     let value = btn.dataset.value;
     if (value === "true")  value = true;
     if (value === "false") value = false;
@@ -168,27 +242,12 @@ export function openModal(currentColumns) {
   const data   = store.entries[key] || {};
   const column = currentColumns.find(c => c.key === key);
 
-store.modal = {
-  temp: data.temp ?? null,
-  tempFactors: data.tempFactors ?? "",
-  bleeding: data.bleeding ?? "none",
-  discharge: data.discharge ?? "none",
-  sediment: data.sediment ?? false,
-  other: data.other ?? "",
-  isFertile: data.isFertile ?? false,
-  isPeak: data.isPeak ?? false,
-  marker: data.marker ?? "",
-};
+  store.modal.temp        = data.temp        ?? null;
+  store.modal.tempFactors = data.tempFactors ?? "";
 
-  qs("modalTitle").innerText = `${key} (CD ${column?.cycleDay ?? "-"})`;
-  qs("tempInput").value      = store.modal.temp != null ? Number(store.modal.temp).toFixed(2) : "";
-  qs("otherInput").value     = store.modal.other;
-  qs("modalFertile").checked = store.modal.isFertile;
-  qs("modalPeak").checked    = store.modal.isPeak;
-  qs("modalMarker").value    = store.modal.marker;
-  qs("tempFactorsInput").value = store.modal.tempFactors;
-
-  syncModalUI();
+  qs("modalTitle").innerText       = `${key} (CD ${column?.cycleDay ?? "-"})`;
+  qs("tempInput").value            = store.modal.temp != null ? Number(store.modal.temp).toFixed(2) : "";
+  qs("tempFactorsInput").value     = store.modal.tempFactors;
 
   const modal = qs("modal");
   modal.classList.remove("hidden");
@@ -218,36 +277,64 @@ export function saveModal(render) {
   if (!store.selectedKey || !validateTempInput()) return;
 
   const temp = parseFloat(qs("tempInput").value);
-  store.modal.temp      = isNaN(temp) ? null : temp;
-  store.modal.other     = qs("otherInput").value.trim();
-  store.modal.isFertile = qs("modalFertile").checked;
-  store.modal.isPeak    = qs("modalPeak").checked;
-  store.modal.marker    = qs("modalMarker").value;
-  store.modal.tempFactors = qs("tempFactorsInput").value.trim();
 
   store.entries[store.selectedKey] = {
     ...(store.entries[store.selectedKey] || {}),
-    ...store.modal,
+    temp:        isNaN(temp) ? null : temp,
+    tempFactors: qs("tempFactorsInput").value.trim(),
   };
 
   store.save();
   closeModal();
+
   qs("modal").addEventListener("transitionend", render, { once: true });
 }
 
 export function openActionModal() {
-  if (!store.selectedKey) return;
-
   const modal = qs("actionModal");
   modal.classList.remove("hidden");
-
   requestAnimationFrame(() => {
-    modal.classList.add("show");
+    requestAnimationFrame(() => modal.classList.add("show"));
   });
 }
 
 export function closeActionModal() {
   const modal = qs("actionModal");
+  modal.classList.remove("show");
+  modal.addEventListener(
+    "transitionend",
+    () => modal.classList.add("hidden"),
+    { once: true }
+  );
+}
+
+export function openMucusModal() {
+  if (!store.selectedKey) return;
+
+  const data = store.entries[store.selectedKey] || {};
+
+  // load saved values into modal state — coerce booleans explicitly
+  store.modal.sensation   = data.sensation   ?? "none";
+  store.modal.stretch     = data.stretch     === true;
+  store.modal.visible     = data.visible     === true;
+  store.modal.consistency = data.consistency ?? "none";
+  store.modal.color       = data.color       ?? "none";
+  store.modal.sediment    = data.sediment    === true;
+  store.modal.isPeak      = data.isPeak      === true;
+
+  const modal = qs("mucusModal");
+  modal.classList.remove("hidden");
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      syncModalUI();          // sync after modal is visible
+      modal.classList.add("show");
+    });
+  });
+}
+
+export function closeMucusModal() {
+  const modal = qs("mucusModal");
 
   modal.classList.remove("show");
 
@@ -256,4 +343,145 @@ export function closeActionModal() {
     () => modal.classList.add("hidden"),
     { once: true }
   );
+}
+
+export function saveMucusModal(render) {
+  if (!store.selectedKey) return;
+
+  store.entries[store.selectedKey] = {
+    ...(store.entries[store.selectedKey] || {}),
+    sensation: store.modal.sensation,
+    stretch: store.modal.stretch,
+    visible: store.modal.visible,
+    consistency: store.modal.consistency,
+    color: store.modal.color,
+    sediment: store.modal.sediment,
+    isPeak: store.modal.isPeak,
+  };
+  
+  store.save();
+  closeMucusModal();
+
+  qs("mucusModal").addEventListener(
+    "transitionend",
+    render,
+    { once: true }
+  );
+}
+export function openBleedingModal() {
+  if (!store.selectedKey) return;
+
+  const data = store.entries[store.selectedKey] || {};
+
+  // load saved bleeding value into modal state
+  store.modal.bleeding = data.bleeding ?? "none";
+
+  syncModalUI();
+
+  const modal = qs("bleedingModal");
+  modal.classList.remove("hidden");
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => modal.classList.add("show"));
+  });
+}
+
+export function closeBleedingModal() {
+  const modal = qs("bleedingModal");
+
+  modal.classList.remove("show");
+
+  modal.addEventListener(
+    "transitionend",
+    () => modal.classList.add("hidden"),
+    { once: true }
+  );
+}
+
+export function saveBleedingModal(render) {
+  if (!store.selectedKey) return;
+
+  store.entries[store.selectedKey] = {
+    ...(store.entries[store.selectedKey] || {}),
+    bleeding: store.modal.bleeding,
+  };
+
+  store.save();
+  closeBleedingModal();
+
+  qs("bleedingModal").addEventListener(
+    "transitionend",
+    render,
+    { once: true }
+  );
+}
+export function openMarkersModal() {
+  if (!store.selectedKey) return;
+
+  const data = store.entries[store.selectedKey] || {};
+
+  // load saved marker values into modal state — coerce booleans explicitly
+  qs("markersFertile").checked = data.isFertile === true;
+  qs("markersPeak").checked    = data.isPeak    === true;
+  qs("markersMarker").value    = data.marker    ?? "";
+
+  const modal = qs("markersModal");
+  modal.classList.remove("hidden");
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => modal.classList.add("show"));
+  });
+}
+
+export function closeMarkersModal() {
+  const modal = qs("markersModal");
+  modal.classList.remove("show");
+  modal.addEventListener("transitionend", () => modal.classList.add("hidden"), { once: true });
+}
+
+export function saveMarkersModal(render) {
+  if (!store.selectedKey) return;
+
+  store.entries[store.selectedKey] = {
+    ...(store.entries[store.selectedKey] || {}),
+    isFertile: qs("markersFertile").checked,
+    isPeak:    qs("markersPeak").checked,
+    marker:    qs("markersMarker").value,
+  };
+
+  store.save();
+  closeMarkersModal();
+
+  qs("markersModal").addEventListener("transitionend", render, { once: true });
+}
+
+export function openOtherModal() {
+  if (!store.selectedKey) return;
+
+  const data = store.entries[store.selectedKey] || {};
+  qs("otherModalInput").value = data.other ?? "";
+
+  const modal = qs("otherModal");
+  modal.classList.remove("hidden");
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => modal.classList.add("show"));
+  });
+}
+
+export function closeOtherModal() {
+  const modal = qs("otherModal");
+  modal.classList.remove("show");
+  modal.addEventListener("transitionend", () => modal.classList.add("hidden"), { once: true });
+}
+
+export function saveOtherModal(render) {
+  if (!store.selectedKey) return;
+
+  store.entries[store.selectedKey] = {
+    ...(store.entries[store.selectedKey] || {}),
+    other: qs("otherModalInput").value.trim(),
+  };
+
+  store.save();
+  closeOtherModal();
+
+  qs("otherModal").addEventListener("transitionend", render, { once: true });
 }

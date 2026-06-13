@@ -13,6 +13,10 @@
 
 "use strict";
 
+import { store } from "./store.js";
+import { buildCycleColumns, getCycleCount, getCycleStartDates } from "./domain.js";
+import { renderChart, handleCanvasClick } from "./chart.js";
+
 import {
   renderMonth,
   renderTempScale,
@@ -24,6 +28,18 @@ import {
   closeActionModal,
   saveModal,
   validateTempInput,
+  openMucusModal,
+  closeMucusModal,
+  saveMucusModal,
+  openBleedingModal,
+  closeBleedingModal,
+  saveBleedingModal,
+  openMarkersModal,
+  closeMarkersModal,
+  saveMarkersModal,
+  openOtherModal,
+  closeOtherModal,
+  saveOtherModal,
   syncModalUI,
 } from "./ui.js";
 
@@ -39,13 +55,17 @@ export const LAYOUT = {
   columnWidth:        50,
   sideLabelWidth:     68,
   tempScaleWidth:     72,
-  chartHeight:        360,
+  chartHeight:        600,
   chartPaddingTop:    12,
   chartPaddingBottom: 8,
   minTemp:            36.0,
   maxTemp:            37.5,
 };
-
+  const ZOOM_MIN  = 300;
+  const ZOOM_MAX  = 1200;
+  const ZOOM_STEP = 100;
+  const ZOOM_BASE = 600; // 100% reference
+  
 /** Symptothermal algorithm parameters (unused in UI — reserved for future logic). */
 export const CYCLE = {
   maxDays:       90,    // safety cap for cycle iteration
@@ -138,8 +158,23 @@ export function syncCSSVariables() {
 /** Columns built from store.entries each render cycle. Shared across modules. */
 export let currentColumns = [];
 
-/** Selects a day column and triggers a full re-render. */
-export function selectColumn(key) { store.selectedKey = key; render(); }
+/** Selects a day column, switches to the correct cycle, and triggers a full re-render. */
+export function selectColumn(key) {
+  store.selectedKey = key;
+
+  // switch to the cycle containing this key
+  const starts = getCycleStartDates();
+  if (starts.length) {
+    const date = normalize(parseDateKey(key));
+    let cycleIndex = 0;
+    for (let i = 0; i < starts.length; i++) {
+      if (normalize(starts[i]) <= date) cycleIndex = i;
+    }
+    store.currentCycleIndex = cycleIndex;
+  }
+
+  render();
+}
 
 /** Highlights a column on hover — only redraws the chart layer. */
 export function hoverColumn(key)  { store.hoveredKey = key; renderChart(currentColumns); }
@@ -154,11 +189,28 @@ export function render() {
   renderMonth();
   renderCalendar(selectColumn);
   renderTempScale();
-  currentColumns = buildColumns();
+  currentColumns = buildCycleColumns();
   renderMapRows(currentColumns, selectColumn, hoverColumn, clearHover);
   renderChart(currentColumns);
+  renderCycleNav();
 }
 
+/** Updates cycle navigation label and button states. */
+function renderCycleNav() {
+  const starts = getCycleStartDates();
+  const total  = Math.max(starts.length, 1);
+  const index  = store.currentCycleIndex ?? total - 1;
+
+  qs("cycleNavLabel").innerText = `Cycle ${index + 1} / ${total}`;
+  qs("prevCycleBtn").disabled   = index <= 0;
+  qs("nextCycleBtn").disabled   = index >= total - 1;
+}
+
+/** Updates zoom percentage label. */
+function renderZoomLabel() {
+  const pct = Math.round((LAYOUT.chartHeight / ZOOM_BASE) * 100);
+  qs("zoomLabel").innerText = `${pct}%`;
+}
 /* ─── init ────────────────────────────────── */
 
 /** Binds all event listeners. Called once on DOMContentLoaded. */
@@ -178,36 +230,62 @@ function init() {
     render();
   };
 
-  // modal
-  qs("editBtn").onclick = openActionModal;
-  qs("closeBtn").onclick = closeModal;
-  qs("saveBtn").onclick  = () => saveModal(render);
+  // cycle navigation
+  qs("prevCycleBtn").onclick = () => {
+    const total = getCycleCount();
+    const index = store.currentCycleIndex ?? total - 1;
+    store.currentCycleIndex = Math.max(0, index - 1);
+    render();
+  };
 
-  qs("tempInput").oninput = validateTempInput;
+  qs("nextCycleBtn").onclick = () => {
+    const total = getCycleCount();
+    const index = store.currentCycleIndex ?? total - 1;
+    store.currentCycleIndex = Math.min(total - 1, index + 1);
+    render();
+  };
+
+  // action modal
+  qs("editBtn").onclick        = () => openActionModal();
+  qs("closeBtn").onclick       = closeModal;
+  qs("saveBtn").onclick        = () => saveModal(render);
+  qs("closeActionModalBtn").onclick = closeActionModal;
 
   qs("temperatureActionBtn").onclick = () => {
-  closeActionModal();
-  setTimeout(() => openModal(currentColumns), 200);
-};
-  // action modals (placeholders for future features)
-qs("bleedingActionBtn").onclick  = () => alert("Coming soon");
-qs("dischargeActionBtn").onclick = () => alert("Coming soon");
-qs("sedimentActionBtn").onclick  = () => alert("Coming soon");
-qs("markersActionBtn").onclick   = () => alert("Coming soon");
-qs("otherActionBtn").onclick     = () => alert("Coming soon");
+    closeActionModal();
+    setTimeout(() => openModal(currentColumns), 200);
+  };
 
-qs("closeActionBtn").onclick = closeActionModal;
+  qs("bleedingActionBtn").onclick = () => {
+    closeActionModal();
+    setTimeout(() => openBleedingModal(), 250);
+  };
 
-  // segmented controls — generic handler driven by data-group / data-value
-  qsa(".segmented button").forEach(btn => {
-    btn.onclick = () => {
-      let value = btn.dataset.value;
-      if (value === "true")  value = true;
-      if (value === "false") value = false;
-      store.modal[btn.dataset.group] = value;
-      syncModalUI();
-    };
-  });
+  qs("closeBleedingModalBtn").onclick  = closeBleedingModal;
+  qs("saveBleedingModalBtn").onclick   = () => saveBleedingModal(render);
+
+  qs("mucusActionBtn").onclick = () => {
+    closeActionModal();
+    setTimeout(() => openMucusModal(), 250);
+  };
+
+  qs("closeMucusModalBtn").onclick = closeMucusModal;
+  qs("saveMucusModalBtn").onclick  = () => saveMucusModal(render);
+
+  qs("markersActionBtn").onclick = () => {
+    closeActionModal();
+    setTimeout(() => openMarkersModal(), 250);
+  };
+
+  qs("otherActionBtn").onclick = () => {
+    closeActionModal();
+    setTimeout(() => openOtherModal(), 250);
+  };
+
+  qs("closeMarkersModalBtn").onclick = closeMarkersModal;
+  qs("saveMarkersModalBtn").onclick  = () => saveMarkersModal(render);
+  qs("closeOtherModalBtn").onclick   = closeOtherModal;
+  qs("saveOtherModalBtn").onclick    = () => saveOtherModal(render);
 
   // coverline tools
   qs("horizontalCoverlineBtn").onclick = () => {
@@ -215,7 +293,7 @@ qs("closeActionBtn").onclick = closeActionModal;
     store.verticalCoverlineMode   = false;
     qs("horizontalCoverlineBtn").innerText = store.horizontalCoverlineMode
       ? "Click chart to set horizontal coverline"
-      : "Set horizontal coverline";
+      : "Horizontal coverline";
   };
 
   qs("verticalCoverlineBtn").onclick = () => {
@@ -223,16 +301,43 @@ qs("closeActionBtn").onclick = closeActionModal;
     store.horizontalCoverlineMode = false;
     qs("verticalCoverlineBtn").innerText = store.verticalCoverlineMode
       ? "Click chart to set vertical coverline"
-      : "Set vertical coverline";
+      : "Vertical coverline";
   };
+
+  // zoom controls
+qs("zoomInBtn").onclick = () => {
+  LAYOUT.chartHeight = Math.min(ZOOM_MAX, LAYOUT.chartHeight + ZOOM_STEP);
+  syncCSSVariables();
+  render();
+};
+
+qs("zoomOutBtn").onclick = () => {
+  LAYOUT.chartHeight = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, LAYOUT.chartHeight - ZOOM_STEP));
+  syncCSSVariables();
+  render();
+};
 
   // dev utility
   qs("devReset").onclick = () => {
     if (!confirm("Reset all data? This cannot be undone.")) return;
-    store.reset(); render();
+    store.reset();
+    render();
   };
 
   qs("tempChart").addEventListener("click", handleCanvasClick);
+
+  // segmented buttons — update store and sync active state
+  qsa(".segmented button").forEach(btn => {
+    btn.onclick = () => {
+      // ignore click if parent modal is not visible
+      if (btn.closest(".modal")?.classList.contains("hidden")) return;
+      let value = btn.dataset.value;
+      if (value === "true")  value = true;
+      if (value === "false") value = false;
+      store.modal[btn.dataset.group] = value;
+      syncModalUI();
+    };
+  });
 }
 
 /* ─── boot ────────────────────────────────── */
@@ -240,4 +345,5 @@ qs("closeActionBtn").onclick = closeActionModal;
 document.addEventListener("DOMContentLoaded", () => {
   init();
   render();
+  renderZoomLabel();
 });

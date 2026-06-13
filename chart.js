@@ -29,17 +29,20 @@ export function drawVerticalGrid(ctx, columns) {
   columns.forEach(col => {
     const x = Math.round(col.x) + 0.5;
     ctx.beginPath();
-    ctx.strokeStyle = col.index % 5 === 0 ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0.05)";
+    ctx.lineWidth   = 1;
+    ctx.strokeStyle = col.index % 5 === 0 ? "rgba(0,0,0,0.30)" : "rgba(0,0,0,0.10)";
     ctx.moveTo(x, LAYOUT.chartPaddingTop);
     ctx.lineTo(x, LAYOUT.chartHeight - LAYOUT.chartPaddingBottom);
     ctx.stroke();
   });
   const lastX = chartWidth(columns) + 0.5;
   ctx.beginPath();
-  ctx.strokeStyle = "rgba(0,0,0,0.15)";
+  ctx.lineWidth   = 1;
+  ctx.strokeStyle = "rgba(0,0,0,0.30)";
   ctx.moveTo(lastX, LAYOUT.chartPaddingTop);
   ctx.lineTo(lastX, LAYOUT.chartHeight - LAYOUT.chartPaddingBottom);
   ctx.stroke();
+  ctx.lineWidth = 1;
 }
 
 /** Draws horizontal temperature grid lines. Every 5th line is darker. */
@@ -47,11 +50,13 @@ export function drawHorizontalGrid(ctx, canvasWidth) {
   for (let i = 0; i <= 15; i++) {
     const y = Math.floor(chartY(LAYOUT.minTemp + i / 10)) + 0.5;
     ctx.beginPath();
-    ctx.strokeStyle = i % 5 === 0 ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0.05)";
+    ctx.lineWidth   = 1;
+    ctx.strokeStyle = i % 5 === 0 ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.3)";
     ctx.moveTo(0, y);
     ctx.lineTo(canvasWidth, y);
     ctx.stroke();
   }
+  ctx.lineWidth = 1;
 }
 
 /* ─── overlays ────────────────────────────── */
@@ -95,35 +100,42 @@ export function drawHoverLine(ctx, columns) {
 
 /** Draws the manually placed horizontal coverline as a dashed red line. */
 export function drawHorizontalCoverline(ctx, columns) {
-  if (!columns.length) return;
-  const first = columns.find(c => c.manualCoverline != null);
-  if (!first) return;
+  if (store.horizontalGuideY == null) return;
+
   ctx.beginPath();
   ctx.setLineDash([6, 4]);
   ctx.strokeStyle = "rgba(180,20,20,0.8)";
   ctx.lineWidth = 1.5;
-  ctx.moveTo(0, chartY(first.manualCoverline));
-  ctx.lineTo(chartWidth(columns), chartY(first.manualCoverline));
+
+  ctx.moveTo(0, store.horizontalGuideY);
+  ctx.lineTo(chartWidth(columns), store.horizontalGuideY);
+
   ctx.stroke();
+
   ctx.setLineDash([]);
   ctx.lineWidth = 1;
 }
 
 /** Draws the manually placed vertical coverline as a dashed red line. */
-export function drawVerticalCoverline(ctx, columns) {
-  const active = columns.find(c => c.coverlineStart);
-  if (!active) return;
+export function drawVerticalCoverline(ctx) {
+  if (store.verticalGuideX == null) return;
+
   ctx.beginPath();
   ctx.setLineDash([6, 4]);
   ctx.strokeStyle = "rgba(180,20,20,0.8)";
   ctx.lineWidth = 1.5;
-  ctx.moveTo(active.centerX, LAYOUT.chartPaddingTop);
-  ctx.lineTo(active.centerX, LAYOUT.chartHeight - LAYOUT.chartPaddingBottom);
+
+  ctx.moveTo(store.verticalGuideX, LAYOUT.chartPaddingTop);
+  ctx.lineTo(
+    store.verticalGuideX,
+    LAYOUT.chartHeight - LAYOUT.chartPaddingBottom
+  );
+
   ctx.stroke();
+
   ctx.setLineDash([]);
   ctx.lineWidth = 1;
 }
-
 /** Draws vertical separators between cycle groups. */
 export function drawCycleSeparators(ctx, cycleGroups) {
   cycleGroups.slice(1).forEach(group => {
@@ -234,55 +246,36 @@ export function renderChart(columns) {
  * Snaps the clicked temperature to the nearest 0.05°C step.
  * Deactivates coverline mode after placement.
  */
+
 export function handleCanvasClick(event) {
-  if (!store.horizontalCoverlineMode && !store.verticalCoverlineMode) return;
+  if (!store.horizontalCoverlineMode && !store.verticalCoverlineMode) {
+    return;
+  }
 
-  const canvas      = qs("tempChart");
-  const rect        = canvas.getBoundingClientRect();
-  const y           = event.clientY - rect.top;
-  const ratio       = (y - LAYOUT.chartPaddingTop) / graphHeight();
-  const temp        = LAYOUT.maxTemp - ratio * (LAYOUT.maxTemp - LAYOUT.minTemp);
-  const snappedTemp = Math.round(temp * 20) / 20;
+  const canvas = qs("tempChart");
+  const rect = canvas.getBoundingClientRect();
 
-  import("./app.js").then(({ currentColumns, render }) => {
-    // clear all coverline start markers before placing a new one
-    currentColumns.forEach(col => {
-      if (!store.entries[col.key]) return;
-      store.entries[col.key].coverlineStart = false;
-    });
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
 
-    const clickedColumn = currentColumns.find(col =>
-      event.offsetX >= col.x &&
-      event.offsetX <= col.x + LAYOUT.columnWidth
-    );
+  if (store.horizontalCoverlineMode) {
+    store.horizontalGuideY = y;
+  }
 
-    if (!clickedColumn) return;
+  if (store.verticalCoverlineMode) {
+    store.verticalGuideX = x;
+  }
 
-    store.entries[clickedColumn.key] = { ...(store.entries[clickedColumn.key] || {}) };
+  store.horizontalCoverlineMode = false;
+  store.verticalCoverlineMode = false;
 
-    if (store.horizontalCoverlineMode) {
-      // clear previous horizontal coverline, then set new one
-      currentColumns.forEach(col => {
-        if (!store.entries[col.key]) return;
-        store.entries[col.key].manualCoverline = null;
-      });
-      store.entries[clickedColumn.key].manualCoverline = snappedTemp;
-    }
+  qs("horizontalCoverlineBtn").classList.remove("active");
+  qs("verticalCoverlineBtn").classList.remove("active");
 
-    if (store.verticalCoverlineMode) {
-      store.entries[clickedColumn.key].coverlineStart = true;
-    }
+  qs("horizontalCoverlineBtn").innerText = "Set horizontal coverline";
+  qs("verticalCoverlineBtn").innerText = "Set vertical coverline";
 
-    // deactivate coverline mode and reset button labels
-    store.horizontalCoverlineMode = false;
-    store.verticalCoverlineMode   = false;
+  store.save();
 
-    qs("horizontalCoverlineBtn").classList.remove("active");
-    qs("verticalCoverlineBtn").classList.remove("active");
-    qs("horizontalCoverlineBtn").innerText = "Set horizontal coverline";
-    qs("verticalCoverlineBtn").innerText   = "Set vertical coverline";
-
-    store.save();
-    render();
-  });
+  import("./app.js").then(({ render }) => render());
 }

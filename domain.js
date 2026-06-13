@@ -84,16 +84,101 @@ export function buildColumns() {
 
       // observation data
       temp:            raw.temp             ?? null,
-      tempFactors:   raw.tempFactors        ?? "",
+      tempFactors:     raw.tempFactors      ?? "",
+
       bleeding:        raw.bleeding         ?? "none",
       discharge:       raw.discharge        ?? "none",
+
+      sensation:       raw.sensation        ?? "none",
+
+      stretch:         raw.stretch          ?? false,
+      visible:         raw.visible          ?? false,
+
+      consistency:     raw.consistency      ?? "none",
+      color:           raw.color            ?? "none",
+
       sediment:        raw.sediment         ?? false,
+
       other:           raw.other            ?? "",
+
       isFertile:       raw.isFertile        ?? false,
       isPeak:          raw.isPeak           ?? false,
       marker:          raw.marker           ?? "",
+
       manualCoverline: raw.manualCoverline  ?? null,
       coverlineStart:  raw.coverlineStart   ?? false,
+          };
+  });
+}
+/**
+ * Returns all columns for a specific cycle by index (0-based).
+ * If cycleIndex is null, returns the latest cycle.
+ * Falls back to all columns if no cycles detected.
+ */
+/**
+ * Returns all columns for a specific cycle by index (0-based).
+ * If cycleIndex is null, returns the latest cycle.
+ * Falls back to all columns if no cycles detected.
+ */
+export function buildCycleColumns() {
+  const allKeys = Object.keys(store.entries).sort();
+  if (!allKeys.length) return [];
+
+  const starts = getCycleStartDates();
+
+  // no cycles detected yet — return all entries
+  if (!starts.length) {
+    return buildColumns();
+  }
+
+  const index = store.currentCycleIndex ?? starts.length - 1;
+  const clampedIndex = Math.max(0, Math.min(index, starts.length - 1));
+
+  // determine date range for this cycle
+  const cycleStart = starts[clampedIndex];
+  const cycleEnd   = starts[clampedIndex + 1]
+    ? new Date(starts[clampedIndex + 1].getTime() - 86_400_000)
+    : null; // null means open-ended (current cycle)
+
+  // filter keys belonging to this cycle
+  const cycleKeys = allKeys.filter(key => {
+    const d = normalize(parseDateKey(key));
+    if (d < normalize(cycleStart)) return false;
+    if (cycleEnd && d > normalize(cycleEnd)) return false;
+    return true;
+  });
+
+  const allStarts = starts;
+
+  // build columns with correct positions (reset index per cycle)
+  return cycleKeys.map((key, index) => {
+    const raw  = store.entries[key];
+    const date = parseDateKey(key);
+    return {
+      key, date, index,
+      x:       columnX(index),
+      centerX: columnCenterX(index),
+      cycleId:  resolveCycleId(date),
+      cycleDay: resolveCycleDay(date, allStarts, index),
+      temp:            raw.temp            ?? null,
+      tempFactors:     raw.tempFactors     ?? "",
+      bleeding:        raw.bleeding        ?? "none",
+      discharge:       raw.discharge       ?? "none",
+      sensation:       raw.sensation       ?? "none",
+      stretch:         raw.stretch         ?? false,
+      visible:         raw.visible         ?? false,
+      consistency:     raw.consistency     ?? "none",
+      color:           raw.color           ?? "none",
+      sediment:        raw.sediment        ?? false,
+      other:           raw.other           ?? "",
+      isFertile:       raw.isFertile       ?? false,
+      isPeak:          raw.isPeak          ?? false,
+      marker:          raw.marker          ?? "",
     };
   });
+}
+
+/** Returns total number of detected cycles. */
+export function getCycleCount() {
+  return Math.max(getCycleStartDates().length, 1);
 }
