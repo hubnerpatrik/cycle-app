@@ -61,11 +61,11 @@ export const LAYOUT = {
   minTemp:            36.0,
   maxTemp:            37.5,
 };
-  const ZOOM_MIN  = 300;
-  const ZOOM_MAX  = 1200;
-  const ZOOM_STEP = 100;
-  const ZOOM_BASE = 600; // 100% reference
-  
+  const ZOOM_MIN  = 24;
+  const ZOOM_MAX  = 90;
+  const ZOOM_STEP = 8;
+  const ZOOM_BASE = 50;
+    
 /** Symptothermal algorithm parameters (unused in UI — reserved for future logic). */
 export const CYCLE = {
   maxDays:       90,    // safety cap for cycle iteration
@@ -208,7 +208,7 @@ function renderCycleNav() {
 
 /** Updates zoom percentage label. */
 function renderZoomLabel() {
-  const pct = Math.round((LAYOUT.chartHeight / ZOOM_BASE) * 100);
+  const pct = Math.round((LAYOUT.columnWidth / ZOOM_BASE) * 100);
   qs("zoomLabel").innerText = `${pct}%`;
 }
 /* ─── init ────────────────────────────────── */
@@ -291,6 +291,8 @@ function init() {
   qs("horizontalCoverlineBtn").onclick = () => {
     store.horizontalCoverlineMode = !store.horizontalCoverlineMode;
     store.verticalCoverlineMode   = false;
+    qs("horizontalCoverlineBtn").classList.toggle("active", store.horizontalCoverlineMode);
+    qs("verticalCoverlineBtn").classList.remove("active");
     qs("horizontalCoverlineBtn").innerText = store.horizontalCoverlineMode
       ? "Click chart to set horizontal coverline"
       : "Horizontal coverline";
@@ -299,23 +301,26 @@ function init() {
   qs("verticalCoverlineBtn").onclick = () => {
     store.verticalCoverlineMode   = !store.verticalCoverlineMode;
     store.horizontalCoverlineMode = false;
+    qs("verticalCoverlineBtn").classList.toggle("active", store.verticalCoverlineMode);
+    qs("horizontalCoverlineBtn").classList.remove("active");
     qs("verticalCoverlineBtn").innerText = store.verticalCoverlineMode
       ? "Click chart to set vertical coverline"
       : "Vertical coverline";
   };
-
   // zoom controls
-qs("zoomInBtn").onclick = () => {
-  LAYOUT.chartHeight = Math.min(ZOOM_MAX, LAYOUT.chartHeight + ZOOM_STEP);
-  syncCSSVariables();
-  render();
-};
+  qs("zoomInBtn").onclick = () => {
+    LAYOUT.columnWidth = Math.min(ZOOM_MAX, LAYOUT.columnWidth + ZOOM_STEP);
+    syncCSSVariables();
+    render();
+    renderZoomLabel();
+  };
 
-qs("zoomOutBtn").onclick = () => {
-  LAYOUT.chartHeight = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, LAYOUT.chartHeight - ZOOM_STEP));
-  syncCSSVariables();
-  render();
-};
+  qs("zoomOutBtn").onclick = () => {
+    LAYOUT.columnWidth = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, LAYOUT.columnWidth - ZOOM_STEP));
+    syncCSSVariables();
+    render();
+    renderZoomLabel();
+  };
 
   // dev utility
   qs("devReset").onclick = () => {

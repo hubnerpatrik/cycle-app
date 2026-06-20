@@ -97,9 +97,13 @@ _emptyModal() {
     const now        = new Date();
     this.month       = now.getMonth();
     this.year        = now.getFullYear();
-    this.horizontalCoverlineTemp = null;
-    this.verticalCoverlineX      = null;
-    this.currentCycleIndex = null;
+
+    this.horizontalCoverlineMode = false;
+    this.verticalCoverlineMode   = false;
+    this.horizontalGuideY        = null;
+    this.verticalGuideX          = null;
+    this.currentCycleIndex       = null;
+    this.modal = this._emptyModal();
   }
 }
 

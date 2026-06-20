@@ -272,8 +272,8 @@ export function handleCanvasClick(event) {
   qs("horizontalCoverlineBtn").classList.remove("active");
   qs("verticalCoverlineBtn").classList.remove("active");
 
-  qs("horizontalCoverlineBtn").innerText = "Set horizontal coverline";
-  qs("verticalCoverlineBtn").innerText = "Set vertical coverline";
+  qs("horizontalCoverlineBtn").innerText = "Horizontal coverline";
+  qs("verticalCoverlineBtn").innerText = "Vertical coverline";
 
   store.save();
 
