@@ -31,7 +31,7 @@
 <div class="app">
 
   <h1>
-    Cycle Tracker
+    Marta Zhinochna STM
   </h1>
 
   <div class="layout">
@@ -42,21 +42,11 @@
 
       <div class="calendar-nav">
 
-        <button
-          id="prevMonth"
-          type="button"
-        >
-          ‹
-        </button>
+        <button id="prevMonth" type="button">‹</button>
 
         <div id="monthLabel"></div>
 
-        <button
-          id="nextMonth"
-          type="button"
-        >
-          ›
-        </button>
+        <button id="nextMonth" type="button">›</button>
 
       </div>
 
@@ -82,40 +72,30 @@
 
     <div class="info-card">
 
-      <h2 class="info-title">
-        Actions
-      </h2>
+      <h2 class="info-title">Actions</h2>
 
-      <button
-        id="editBtn"
-        class="action-btn"
-        type="button"
-      >
-        Edit Day
+      <button id="editBtn" class="action-btn" type="button">
+        <span class="action-icon chip-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 11-11-3-3L5 16l-1 4Z"/><path d="M14 6l3 3"/></svg></span>
+        <span class="action-label">Edit Day</span>
+        <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
 
-      <button
-        id="coverlineActionBtn"
-        class="action-btn"
-        type="button"
-      >
-        Coverlines
+      <button id="coverlineActionBtn" class="action-btn" type="button">
+        <span class="action-icon chip-teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l4-5 4 3 4-7 4 4"/><line x1="3" y1="18" x2="21" y2="18" stroke-dasharray="2 2"/></svg></span>
+        <span class="action-label">Coverlines</span>
+        <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
 
-      <button
-        id="markerActionBtn"
-        class="action-btn"
-        type="button"
-      >
-        Markers
+      <button id="markerActionBtn" class="action-btn" type="button">
+        <span class="action-icon chip-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2.5 3.5L16 11H5"/></svg></span>
+        <span class="action-label">Markers</span>
+        <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
 
-      <button
-        id="cycleActionBtn"
-        class="action-btn"
-        type="button"
-      >
-        Cycle
+      <button id="cycleActionBtn" class="action-btn" type="button">
+        <span class="action-icon chip-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 14-5"/><path d="M18 3v4h-4"/><path d="M20 12a8 8 0 0 1-14 5"/><path d="M6 21v-4h4"/></svg></span>
+        <span class="action-label">Cycle</span>
+        <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
 
     </div>
@@ -127,34 +107,22 @@
   <div class="chart-card">
 
     <div class="chart-tools">
-
-      <button
-        id="horizontalCoverlineBtn"
-        class="tool-btn"
-        type="button"
-      >
-        Horizontal coverline
-      </button>
-
-      <button
-        id="verticalCoverlineBtn"
-        class="tool-btn"
-        type="button"
-      >
-        Vertical coverline
-      </button>
-
+      <button id="horizontalCoverlineBtn" class="tool-btn" type="button">Horizontal coverline</button>
+      <button id="verticalCoverlineBtn" class="tool-btn" type="button">Vertical coverline</button>
     </div>
+
     <div class="cycle-nav">
-  <button id="prevCycleBtn" class="tool-btn" type="button">‹</button>
-  <span id="cycleNavLabel"></span>
-  <button id="nextCycleBtn" class="tool-btn" type="button">›</button>
-</div>
-<div class="zoom-controls">
-  <button id="zoomOutBtn" class="tool-btn" type="button">−</button>
-  <span id="zoomLabel">100%</span>
-  <button id="zoomInBtn" class="tool-btn" type="button">+</button>
-</div>
+      <button id="prevCycleBtn" class="tool-btn" type="button">‹</button>
+      <span id="cycleNavLabel"></span>
+      <button id="nextCycleBtn" class="tool-btn" type="button">›</button>
+    </div>
+
+    <div class="zoom-controls">
+      <button id="zoomOutBtn" class="tool-btn" type="button">−</button>
+      <span id="zoomLabel">100%</span>
+      <button id="zoomInBtn" class="tool-btn" type="button">+</button>
+    </div>
+
     <div class="cycle-map">
 
       <div class="map-scroll">
@@ -164,214 +132,97 @@
           <!-- header -->
 
           <div class="map-header-row">
-
             <div class="map-side-label"></div>
-
             <div class="map-temp-spacer"></div>
-
-            <div
-              id="dayNumbers"
-              class="map-days"
-            ></div>
-
+            <div id="dayNumbers" class="map-days"></div>
           </div>
 
           <!-- chart -->
 
           <div class="map-chart-row">
-
-            <div class="map-side-label">
-              Temp (°C)
-            </div>
-
-            <div
-              id="tempScale"
-              class="temp-scale-column"
-            ></div>
-
+            <div class="map-side-label">Temp (°C)</div>
+            <div id="tempScale" class="temp-scale-column"></div>
             <div class="map-chart-area">
-
               <canvas id="tempChart"></canvas>
-
             </div>
-
           </div>
 
           <!-- cycle day -->
 
           <div class="map-row">
-
-            <div class="map-side-label">
-              CD (days)
-            </div>
-
+            <div class="map-side-label">CD (days)</div>
             <div class="map-temp-spacer"></div>
-
-            <div
-              id="cycleDayRow"
-              class="map-cells"
-            ></div>
-
+            <div id="cycleDayRow" class="map-cells"></div>
           </div>
 
           <!-- bleeding -->
 
           <div class="map-row">
-
-            <div class="map-side-label">
-              Bleeding
-            </div>
-
+            <div class="map-side-label">Bleeding</div>
             <div class="map-temp-spacer"></div>
-
-            <div
-              id="bleedingRow"
-              class="map-cells"
-            ></div>
-
+            <div id="bleedingRow" class="map-cells"></div>
           </div>
 
           <!-- spotting -->
 
           <div class="map-row">
-
-            <div class="map-side-label">
-              Spotting
-            </div>
-
+            <div class="map-side-label">Spotting</div>
             <div class="map-temp-spacer"></div>
-
-            <div
-              id="spottingRow"
-              class="map-cells"
-            ></div>
-
+            <div id="spottingRow" class="map-cells"></div>
           </div>
 
           <!-- sediment -->
 
           <div class="map-row">
-
-            <div class="map-side-label">
-              Clots
-            </div>
-
+            <div class="map-side-label">Clots</div>
             <div class="map-temp-spacer"></div>
-
-            <div
-              id="sedimentRow"
-              class="map-cells"
-            ></div>
-
+            <div id="sedimentRow" class="map-cells"></div>
           </div>
 
           <!-- mucus -->
 
           <div class="map-row">
-
-            <div class="map-side-label">
-              Sensation
-            </div>
-
+            <div class="map-side-label">Sensation</div>
             <div class="map-temp-spacer"></div>
-
-            <div
-              id="sensationRow"
-              class="map-cells"
-            ></div>
-
+            <div id="sensationRow" class="map-cells"></div>
           </div>
 
           <div class="map-row">
-
-            <div class="map-side-label">
-              Slippery
-            </div>
-
+            <div class="map-side-label">Slippery</div>
             <div class="map-temp-spacer"></div>
-
-            <div
-              id="stretchRow"
-              class="map-cells"
-            ></div>
-
+            <div id="stretchRow" class="map-cells"></div>
           </div>
 
           <div class="map-row">
-
-            <div class="map-side-label">
-              Discharge
-            </div>
-
+            <div class="map-side-label">Discharge</div>
             <div class="map-temp-spacer"></div>
-
-            <div
-              id="visibleRow"
-              class="map-cells"
-            ></div>
-
+            <div id="visibleRow" class="map-cells"></div>
           </div>
 
           <div class="map-row">
-
-            <div class="map-side-label">
-              Consistency
-            </div>
-
+            <div class="map-side-label">Consistency</div>
             <div class="map-temp-spacer"></div>
-
-            <div
-              id="consistencyRow"
-              class="map-cells"
-            ></div>
-
+            <div id="consistencyRow" class="map-cells"></div>
           </div>
 
           <div class="map-row">
-
-            <div class="map-side-label">
-              Color
-            </div>
-
+            <div class="map-side-label">Color</div>
             <div class="map-temp-spacer"></div>
-
-            <div
-              id="colorRow"
-              class="map-cells"
-            ></div>
-
+            <div id="colorRow" class="map-cells"></div>
           </div>
 
           <div class="map-row">
-
-            <div class="map-side-label">
-              Peak
-            </div>
-
+            <div class="map-side-label">Peak</div>
             <div class="map-temp-spacer"></div>
-
-            <div
-              id="peakRow"
-              class="map-cells"
-            ></div>
-
+            <div id="peakRow" class="map-cells"></div>
           </div>
 
           <!-- other -->
 
           <div class="map-row">
-
-            <div class="map-side-label">
-              Other
-            </div>
-
+            <div class="map-side-label">Other</div>
             <div class="map-temp-spacer"></div>
-
-            <div
-              id="otherRow"
-              class="map-cells"
-            ></div>
-
+            <div id="otherRow" class="map-cells"></div>
           </div>
 
         </div>
@@ -385,76 +236,34 @@
   <!-- dev panel -->
 
   <div class="dev-panel">
-
-    <button
-      id="devReset"
-      type="button"
-    >
-      DEV RESET
-    </button>
-
+    <button id="devReset" type="button">DEV RESET</button>
   </div>
 
 </div>
 
 <!-- modal -->
 
-<div
-  id="modal"
-  class="modal hidden"
->
+<div id="modal" class="modal hidden">
 
   <div class="modal-card">
 
-    <h2 id="modalTitle">
-      Edit day
-    </h2>
+    <h2 id="modalTitle">Edit day</h2>
 
     <div class="modal-section">
 
-      <div class="section-title">
-        Temperature
-      </div>
+      <div class="section-title">Temperature</div>
 
-      <input
-        id="tempInput"
-        type="number"
-        step="0.01"
-        min="35"
-        max="38"
-        placeholder="36.50"
-      >
+      <input id="tempInput" type="number" step="0.01" min="35" max="38" placeholder="36.50">
 
-      <label class="input-label">
-        Influence factors
-      </label>
+      <label class="input-label">Influence factors</label>
 
-      <input
-        id="tempFactorsInput"
-        type="text"
-        placeholder="Alcohol, poor sleep, illness..."
-      >
+      <input id="tempFactorsInput" type="text" placeholder="Alcohol, poor sleep, illness...">
 
     </div>
 
     <div class="modal-actions">
-
-      <button
-        id="closeBtn"
-        class="btn secondary"
-        type="button"
-      >
-        Close
-      </button>
-
-      <button
-        id="saveBtn"
-        class="btn primary"
-        type="button"
-      >
-        Save
-      </button>
-
+      <button id="closeBtn" class="btn secondary" type="button">Back</button>
+      <button id="saveBtn" class="btn primary" type="button">Save</button>
     </div>
 
   </div>
@@ -468,28 +277,36 @@
     <h2>Edit Day</h2>
 
     <button id="temperatureActionBtn" class="action-btn">
-      Temperature
+      <span class="action-icon chip-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14.5V5a2 2 0 1 0-4 0v9.5a4 4 0 1 0 4 0Z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></span>
+      <span class="action-label">Temperature</span>
+      <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
 
     <button id="bleedingActionBtn" class="action-btn">
-      Bleeding
+      <span class="action-icon chip-red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c4 5 7 8.5 7 12a7 7 0 1 1-14 0c0-3.5 3-7 7-12Z"/></svg></span>
+      <span class="action-label">Bleeding</span>
+      <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
 
     <button id="mucusActionBtn" class="action-btn">
-      Mucus
+      <span class="action-icon chip-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9c1.5 1.6 3 1.6 4.5 0s3-1.6 4.5 0 3 1.6 4.5 0 3-1.6 4.5 0"/><path d="M3 15c1.5 1.6 3 1.6 4.5 0s3-1.6 4.5 0 3 1.6 4.5 0 3-1.6 4.5 0"/></svg></span>
+      <span class="action-label">Mucus</span>
+      <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
 
     <button id="markersActionBtn" class="action-btn">
-      Markers
+      <span class="action-icon chip-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2.5 3.5L16 11H5"/></svg></span>
+      <span class="action-label">Markers</span>
+      <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
 
     <button id="otherActionBtn" class="action-btn">
-      Other
+      <span class="action-icon chip-gray"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></span>
+      <span class="action-label">Other</span>
+      <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
 
-    <button id="closeActionModalBtn" class="btn secondary">
-      Close
-    </button>
+    <button id="closeActionModalBtn" class="btn secondary" type="button">Close</button>
 
   </div>
 
@@ -503,58 +320,19 @@
 
     <div class="modal-section">
 
-      <div class="section-title">
-        Bleeding
-      </div>
+      <div class="section-title">Bleeding</div>
 
       <div class="segmented three">
-
-        <button
-          type="button"
-          data-group="bleeding"
-          data-value="none"
-        >
-          None
-        </button>
-
-        <button
-          type="button"
-          data-group="bleeding"
-          data-value="spotting"
-        >
-          Spotting
-        </button>
-
-        <button
-          type="button"
-          data-group="bleeding"
-          data-value="menstruation"
-        >
-          Period
-        </button>
-
+        <button type="button" data-group="bleeding" data-value="none">None</button>
+        <button type="button" data-group="bleeding" data-value="spotting">Spotting</button>
+        <button type="button" data-group="bleeding" data-value="menstruation">Period</button>
       </div>
 
     </div>
 
     <div class="modal-actions">
-
-      <button
-        id="closeBleedingModalBtn"
-        class="btn secondary"
-        type="button"
-      >
-        Close
-      </button>
-
-      <button
-        id="saveBleedingModalBtn"
-        class="btn primary"
-        type="button"
-      >
-        Save
-      </button>
-
+      <button id="closeBleedingModalBtn" class="btn secondary" type="button">Back</button>
+      <button id="saveBleedingModalBtn" class="btn primary" type="button">Save</button>
     </div>
 
   </div>
@@ -570,87 +348,60 @@
     <div class="modal-section">
       <div class="section-title">Sensation</div>
       <div class="segmented four">
-
         <button type="button" data-group="sensation" data-value="none">None</button>
         <button type="button" data-group="sensation" data-value="dry">Dry</button>
         <button type="button" data-group="sensation" data-value="moist">Moist</button>
         <button type="button" data-group="sensation" data-value="wet">Wet</button>
-
       </div>
     </div>
 
     <div class="modal-section">
       <div class="section-title">Slippery when wiping?</div>
       <div class="segmented two">
-
         <button type="button" data-group="stretch" data-value="false">No</button>
         <button type="button" data-group="stretch" data-value="true">Yes</button>
-
       </div>
     </div>
 
     <div class="modal-section">
       <div class="section-title">Presence of discharge?</div>
       <div class="segmented two">
-
         <button type="button" data-group="visible" data-value="false">No</button>
         <button type="button" data-group="visible" data-value="true">Yes</button>
-
       </div>
     </div>
 
     <div class="modal-section">
       <div class="section-title">Consistency</div>
       <div class="segmented four">
-
         <button type="button" data-group="consistency" data-value="none">None</button>
         <button type="button" data-group="consistency" data-value="sticky">Creamy</button>
         <button type="button" data-group="consistency" data-value="creamy">Slightly stretchy</button>
         <button type="button" data-group="consistency" data-value="eggwhite">Strechy</button>
-
       </div>
     </div>
 
     <div class="modal-section">
       <div class="section-title">Color</div>
       <div class="segmented four">
-
         <button type="button" data-group="color" data-value="none">None</button>
         <button type="button" data-group="color" data-value="clear">White</button>
         <button type="button" data-group="color" data-value="white">Clear</button>
         <button type="button" data-group="color" data-value="yellow">Other</button>
-
       </div>
     </div>
 
     <div class="modal-section">
       <div class="section-title">Clots</div>
       <div class="segmented two">
-
         <button type="button" data-group="sediment" data-value="false">No</button>
         <button type="button" data-group="sediment" data-value="true">Yes</button>
-
       </div>
     </div>
 
     <div class="modal-actions">
-
-      <button
-        id="closeMucusModalBtn"
-        class="btn secondary"
-        type="button"
-      >
-        Close
-      </button>
-
-      <button
-        id="saveMucusModalBtn"
-        class="btn primary"
-        type="button"
-      >
-        Save
-      </button>
-
+      <button id="closeMucusModalBtn" class="btn secondary" type="button">Back</button>
+      <button id="saveMucusModalBtn" class="btn primary" type="button">Save</button>
     </div>
 
   </div>
@@ -666,17 +417,8 @@
     <div class="modal-section">
       <div class="section-title">Fertility</div>
       <div class="checkbox-group">
-
-        <label class="checkbox-row">
-          <input type="checkbox" id="markersFertile">
-          <span>Fertile day</span>
-        </label>
-
-        <label class="checkbox-row">
-          <input type="checkbox" id="markersPeak">
-          <span>Peak day</span>
-        </label>
-
+        <label class="checkbox-row"><input type="checkbox" id="markersFertile"><span>Fertile day</span></label>
+        <label class="checkbox-row"><input type="checkbox" id="markersPeak"><span>Peak day</span></label>
       </div>
     </div>
 
@@ -695,23 +437,8 @@
     </div>
 
     <div class="modal-actions">
-
-      <button
-        id="closeMarkersModalBtn"
-        class="btn secondary"
-        type="button"
-      >
-        Close
-      </button>
-
-      <button
-        id="saveMarkersModalBtn"
-        class="btn primary"
-        type="button"
-      >
-        Save
-      </button>
-
+      <button id="closeMarkersModalBtn" class="btn secondary" type="button">Back</button>
+      <button id="saveMarkersModalBtn" class="btn primary" type="button">Save</button>
     </div>
 
   </div>
@@ -726,31 +453,12 @@
 
     <div class="modal-section">
       <div class="section-title">Other observations</div>
-      <input
-        id="otherModalInput"
-        type="text"
-        placeholder="Other observations"
-      >
+      <input id="otherModalInput" type="text" placeholder="Other observations">
     </div>
 
     <div class="modal-actions">
-
-      <button
-        id="closeOtherModalBtn"
-        class="btn secondary"
-        type="button"
-      >
-        Close
-      </button>
-
-      <button
-        id="saveOtherModalBtn"
-        class="btn primary"
-        type="button"
-      >
-        Save
-      </button>
-
+      <button id="closeOtherModalBtn" class="btn secondary" type="button">Back</button>
+      <button id="saveOtherModalBtn" class="btn primary" type="button">Save</button>
     </div>
 
   </div>

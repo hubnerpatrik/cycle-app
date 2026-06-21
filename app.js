@@ -247,7 +247,10 @@ function init() {
 
   // action modal
   qs("editBtn").onclick        = () => openActionModal();
-  qs("closeBtn").onclick       = closeModal;
+  qs("closeBtn").onclick = () => {
+  closeModal();
+  setTimeout(() => openActionModal(), 200);
+};
   qs("saveBtn").onclick        = () => saveModal(render);
   qs("closeActionModalBtn").onclick = closeActionModal;
 
@@ -261,7 +264,10 @@ function init() {
     setTimeout(() => openBleedingModal(), 250);
   };
 
-  qs("closeBleedingModalBtn").onclick  = closeBleedingModal;
+  qs("closeBleedingModalBtn").onclick = () => {
+  closeBleedingModal();
+  setTimeout(() => openActionModal(), 250);
+};
   qs("saveBleedingModalBtn").onclick   = () => saveBleedingModal(render);
 
   qs("mucusActionBtn").onclick = () => {
@@ -269,7 +275,10 @@ function init() {
     setTimeout(() => openMucusModal(), 250);
   };
 
-  qs("closeMucusModalBtn").onclick = closeMucusModal;
+  qs("closeMucusModalBtn").onclick = () => {
+  closeMucusModal();
+  setTimeout(() => openActionModal(), 250);
+};
   qs("saveMucusModalBtn").onclick  = () => saveMucusModal(render);
 
   qs("markersActionBtn").onclick = () => {
@@ -282,9 +291,15 @@ function init() {
     setTimeout(() => openOtherModal(), 250);
   };
 
-  qs("closeMarkersModalBtn").onclick = closeMarkersModal;
+  qs("closeMarkersModalBtn").onclick = () => {
+  closeMarkersModal();
+  setTimeout(() => openActionModal(), 250);
+};
   qs("saveMarkersModalBtn").onclick  = () => saveMarkersModal(render);
-  qs("closeOtherModalBtn").onclick   = closeOtherModal;
+  qs("closeOtherModalBtn").onclick = () => {
+  closeOtherModal();
+  setTimeout(() => openActionModal(), 250);
+};
   qs("saveOtherModalBtn").onclick    = () => saveOtherModal(render);
 
   // coverline tools
