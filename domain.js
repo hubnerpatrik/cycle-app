@@ -89,7 +89,7 @@ export function buildColumns() {
       bleeding:        raw.bleeding         ?? "none",
       discharge:       raw.discharge        ?? "none",
 
-      sensation:       raw.sensation        ?? "none",
+      sensation:       raw.sensation        ?? "dry",
 
       stretch:         raw.stretch          ?? false,
       visible:         raw.visible          ?? false,
@@ -164,7 +164,7 @@ export function buildCycleColumns() {
       tempFactors:     raw.tempFactors     ?? "",
       bleeding:        raw.bleeding        ?? "none",
       discharge:       raw.discharge       ?? "none",
-      sensation:       raw.sensation       ?? "none",
+      sensation:       raw.sensation       ?? "dry",
       stretch:         raw.stretch         ?? false,
       visible:         raw.visible         ?? false,
       consistency:     raw.consistency     ?? "none",

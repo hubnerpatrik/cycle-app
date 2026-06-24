@@ -80,21 +80,21 @@
         <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
 
-      <button id="coverlineActionBtn" class="action-btn" type="button">
-        <span class="action-icon chip-teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l4-5 4 3 4-7 4 4"/><line x1="3" y1="18" x2="21" y2="18" stroke-dasharray="2 2"/></svg></span>
-        <span class="action-label">Coverlines</span>
+      <button id="dayInfoBtn" class="action-btn" type="button">
+        <span class="action-icon chip-gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg></span>
+        <span class="action-label">Day Info</span>
         <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
 
       <button id="markerActionBtn" class="action-btn" type="button">
         <span class="action-icon chip-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2.5 3.5L16 11H5"/></svg></span>
-        <span class="action-label">Markers</span>
+        <span class="action-label">Placeholder 1</span>
         <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
 
       <button id="cycleActionBtn" class="action-btn" type="button">
         <span class="action-icon chip-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 14-5"/><path d="M18 3v4h-4"/><path d="M20 12a8 8 0 0 1-14 5"/><path d="M6 21v-4h4"/></svg></span>
-        <span class="action-label">Cycle</span>
+        <span class="action-label">Placeholder 2</span>
         <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
 
@@ -236,11 +236,12 @@
   <!-- dev panel -->
 
   <div class="dev-panel">
+    
     <button id="devReset" type="button">DEV RESET</button>
   </div>
 
 </div>
-
+<div id="toast" class="toast hidden"></div>
 <!-- modal -->
 
 <div id="modal" class="modal hidden">
@@ -322,8 +323,7 @@
 
       <div class="section-title">Bleeding</div>
 
-      <div class="segmented three">
-        <button type="button" data-group="bleeding" data-value="none">None</button>
+      <div class="segmented two">
         <button type="button" data-group="bleeding" data-value="spotting">Spotting</button>
         <button type="button" data-group="bleeding" data-value="menstruation">Period</button>
       </div>
@@ -347,8 +347,7 @@
 
     <div class="modal-section">
       <div class="section-title">Sensation</div>
-      <div class="segmented four">
-        <button type="button" data-group="sensation" data-value="none">None</button>
+      <div class="segmented three">
         <button type="button" data-group="sensation" data-value="dry">Dry</button>
         <button type="button" data-group="sensation" data-value="moist">Moist</button>
         <button type="button" data-group="sensation" data-value="wet">Wet</button>
@@ -460,9 +459,41 @@
       <button id="closeOtherModalBtn" class="btn secondary" type="button">Back</button>
       <button id="saveOtherModalBtn" class="btn primary" type="button">Save</button>
     </div>
-
+</div>
   </div>
-
+  <div id="dayInfoModal" class="modal hidden">
+  <div class="modal-card">
+    <h2 id="dayInfoTitle">Day info</h2>
+    <div class="info-panel">
+      <div class="info-group">
+        <div class="info-label">Temperature</div>
+        <div id="infoTemp" class="info-value">-</div>
+      </div>
+      <div class="info-group">
+        <div class="info-label">Influence factors</div>
+        <div id="infoTempFactors" class="info-value">-</div>
+      </div>
+      <div class="info-group">
+        <div class="info-label">Bleeding</div>
+        <div id="infoBleeding" class="info-value">-</div>
+      </div>
+      <div class="info-group">
+        <div class="info-label">Mucus</div>
+        <div id="infoMucus" class="info-value">-</div>
+      </div>
+      <div class="info-group">
+        <div class="info-label">Markers</div>
+        <div id="infoMarkers" class="info-value">-</div>
+      </div>
+      <div class="info-group">
+        <div class="info-label">Other</div>
+        <div id="infoOther" class="info-value">-</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button id="closeDayInfoModalBtn" class="btn secondary" type="button">Close</button>
+    </div>
+  </div>
 </div>
 
 <script type="module" src="app.js"></script>

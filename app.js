@@ -41,6 +41,8 @@ import {
   closeOtherModal,
   saveOtherModal,
   syncModalUI,
+  openDayInfoModal,
+  closeDayInfoModal
 } from "./ui.js";
 
 /* ─── DOM helpers ─────────────────────────── */
@@ -358,6 +360,10 @@ function init() {
       syncModalUI();
     };
   });
+  
+  // day info modal
+  qs("dayInfoBtn").onclick = () => openDayInfoModal(currentColumns);
+  qs("closeDayInfoModalBtn").onclick = closeDayInfoModal;
 }
 
 /* ─── boot ────────────────────────────────── */

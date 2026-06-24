@@ -7,7 +7,7 @@ import { store } from "./store.js";
 import {
   LAYOUT, MUCUS_LABELS, qs, qsa,
   chartY, chartWidth,
-  getDaysInMonth, getMonthOffset, formatDateKey,
+  getDaysInMonth, getMonthOffset, formatDateKey, formatTemp,
 } from "./app.js";
 
 /* ─── month label ─────────────────────────── */
@@ -215,7 +215,7 @@ const rowIds = [
     attach(sedimentCell, col);
     rows.sedimentRow.appendChild(sedimentCell);
 
-    const otherCell = makeCell(col.other, sel);
+    const otherCell = makeCell(col.other ? "✓" : "", sel);
     attach(otherCell, col);
     rows.otherRow.appendChild(otherCell);
   });
@@ -236,7 +236,7 @@ export function syncModalUI() {
 
 /** Opens the edit modal for the currently selected day. */
 export function openModal(currentColumns) {
-  if (!store.selectedKey) return;
+  if (!store.selectedKey) return showMessage("Select a day first");
 
   const key    = store.selectedKey;
   const data   = store.entries[key] || {};
@@ -274,7 +274,8 @@ export function validateTempInput() {
  * Accepts render as a callback to avoid a circular import with app.js.
  */
 export function saveModal(render) {
-  if (!store.selectedKey || !validateTempInput()) return;
+  if (!store.selectedKey) return showMessage("Select a day first");
+  if (!validateTempInput()) return showMessage("Temperature must be between 34–42 °C");
 
   const temp = parseFloat(qs("tempInput").value);
 
@@ -309,12 +310,12 @@ export function closeActionModal() {
 }
 
 export function openMucusModal() {
-  if (!store.selectedKey) return;
+  if (!store.selectedKey) return showMessage("Select a day first");
 
   const data = store.entries[store.selectedKey] || {};
 
   // load saved values into modal state — coerce booleans explicitly
-  store.modal.sensation   = data.sensation   ?? "none";
+  store.modal.sensation   = data.sensation   ?? "dry";
   store.modal.stretch     = data.stretch     === true;
   store.modal.visible     = data.visible     === true;
   store.modal.consistency = data.consistency ?? "none";
@@ -369,7 +370,7 @@ export function saveMucusModal(render) {
   );
 }
 export function openBleedingModal() {
-  if (!store.selectedKey) return;
+  if (!store.selectedKey) return showMessage("Select a day first");
 
   const data = store.entries[store.selectedKey] || {};
 
@@ -415,7 +416,7 @@ export function saveBleedingModal(render) {
   );
 }
 export function openMarkersModal() {
-  if (!store.selectedKey) return;
+  if (!store.selectedKey) return showMessage("Select a day first");
 
   const data = store.entries[store.selectedKey] || {};
 
@@ -454,7 +455,7 @@ export function saveMarkersModal(render) {
 }
 
 export function openOtherModal() {
-  if (!store.selectedKey) return;
+  if (!store.selectedKey) return showMessage("Select a day first");
 
   const data = store.entries[store.selectedKey] || {};
   qs("otherModalInput").value = data.other ?? "";
@@ -484,4 +485,75 @@ export function saveOtherModal(render) {
   closeOtherModal();
 
   qs("otherModal").addEventListener("transitionend", render, { once: true });
+}
+
+/* ─── day info modal ───────────────────────── */
+const BLEEDING_LABELS = { none: "None", spotting: "Spotting", menstruation: "Period" };
+const SENSATION_LABELS = { dry: "Dry", moist: "Moist", wet: "Wet" };
+
+// full-word versions of the abbreviated map labels — used only in day-info modal
+const CONSISTENCY_FULL_LABELS = { none: "None", sticky: "Creamy", creamy: "Slightly stretchy", eggwhite: "Stretchy" };
+const COLOR_FULL_LABELS = { none: "None", clear: "White", white: "Clear", yellow: "Other" };
+
+/** Opens the read-only day info modal for the currently selected day. */
+export function openDayInfoModal(currentColumns) {
+  if (!store.selectedKey) return showMessage("Select a day first");
+
+  const key    = store.selectedKey;
+  const data   = store.entries[key] || {};
+  const column = currentColumns.find(c => c.key === key);
+
+  qs("dayInfoTitle").innerText = `${key} (CD ${column?.cycleDay ?? "-"})`;
+
+  qs("infoTemp").innerText        = data.temp != null ? `${formatTemp(data.temp)} °C` : "-";
+  qs("infoTempFactors").innerText = data.tempFactors?.trim() ? data.tempFactors : "-";
+  qs("infoBleeding").innerText    = BLEEDING_LABELS[data.bleeding ?? "none"];
+
+  qs("infoMucus").innerHTML = [
+    `Sensation: ${SENSATION_LABELS[data.sensation ?? "dry"]}`,
+    `Slippery: ${data.stretch ? "Yes" : "No"}`,
+    `Discharge: ${data.visible ? "Yes" : "No"}`,
+    `Consistency: ${CONSISTENCY_FULL_LABELS[data.consistency ?? "none"]}`,
+    `Color: ${COLOR_FULL_LABELS[data.color ?? "none"]}`,
+    `Clots: ${data.sediment ? "Yes" : "No"}`,
+  ].join("<br>");
+
+  qs("infoMarkers").innerHTML = [
+    `Fertile: ${data.isFertile ? "Yes" : "No"}`,
+    `Peak: ${data.isPeak ? "Yes" : "No"}`,
+    `Marker: ${data.marker || "-"}`,
+  ].join("<br>");
+
+  qs("infoOther").innerText = data.other?.trim() ? data.other : "-";
+
+  const modal = qs("dayInfoModal");
+  modal.classList.remove("hidden");
+  requestAnimationFrame(() => modal.classList.add("show"));
+}
+
+/** Closes the day info modal. */
+export function closeDayInfoModal() {
+  const modal = qs("dayInfoModal");
+  modal.classList.remove("show");
+  modal.addEventListener("transitionend", () => modal.classList.add("hidden"), { once: true });
+}
+
+/* ─── toast ───────────────────────────────── */
+
+let toastTimer = null;
+
+/** Shows a temporary message banner. Used for blocked actions and validation errors. */
+export function showMessage(text) {
+  const toast = qs("toast");
+  if (!toast) return;
+
+  clearTimeout(toastTimer);
+  toast.textContent = text;
+  toast.classList.remove("hidden");
+  requestAnimationFrame(() => toast.classList.add("show"));
+
+  toastTimer = setTimeout(() => {
+    toast.classList.remove("show");
+    toast.addEventListener("transitionend", () => toast.classList.add("hidden"), { once: true });
+  }, 2200);
 }

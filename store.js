@@ -38,7 +38,7 @@ _emptyModal() {
     bleeding: "none",
     discharge: "none",
 
-    sensation: "none",
+    sensation: "dry",
 
     stretch: false,
     visible: false,
