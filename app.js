@@ -76,8 +76,18 @@ export const CYCLE = {
   coverlineShift: 0.05, // degrees above max-low temp = coverline
 };
 
-/** Short display labels for mucus quality values. */
-export const MUCUS_LABELS = { dry: "D", moist: "M", wet: "W" };
+/** Influence factor options for temperature readings — dropdown source. */
+export const TEMP_FACTORS = {
+  alcohol:          "Alcohol",
+  travel:           "Travel",
+  stress:           "Stress",
+  medication:       "Medication",
+  illness:          "Illness",
+  restlessSleep:    "Restless sleep",
+  newThermometer:   "New thermometer",
+  physicalActivity: "Physical activity",
+  other:            "Other",
+};
 
 /* ─── date utils ──────────────────────────── */
 

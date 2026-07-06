@@ -258,7 +258,22 @@
 
       <label class="input-label">Influence factors</label>
 
-      <input id="tempFactorsInput" type="text" placeholder="Alcohol, poor sleep, illness...">
+            <select id="tempFactorsInput">
+              <option value="">None</option>
+              <option value="alcohol">Alcohol</option>
+              <option value="travel">Travel</option>
+              <option value="stress">Stress</option>
+              <option value="medication">Medication</option>
+              <option value="illness">Illness</option>
+              <option value="restlessSleep">Restless sleep</option>
+              <option value="newThermometer">New thermometer</option>
+              <option value="physicalActivity">Physical activity</option>
+              <option value="other">Other</option>
+            </select>
+
+            <label class="input-label">Measurement time (optional)</label>
+
+            <input id="measurementTimeInput" type="time">
 
     </div>
 
@@ -329,7 +344,14 @@
       </div>
 
     </div>
-
+      <div class="modal-section">
+            <div class="section-title">Clots</div>
+            <div class="segmented two">
+              <button type="button" data-group="sediment" data-value="false">No</button>
+              <button type="button" data-group="sediment" data-value="true">Yes</button>
+            </div>
+          </div>
+          
     <div class="modal-actions">
       <button id="closeBleedingModalBtn" class="btn secondary" type="button">Back</button>
       <button id="saveBleedingModalBtn" class="btn primary" type="button">Save</button>
@@ -377,24 +399,6 @@
         <button type="button" data-group="consistency" data-value="sticky">Creamy</button>
         <button type="button" data-group="consistency" data-value="creamy">Slightly stretchy</button>
         <button type="button" data-group="consistency" data-value="eggwhite">Strechy</button>
-      </div>
-    </div>
-
-    <div class="modal-section">
-      <div class="section-title">Color</div>
-      <div class="segmented four">
-        <button type="button" data-group="color" data-value="none">None</button>
-        <button type="button" data-group="color" data-value="clear">White</button>
-        <button type="button" data-group="color" data-value="white">Clear</button>
-        <button type="button" data-group="color" data-value="yellow">Other</button>
-      </div>
-    </div>
-
-    <div class="modal-section">
-      <div class="section-title">Clots</div>
-      <div class="segmented two">
-        <button type="button" data-group="sediment" data-value="false">No</button>
-        <button type="button" data-group="sediment" data-value="true">Yes</button>
       </div>
     </div>
 

@@ -5,7 +5,7 @@
 
 import { store } from "./store.js";
 import {
-  LAYOUT, MUCUS_LABELS, qs, qsa,
+  LAYOUT, TEMP_FACTORS, qs, qsa,
   chartY, chartWidth,
   getDaysInMonth, getMonthOffset, formatDateKey, formatTemp,
 } from "./app.js";
@@ -222,6 +222,13 @@ const rowIds = [
 }
 
 /* ─── modal ───────────────────────────────── */
+/** After a modal's close transition: re-render and reopen the action modal. */
+function afterModalSave(modalId, render) {
+  qs(modalId).addEventListener("transitionend", () => {
+    render();
+    setTimeout(openActionModal, 200);
+  }, { once: true });
+}
 
 /** Syncs segmented button active states to current store.modal values. */
 export function syncModalUI() {
@@ -242,12 +249,14 @@ export function openModal(currentColumns) {
   const data   = store.entries[key] || {};
   const column = currentColumns.find(c => c.key === key);
 
-  store.modal.temp        = data.temp        ?? null;
-  store.modal.tempFactors = data.tempFactors ?? "";
+store.modal.temp            = data.temp            ?? null;
+  store.modal.tempFactors     = data.tempFactors      ?? "";
+  store.modal.measurementTime = data.measurementTime  ?? "";
 
   qs("modalTitle").innerText       = `${key} (CD ${column?.cycleDay ?? "-"})`;
   qs("tempInput").value            = store.modal.temp != null ? Number(store.modal.temp).toFixed(2) : "";
   qs("tempFactorsInput").value     = store.modal.tempFactors;
+  qs("measurementTimeInput").value = store.modal.measurementTime;
 
   const modal = qs("modal");
   modal.classList.remove("hidden");
@@ -281,14 +290,14 @@ export function saveModal(render) {
 
   store.entries[store.selectedKey] = {
     ...(store.entries[store.selectedKey] || {}),
-    temp:        isNaN(temp) ? null : temp,
-    tempFactors: qs("tempFactorsInput").value.trim(),
+    temp:            isNaN(temp) ? null : temp,
+    tempFactors:     qs("tempFactorsInput").value,
+    measurementTime: qs("measurementTimeInput").value,
   };
 
   store.save();
   closeModal();
-
-  qs("modal").addEventListener("transitionend", render, { once: true });
+  afterModalSave("modal", render);
 }
 
 export function openActionModal() {
@@ -320,7 +329,6 @@ export function openMucusModal() {
   store.modal.visible     = data.visible     === true;
   store.modal.consistency = data.consistency ?? "none";
   store.modal.color       = data.color       ?? "none";
-  store.modal.sediment    = data.sediment    === true;
   store.modal.isPeak      = data.isPeak      === true;
 
   const modal = qs("mucusModal");
@@ -356,19 +364,14 @@ export function saveMucusModal(render) {
     visible: store.modal.visible,
     consistency: store.modal.consistency,
     color: store.modal.color,
-    sediment: store.modal.sediment,
     isPeak: store.modal.isPeak,
   };
-  
+
   store.save();
   closeMucusModal();
-
-  qs("mucusModal").addEventListener(
-    "transitionend",
-    render,
-    { once: true }
-  );
+  afterModalSave("mucusModal", render);
 }
+
 export function openBleedingModal() {
   if (!store.selectedKey) return showMessage("Select a day first");
 
@@ -376,6 +379,7 @@ export function openBleedingModal() {
 
   // load saved bleeding value into modal state
   store.modal.bleeding = data.bleeding ?? "none";
+  store.modal.sediment = data.sediment === true;
 
   syncModalUI();
 
@@ -404,17 +408,14 @@ export function saveBleedingModal(render) {
   store.entries[store.selectedKey] = {
     ...(store.entries[store.selectedKey] || {}),
     bleeding: store.modal.bleeding,
+    sediment: store.modal.sediment,
   };
 
   store.save();
   closeBleedingModal();
-
-  qs("bleedingModal").addEventListener(
-    "transitionend",
-    render,
-    { once: true }
-  );
+  afterModalSave("bleedingModal", render);
 }
+
 export function openMarkersModal() {
   if (!store.selectedKey) return showMessage("Select a day first");
 
@@ -450,8 +451,7 @@ export function saveMarkersModal(render) {
 
   store.save();
   closeMarkersModal();
-
-  qs("markersModal").addEventListener("transitionend", render, { once: true });
+  afterModalSave("markersModal", render);
 }
 
 export function openOtherModal() {
@@ -483,8 +483,7 @@ export function saveOtherModal(render) {
 
   store.save();
   closeOtherModal();
-
-  qs("otherModal").addEventListener("transitionend", render, { once: true });
+  afterModalSave("otherModal", render);
 }
 
 /* ─── day info modal ───────────────────────── */
@@ -505,8 +504,10 @@ export function openDayInfoModal(currentColumns) {
 
   qs("dayInfoTitle").innerText = `${key} (CD ${column?.cycleDay ?? "-"})`;
 
-  qs("infoTemp").innerText        = data.temp != null ? `${formatTemp(data.temp)} °C` : "-";
-  qs("infoTempFactors").innerText = data.tempFactors?.trim() ? data.tempFactors : "-";
+  qs("infoTemp").innerText = data.temp != null
+    ? `${formatTemp(data.temp)} °C${data.measurementTime ? ` at ${data.measurementTime}` : ""}`
+    : "-";
+  qs("infoTempFactors").innerText = data.tempFactors ? TEMP_FACTORS[data.tempFactors] : "-";
   qs("infoBleeding").innerText    = BLEEDING_LABELS[data.bleeding ?? "none"];
 
   qs("infoMucus").innerHTML = [

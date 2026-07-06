@@ -34,7 +34,7 @@ _emptyModal() {
   return {
     temp: null,
     tempFactors: "",
-
+    measurementTime: "",   
     bleeding: "none",
     discharge: "none",
 

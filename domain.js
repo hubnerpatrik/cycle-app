@@ -85,6 +85,7 @@ export function buildColumns() {
       // observation data
       temp:            raw.temp             ?? null,
       tempFactors:     raw.tempFactors      ?? "",
+      measurementTime: raw.measurementTime  ?? "",
 
       bleeding:        raw.bleeding         ?? "none",
       discharge:       raw.discharge        ?? "none",
@@ -162,6 +163,7 @@ export function buildCycleColumns() {
       cycleDay: resolveCycleDay(date, allStarts, index),
       temp:            raw.temp            ?? null,
       tempFactors:     raw.tempFactors     ?? "",
+      measurementTime: raw.measurementTime ?? "",
       bleeding:        raw.bleeding        ?? "none",
       discharge:       raw.discharge       ?? "none",
       sensation:       raw.sensation       ?? "dry",

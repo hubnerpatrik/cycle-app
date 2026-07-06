@@ -30,7 +30,7 @@ export function drawVerticalGrid(ctx, columns) {
     const x = Math.round(col.x) + 0.5;
     ctx.beginPath();
     ctx.lineWidth   = 1;
-    ctx.strokeStyle = col.index % 5 === 0 ? "rgba(0,0,0,0.30)" : "rgba(0,0,0,0.10)";
+    ctx.strokeStyle = col.index % 5 === 0 ? "#d4d4da" : "#e5e5ea";
     ctx.moveTo(x, LAYOUT.chartPaddingTop);
     ctx.lineTo(x, LAYOUT.chartHeight - LAYOUT.chartPaddingBottom);
     ctx.stroke();
@@ -38,7 +38,7 @@ export function drawVerticalGrid(ctx, columns) {
   const lastX = chartWidth(columns) + 0.5;
   ctx.beginPath();
   ctx.lineWidth   = 1;
-  ctx.strokeStyle = "rgba(0,0,0,0.30)";
+  ctx.strokeStyle = "#d4d4da";
   ctx.moveTo(lastX, LAYOUT.chartPaddingTop);
   ctx.lineTo(lastX, LAYOUT.chartHeight - LAYOUT.chartPaddingBottom);
   ctx.stroke();
@@ -193,6 +193,16 @@ export function drawTemperaturePoints(ctx, columns) {
   ctx.lineWidth = 1;
 }
 
+/** Draws the measurement time label under a temperature dot, when set. */
+export function drawMeasurementTimes(ctx, columns) {
+  columns.forEach(col => {
+    if (col.temp == null || !col.measurementTime) return;
+    ctx.font = "10px Inter";
+    ctx.fillStyle = "#8e8e93";
+    ctx.textAlign = "center";
+    ctx.fillText(col.measurementTime, col.centerX, chartY(col.temp) + 18);
+  });
+}
 /** Draws anomaly marker labels above temperature dots. */
 export function drawMarkers(ctx, columns) {
   columns.forEach(col => {
@@ -236,6 +246,7 @@ export function renderChart(columns) {
   drawVerticalCoverline(ctx, columns);
   drawTemperatureLine(ctx, cycleGroups);
   drawTemperaturePoints(ctx, columns);
+  drawMeasurementTimes(ctx, columns);
   drawMarkers(ctx, columns);
 }
 
