@@ -23,6 +23,7 @@ import {
   renderCalendar,
   renderMapRows,
   openModal,
+  syncMucusModalUI,
   closeModal,
   openActionModal,
   closeActionModal,
@@ -34,6 +35,9 @@ import {
   openBleedingModal,
   closeBleedingModal,
   saveBleedingModal,
+  openFertileRangeModal,
+  closeFertileRangeModal,
+  saveFertileRangeModal,
   openMarkersModal,
   closeMarkersModal,
   saveMarkersModal,
@@ -170,6 +174,52 @@ export function syncCSSVariables() {
 /** Columns built from store.entries each render cycle. Shared across modules. */
 export let currentColumns = [];
 
+export function getCycleCoverlineKey(cycleIndex = store.currentCycleIndex) {
+  return cycleIndex == null ? "default" : `cycle-${cycleIndex}`;
+}
+
+export function getCycleCoverlineValues(cycleIndex = store.currentCycleIndex) {
+  const key = getCycleCoverlineKey(cycleIndex);
+  const data = store.coverlines?.[key] ?? {};
+  return {
+    horizontalGuideY: data.horizontalGuideY ?? store.horizontalGuideY ?? null,
+    verticalGuideX: data.verticalGuideX ?? store.verticalGuideX ?? null,
+  };
+}
+
+export function setCycleCoverlineValues(values, cycleIndex = store.currentCycleIndex) {
+  const key = getCycleCoverlineKey(cycleIndex);
+  if (!store.coverlines[key]) store.coverlines[key] = {};
+
+  const data = store.coverlines[key];
+  if (values.horizontalGuideY != null) data.horizontalGuideY = values.horizontalGuideY;
+  else delete data.horizontalGuideY;
+
+  if (values.verticalGuideX != null) data.verticalGuideX = values.verticalGuideX;
+  else delete data.verticalGuideX;
+
+  if (!Object.keys(data).length) delete store.coverlines[key];
+
+  if (values.horizontalGuideY != null) store.horizontalGuideY = values.horizontalGuideY;
+  if (values.verticalGuideX != null) store.verticalGuideX = values.verticalGuideX;
+}
+
+export function isFertileDay(key, entries = store.entries) {
+  const entry = entries[key] || {};
+  if (entry.isFertile === true) return true;
+
+  return Object.entries(entries).some(([candidateKey, candidateEntry]) => {
+    const start = candidateEntry?.fertileRangeStart;
+    const end = candidateEntry?.fertileRangeEnd;
+    if (!start || !end) return false;
+
+    const startDate = normalize(parseDateKey(start));
+    const endDate = normalize(parseDateKey(end));
+    const dayDate = normalize(parseDateKey(key));
+    return dayDate >= startDate && dayDate <= endDate;
+  });
+}
+
 /** Selects a day column, switches to the correct cycle, and triggers a full re-render. */
 export function selectColumn(key) {
   store.selectedKey = key;
@@ -298,10 +348,21 @@ function init() {
     setTimeout(() => openMarkersModal(), 250);
   };
 
+  qs("fertileRangeActionBtn").onclick = () => {
+    closeActionModal();
+    setTimeout(() => openFertileRangeModal(), 250);
+  };
+
   qs("otherActionBtn").onclick = () => {
     closeActionModal();
     setTimeout(() => openOtherModal(), 250);
   };
+
+  qs("closeFertileRangeModalBtn").onclick = () => {
+    closeFertileRangeModal();
+    setTimeout(() => openActionModal(), 250);
+  };
+  qs("saveFertileRangeModalBtn").onclick = () => saveFertileRangeModal(render);
 
   qs("closeMarkersModalBtn").onclick = () => {
   closeMarkersModal();
@@ -370,6 +431,27 @@ function init() {
       syncModalUI();
     };
   });
+
+  const mucusColorOtherCheckbox = qs("mucusColorOtherCheckbox");
+  const mucusColorOtherInput = qs("mucusColorOtherInput");
+  if (mucusColorOtherCheckbox) {
+    mucusColorOtherCheckbox.onchange = () => {
+      if (mucusColorOtherCheckbox.checked) {
+        store.modal.color = "other";
+        store.modal.colorOther = store.modal.colorOther ?? "";
+      } else {
+        store.modal.color = "";
+        store.modal.colorOther = "";
+      }
+      syncMucusModalUI();
+    };
+  }
+
+  if (mucusColorOtherInput) {
+    mucusColorOtherInput.oninput = () => {
+      store.modal.colorOther = mucusColorOtherInput.value;
+    };
+  }
   
   // day info modal
   qs("dayInfoBtn").onclick = () => openDayInfoModal(currentColumns);

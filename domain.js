@@ -5,7 +5,7 @@
 // and building the column array consumed by render.
 
 import { store } from "./store.js";
-import { normalize, parseDateKey, columnX, columnCenterX } from "./app.js";
+import { normalize, parseDateKey, columnX, columnCenterX, isFertileDay } from "./app.js";
 
 /* ─── cycle detection ─────────────────────── */
 
@@ -102,7 +102,7 @@ export function buildColumns() {
 
       other:           raw.other            ?? "",
 
-      isFertile:       raw.isFertile        ?? false,
+      isFertile:       isFertileDay(key, store.entries),
       isPeak:          raw.isPeak           ?? false,
       marker:          raw.marker           ?? "",
 
@@ -173,7 +173,7 @@ export function buildCycleColumns() {
       color:           raw.color           ?? "none",
       sediment:        raw.sediment        ?? false,
       other:           raw.other           ?? "",
-      isFertile:       raw.isFertile       ?? false,
+      isFertile:       isFertileDay(key, store.entries),
       isPeak:          raw.isPeak          ?? false,
       marker:          raw.marker          ?? "",
     };

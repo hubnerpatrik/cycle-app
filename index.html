@@ -86,9 +86,9 @@
         <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
 
-      <button id="markerActionBtn" class="action-btn" type="button">
+      <button id="fertileRangeActionBtn" class="action-btn" type="button">
         <span class="action-icon chip-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2.5 3.5L16 11H5"/></svg></span>
-        <span class="action-label">Placeholder 1</span>
+        <span class="action-label">Fertile range</span>
         <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
 
@@ -182,37 +182,37 @@
           <!-- mucus -->
 
           <div class="map-row">
-            <div class="map-side-label">Sensation</div>
+            <div class="map-side-label">Sens</div>
             <div class="map-temp-spacer"></div>
             <div id="sensationRow" class="map-cells"></div>
           </div>
 
           <div class="map-row">
-            <div class="map-side-label">Slippery</div>
+            <div class="map-side-label">Slip</div>
             <div class="map-temp-spacer"></div>
             <div id="stretchRow" class="map-cells"></div>
           </div>
 
           <div class="map-row">
-            <div class="map-side-label">Discharge</div>
+            <div class="map-side-label">Disch</div>
             <div class="map-temp-spacer"></div>
             <div id="visibleRow" class="map-cells"></div>
           </div>
 
           <div class="map-row">
-            <div class="map-side-label">Consistency</div>
+            <div class="map-side-label">Cons</div>
             <div class="map-temp-spacer"></div>
             <div id="consistencyRow" class="map-cells"></div>
           </div>
 
           <div class="map-row">
-            <div class="map-side-label">Color</div>
+            <div class="map-side-label">Col</div>
             <div class="map-temp-spacer"></div>
             <div id="colorRow" class="map-cells"></div>
           </div>
 
           <div class="map-row">
-            <div class="map-side-label">Peak</div>
+            <div class="map-side-label">Pk</div>
             <div class="map-temp-spacer"></div>
             <div id="peakRow" class="map-cells"></div>
           </div>
@@ -220,7 +220,7 @@
           <!-- other -->
 
           <div class="map-row">
-            <div class="map-side-label">Other</div>
+            <div class="map-side-label">Add</div>
             <div class="map-temp-spacer"></div>
             <div id="otherRow" class="map-cells"></div>
           </div>
@@ -395,11 +395,23 @@
     <div class="modal-section">
       <div class="section-title">Consistency</div>
       <div class="segmented four">
-        <button type="button" data-group="consistency" data-value="none">None</button>
+        <button type="button" data-group="consistency" data-value="">No mucus</button>
         <button type="button" data-group="consistency" data-value="sticky">Creamy</button>
         <button type="button" data-group="consistency" data-value="creamy">Slightly stretchy</button>
-        <button type="button" data-group="consistency" data-value="eggwhite">Strechy</button>
+        <button type="button" data-group="consistency" data-value="eggwhite">Stretchy</button>
       </div>
+    </div>
+
+    <div class="modal-section">
+      <div class="section-title">Color</div>
+      <div class="segmented four">
+        <button type="button" data-group="color" data-value="">No color</button>
+        <button type="button" data-group="color" data-value="white">White</button>
+        <button type="button" data-group="color" data-value="clear">Clear</button>
+        <button type="button" data-group="color" data-value="yellow">Yellow</button>
+      </div>
+      <label class="checkbox-row"><input type="checkbox" id="mucusColorOtherCheckbox"><span>Other</span></label>
+      <input id="mucusColorOtherInput" type="text" placeholder="Describe color" class="hidden" />
     </div>
 
     <div class="modal-actions">
@@ -411,32 +423,43 @@
 
 </div>
 
-<div id="markersModal" class="modal hidden">
+<div id="fertileRangeModal" class="modal hidden">
 
   <div class="modal-card">
 
-    <h2>Markers</h2>
+    <h2>Fertile range</h2>
 
     <div class="modal-section">
-      <div class="section-title">Fertility</div>
-      <div class="checkbox-group">
-        <label class="checkbox-row"><input type="checkbox" id="markersFertile"><span>Fertile day</span></label>
-        <label class="checkbox-row"><input type="checkbox" id="markersPeak"><span>Peak day</span></label>
-      </div>
+      <label class="input-label">From</label>
+      <input id="fertileRangeStart" type="date">
     </div>
 
     <div class="modal-section">
-      <div class="section-title">Marker</div>
-      <select id="markersMarker">
-        <option value="">None</option>
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3">3</option>
-        <option value="4">4</option>
-        <option value="5">5</option>
-        <option value="6">6</option>
-        <option value="P">P</option>
-      </select>
+      <label class="input-label">To</label>
+      <input id="fertileRangeEnd" type="date">
+    </div>
+
+    <div class="modal-actions">
+      <button id="closeFertileRangeModalBtn" class="btn secondary" type="button">Back</button>
+      <button id="saveFertileRangeModalBtn" class="btn primary" type="button">Save</button>
+    </div>
+
+  </div>
+
+</div>
+
+<div id="markersModal" class="modal hidden">
+
+
+  <div class="modal-card">
+
+    <h2>Peak day</h2>
+
+    <div class="modal-section">
+      <div class="segmented two">
+        <button type="button" data-group="isPeak" data-value="false">No</button>
+        <button type="button" data-group="isPeak" data-value="true">Yes</button>
+      </div>
     </div>
 
     <div class="modal-actions">
@@ -452,11 +475,11 @@
 
   <div class="modal-card">
 
-    <h2>Other</h2>
+    <h2>Additional symptoms</h2>
 
     <div class="modal-section">
-      <div class="section-title">Other observations</div>
-      <input id="otherModalInput" type="text" placeholder="Other observations">
+      <div class="section-title">Additional symptoms</div>
+      <input id="otherModalInput" type="text" placeholder="Additional symptoms">
     </div>
 
     <div class="modal-actions">

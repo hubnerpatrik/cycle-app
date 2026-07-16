@@ -27,6 +27,7 @@ constructor() {
   // visual guides only
   this.horizontalGuideY = null;
   this.verticalGuideX = null;
+  this.coverlines = {};
 }
 
   /** Returns a blank modal state object. */
@@ -43,13 +44,12 @@ _emptyModal() {
     stretch: false,
     visible: false,
 
-    consistency: "none",
-    color: "none",
+    consistency: "",
+    color: "",
+    colorOther: "",
 
     sediment: false,
 
-    marker: "",
-    isFertile: false,
     isPeak: false,
 
     other: "",
@@ -69,6 +69,7 @@ _emptyModal() {
       if (parsed.entries) {
         this.horizontalGuideY = parsed.horizontalGuideY ?? null;
         this.verticalGuideX = parsed.verticalGuideX ?? null;
+        this.coverlines = parsed.coverlines ?? {};
         return parsed.entries;
       }
 
@@ -85,6 +86,7 @@ _emptyModal() {
       entries: this.entries,
       horizontalGuideY: this.horizontalGuideY,
       verticalGuideX: this.verticalGuideX,
+      coverlines: this.coverlines,
     }));
   }
 
@@ -102,6 +104,7 @@ _emptyModal() {
     this.verticalCoverlineMode   = false;
     this.horizontalGuideY        = null;
     this.verticalGuideX          = null;
+    this.coverlines              = {};
     this.currentCycleIndex       = null;
     this.modal = this._emptyModal();
   }

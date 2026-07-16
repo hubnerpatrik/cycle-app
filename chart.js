@@ -4,7 +4,7 @@
 // Draw order: bg → overlays → grid → annotations → data
 
 import { store } from "./store.js";
-import { LAYOUT, qs, chartY, graphHeight, chartWidth } from "./app.js";
+import { LAYOUT, qs, chartY, graphHeight, chartWidth, getCycleCoverlineValues, setCycleCoverlineValues } from "./app.js";
 
 /* ─── cycle grouping ──────────────────────── */
 
@@ -68,10 +68,6 @@ export function drawOverlayBands(ctx, columns) {
       ctx.fillStyle = "rgba(34,197,94,0.12)";
       ctx.fillRect(col.x, LAYOUT.chartPaddingTop, LAYOUT.columnWidth, graphHeight());
     }
-    if (col.isPeak) {
-      ctx.fillStyle = "rgba(168,85,247,0.10)";
-      ctx.fillRect(col.x, LAYOUT.chartPaddingTop, LAYOUT.columnWidth, graphHeight());
-    }
   });
 }
 
@@ -100,15 +96,16 @@ export function drawHoverLine(ctx, columns) {
 
 /** Draws the manually placed horizontal coverline as a dashed red line. */
 export function drawHorizontalCoverline(ctx, columns) {
-  if (store.horizontalGuideY == null) return;
+  const { horizontalGuideY } = getCycleCoverlineValues();
+  if (horizontalGuideY == null) return;
 
   ctx.beginPath();
   ctx.setLineDash([6, 4]);
   ctx.strokeStyle = "rgba(180,20,20,0.8)";
   ctx.lineWidth = 1.5;
 
-  ctx.moveTo(0, store.horizontalGuideY);
-  ctx.lineTo(chartWidth(columns), store.horizontalGuideY);
+  ctx.moveTo(0, horizontalGuideY);
+  ctx.lineTo(chartWidth(columns), horizontalGuideY);
 
   ctx.stroke();
 
@@ -118,16 +115,17 @@ export function drawHorizontalCoverline(ctx, columns) {
 
 /** Draws the manually placed vertical coverline as a dashed red line. */
 export function drawVerticalCoverline(ctx) {
-  if (store.verticalGuideX == null) return;
+  const { verticalGuideX } = getCycleCoverlineValues();
+  if (verticalGuideX == null) return;
 
   ctx.beginPath();
   ctx.setLineDash([6, 4]);
   ctx.strokeStyle = "rgba(180,20,20,0.8)";
   ctx.lineWidth = 1.5;
 
-  ctx.moveTo(store.verticalGuideX, LAYOUT.chartPaddingTop);
+  ctx.moveTo(verticalGuideX, LAYOUT.chartPaddingTop);
   ctx.lineTo(
-    store.verticalGuideX,
+    verticalGuideX,
     LAYOUT.chartHeight - LAYOUT.chartPaddingBottom
   );
 
@@ -156,15 +154,21 @@ export function drawTemperatureLine(ctx, cycleGroups) {
   cycleGroups.forEach(group => {
     const valid = group.columns.filter(c => c.temp != null);
     if (valid.length < 2) return;
-    ctx.beginPath();
-    valid.forEach((col, i) => {
-      i === 0
-        ? ctx.moveTo(col.centerX, chartY(col.temp))
-        : ctx.lineTo(col.centerX, chartY(col.temp));
-    });
+
     ctx.strokeStyle = "#111";
     ctx.lineWidth = 2;
-    ctx.stroke();
+
+    valid.forEach((col, i) => {
+      if (i === 0) return;
+      const prev = valid[i - 1];
+      ctx.beginPath();
+      ctx.moveTo(prev.centerX, chartY(prev.temp));
+      ctx.lineTo(col.centerX, chartY(col.temp));
+      ctx.setLineDash(col.index - prev.index > 1 ? [4, 4] : []);
+      ctx.stroke();
+    });
+
+    ctx.setLineDash([]);
   });
   ctx.lineWidth = 1;
 }
@@ -270,11 +274,11 @@ export function handleCanvasClick(event) {
   const y = event.clientY - rect.top;
 
   if (store.horizontalCoverlineMode) {
-    store.horizontalGuideY = y;
+    setCycleCoverlineValues({ horizontalGuideY: y });
   }
 
   if (store.verticalCoverlineMode) {
-    store.verticalGuideX = x;
+    setCycleCoverlineValues({ verticalGuideX: x });
   }
 
   store.horizontalCoverlineMode = false;

@@ -8,6 +8,7 @@ import {
   LAYOUT, TEMP_FACTORS, qs, qsa,
   chartY, chartWidth,
   getDaysInMonth, getMonthOffset, formatDateKey, formatTemp,
+  isFertileDay,
 } from "./app.js";
 
 /* ─── month label ─────────────────────────── */
@@ -96,7 +97,7 @@ export function renderCalendar(selectColumn) {
     div.appendChild(dayNum);
 
     if (entry?.bleeding === "menstruation") div.classList.add("red");
-    if (entry?.isFertile)                   div.classList.add("fertile-day");
+    if (isFertileDay(key))                   div.classList.add("fertile-day");
     if (store.selectedKey === key)          div.classList.add("selected");
 
     div.onclick = () => selectColumn(key);
@@ -148,16 +149,17 @@ const rowIds = [
   };
 
   const CONSISTENCY_LABELS = {
-  none: "",
+  "": "",
   sticky: "ST",
   creamy: "CR",
   eggwhite: "EW",
 };
   const COLOR_LABELS = {
-    none: "",
+    "": "",
     white: "W",
     yellow: "Y",
     clear: "C",
+    other: "O",
 };
 
   columns.forEach(col => {
@@ -193,7 +195,7 @@ const rowIds = [
     attach(colorCell, col);
     rows.colorRow.appendChild(colorCell);
 
-    const peakCell = makeCell(col.isPeak ? "P" : "", sel);
+    const peakCell = makeCell(col.isPeak ? "✓" : "", sel);
     attach(peakCell, col);
     rows.peakRow.appendChild(peakCell);
 
@@ -318,6 +320,20 @@ export function closeActionModal() {
   );
 }
 
+export function syncMucusModalUI() {
+  const otherCheckbox = qs("mucusColorOtherCheckbox");
+  const otherInput = qs("mucusColorOtherInput");
+  if (otherCheckbox) {
+    const isOther = store.modal.color === "other" || (store.modal.colorOther && store.modal.colorOther.trim());
+    otherCheckbox.checked = isOther;
+    if (otherInput) {
+      otherInput.classList.toggle("hidden", !isOther);
+      otherInput.value = store.modal.colorOther ?? "";
+    }
+  }
+  syncModalUI();
+}
+
 export function openMucusModal() {
   if (!store.selectedKey) return showMessage("Select a day first");
 
@@ -327,8 +343,9 @@ export function openMucusModal() {
   store.modal.sensation   = data.sensation   ?? "dry";
   store.modal.stretch     = data.stretch     === true;
   store.modal.visible     = data.visible     === true;
-  store.modal.consistency = data.consistency ?? "none";
-  store.modal.color       = data.color       ?? "none";
+  store.modal.consistency = data.consistency ?? "";
+  store.modal.color       = data.color       ?? "";
+  store.modal.colorOther  = data.colorOther  ?? "";
   store.modal.isPeak      = data.isPeak      === true;
 
   const modal = qs("mucusModal");
@@ -336,7 +353,7 @@ export function openMucusModal() {
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      syncModalUI();          // sync after modal is visible
+      syncMucusModalUI();    // sync after modal is visible
       modal.classList.add("show");
     });
   });
@@ -364,6 +381,7 @@ export function saveMucusModal(render) {
     visible: store.modal.visible,
     consistency: store.modal.consistency,
     color: store.modal.color,
+    colorOther: store.modal.colorOther,
     isPeak: store.modal.isPeak,
   };
 
@@ -416,20 +434,57 @@ export function saveBleedingModal(render) {
   afterModalSave("bleedingModal", render);
 }
 
+export function openFertileRangeModal() {
+  if (!store.selectedKey) return showMessage("Select a day first");
+
+  const data = store.entries[store.selectedKey] || {};
+  qs("fertileRangeStart").value = data.fertileRangeStart ?? "";
+  qs("fertileRangeEnd").value   = data.fertileRangeEnd ?? "";
+
+  const modal = qs("fertileRangeModal");
+  modal.classList.remove("hidden");
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => modal.classList.add("show"));
+  });
+}
+
+export function closeFertileRangeModal() {
+  const modal = qs("fertileRangeModal");
+  modal.classList.remove("show");
+  modal.addEventListener("transitionend", () => modal.classList.add("hidden"), { once: true });
+}
+
+export function saveFertileRangeModal(render) {
+  if (!store.selectedKey) return;
+
+  const fertileStart = qs("fertileRangeStart").value || null;
+  const fertileEnd = qs("fertileRangeEnd").value || null;
+
+  store.entries[store.selectedKey] = {
+    ...(store.entries[store.selectedKey] || {}),
+    fertileRangeStart: fertileStart,
+    fertileRangeEnd: fertileEnd,
+  };
+
+  store.save();
+  closeFertileRangeModal();
+  afterModalSave("fertileRangeModal", render);
+}
+
 export function openMarkersModal() {
   if (!store.selectedKey) return showMessage("Select a day first");
 
   const data = store.entries[store.selectedKey] || {};
 
-  // load saved marker values into modal state — coerce booleans explicitly
-  qs("markersFertile").checked = data.isFertile === true;
-  qs("markersPeak").checked    = data.isPeak    === true;
-  qs("markersMarker").value    = data.marker    ?? "";
+  store.modal.isPeak = data.isPeak === true;
 
   const modal = qs("markersModal");
   modal.classList.remove("hidden");
   requestAnimationFrame(() => {
-    requestAnimationFrame(() => modal.classList.add("show"));
+    requestAnimationFrame(() => {
+      syncModalUI();
+      modal.classList.add("show");
+    });
   });
 }
 
@@ -444,9 +499,7 @@ export function saveMarkersModal(render) {
 
   store.entries[store.selectedKey] = {
     ...(store.entries[store.selectedKey] || {}),
-    isFertile: qs("markersFertile").checked,
-    isPeak:    qs("markersPeak").checked,
-    marker:    qs("markersMarker").value,
+    isPeak: store.modal.isPeak === true,
   };
 
   store.save();
@@ -491,8 +544,8 @@ const BLEEDING_LABELS = { none: "None", spotting: "Spotting", menstruation: "Per
 const SENSATION_LABELS = { dry: "Dry", moist: "Moist", wet: "Wet" };
 
 // full-word versions of the abbreviated map labels — used only in day-info modal
-const CONSISTENCY_FULL_LABELS = { none: "None", sticky: "Creamy", creamy: "Slightly stretchy", eggwhite: "Stretchy" };
-const COLOR_FULL_LABELS = { none: "None", clear: "White", white: "Clear", yellow: "Other" };
+const CONSISTENCY_FULL_LABELS = { "": "-", sticky: "Creamy", creamy: "Slightly stretchy", eggwhite: "Stretchy" };
+const COLOR_FULL_LABELS = { "": "-", clear: "Clear", white: "White", yellow: "Yellow", other: "Other" };
 
 /** Opens the read-only day info modal for the currently selected day. */
 export function openDayInfoModal(currentColumns) {
@@ -515,14 +568,17 @@ export function openDayInfoModal(currentColumns) {
     `Slippery: ${data.stretch ? "Yes" : "No"}`,
     `Discharge: ${data.visible ? "Yes" : "No"}`,
     `Consistency: ${CONSISTENCY_FULL_LABELS[data.consistency ?? "none"]}`,
-    `Color: ${COLOR_FULL_LABELS[data.color ?? "none"]}`,
+    `Color: ${COLOR_FULL_LABELS[data.color ?? ""]}${data.colorOther ? ` (${data.colorOther})` : ""}`,
     `Clots: ${data.sediment ? "Yes" : "No"}`,
   ].join("<br>");
 
+  const fertileRangeText = data.fertileRangeStart && data.fertileRangeEnd
+    ? `${data.fertileRangeStart} to ${data.fertileRangeEnd}`
+    : "-";
+
   qs("infoMarkers").innerHTML = [
-    `Fertile: ${data.isFertile ? "Yes" : "No"}`,
+    `Fertile range: ${fertileRangeText}`,
     `Peak: ${data.isPeak ? "Yes" : "No"}`,
-    `Marker: ${data.marker || "-"}`,
   ].join("<br>");
 
   qs("infoOther").innerText = data.other?.trim() ? data.other : "-";
