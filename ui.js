@@ -134,6 +134,10 @@ const rowIds = [
   "bleedingRow",
   "spottingRow",
   "sedimentRow",
+  "markerRow",
+  "cervixFirmnessRow",
+  "cervixHeightRow",
+  "cervixOpennessRow",
   "otherRow",
 ];
   const rows  = Object.fromEntries(rowIds.map(id => [id, qs(id)]));
@@ -199,6 +203,29 @@ const rowIds = [
     attach(peakCell, col);
     rows.peakRow.appendChild(peakCell);
 
+    const markerCell = makeCell(col.marker || "", sel);
+    attach(markerCell, col);
+    rows.markerRow.appendChild(markerCell);
+
+    const firmnessCell = makeCell(col.cervixFirmness || "", sel);
+    attach(firmnessCell, col);
+    rows.cervixFirmnessRow.appendChild(firmnessCell);
+
+    const heightCell = makeCell(col.cervixHeight || "", sel);
+    attach(heightCell, col);
+    rows.cervixHeightRow.appendChild(heightCell);
+
+    const opennessCell = document.createElement("div");
+    opennessCell.className = ["map-cell", sel].filter(Boolean).join(" ");
+    if (col.cervixOpenness) {
+      const openness = document.createElement("span");
+      openness.className = ["cervix-indicator", col.cervixOpenness].join(" ");
+      openness.title = `Openness: ${col.cervixOpenness}`;
+      opennessCell.appendChild(openness);
+    }
+    attach(opennessCell, col);
+    rows.cervixOpennessRow.appendChild(opennessCell);
+
     const bleedCell = makeCell(
       col.bleeding === "menstruation" ? "●" : "", sel,
       col.bleeding === "menstruation" ? "period" : ""
@@ -254,11 +281,14 @@ export function openModal(currentColumns) {
 store.modal.temp            = data.temp            ?? null;
   store.modal.tempFactors     = data.tempFactors      ?? "";
   store.modal.measurementTime = data.measurementTime  ?? "";
+  store.modal.measurementTimeEnabled = Boolean(data.measurementTime);
 
   qs("modalTitle").innerText       = `${key} (CD ${column?.cycleDay ?? "-"})`;
   qs("tempInput").value            = store.modal.temp != null ? Number(store.modal.temp).toFixed(2) : "";
   qs("tempFactorsInput").value     = store.modal.tempFactors;
+  qs("measurementTimeCheckbox").checked = store.modal.measurementTimeEnabled;
   qs("measurementTimeInput").value = store.modal.measurementTime;
+  syncMeasurementTimeUI();
 
   const modal = qs("modal");
   modal.classList.remove("hidden");
@@ -294,7 +324,7 @@ export function saveModal(render) {
     ...(store.entries[store.selectedKey] || {}),
     temp:            isNaN(temp) ? null : temp,
     tempFactors:     qs("tempFactorsInput").value,
-    measurementTime: qs("measurementTimeInput").value,
+    measurementTime: store.modal.measurementTimeEnabled ? qs("measurementTimeInput").value : "",
   };
 
   store.save();
@@ -323,15 +353,35 @@ export function closeActionModal() {
 export function syncMucusModalUI() {
   const otherCheckbox = qs("mucusColorOtherCheckbox");
   const otherInput = qs("mucusColorOtherInput");
+  const isOther = store.modal.color === "other" || (store.modal.colorOther && store.modal.colorOther.trim());
+
   if (otherCheckbox) {
-    const isOther = store.modal.color === "other" || (store.modal.colorOther && store.modal.colorOther.trim());
     otherCheckbox.checked = isOther;
-    if (otherInput) {
-      otherInput.classList.toggle("hidden", !isOther);
-      otherInput.value = store.modal.colorOther ?? "";
-    }
   }
+
+  qsa('.segmented button[data-group="color"]').forEach(btn => {
+    btn.disabled = isOther;
+    btn.classList.toggle("disabled", isOther);
+  });
+
+  if (otherInput) {
+    otherInput.classList.toggle("hidden", !isOther);
+    otherInput.value = store.modal.colorOther ?? "";
+  }
+
   syncModalUI();
+}
+
+export function syncMeasurementTimeUI() {
+  const checkbox = qs("measurementTimeCheckbox");
+  const wrapper = qs("measurementTimeWrapper");
+
+  if (checkbox) {
+    checkbox.checked = Boolean(store.modal.measurementTimeEnabled);
+  }
+  if (wrapper) {
+    wrapper.classList.toggle("hidden", !store.modal.measurementTimeEnabled);
+  }
 }
 
 export function openMucusModal() {
@@ -434,49 +484,15 @@ export function saveBleedingModal(render) {
   afterModalSave("bleedingModal", render);
 }
 
-export function openFertileRangeModal() {
-  if (!store.selectedKey) return showMessage("Select a day first");
-
-  const data = store.entries[store.selectedKey] || {};
-  qs("fertileRangeStart").value = data.fertileRangeStart ?? "";
-  qs("fertileRangeEnd").value   = data.fertileRangeEnd ?? "";
-
-  const modal = qs("fertileRangeModal");
-  modal.classList.remove("hidden");
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => modal.classList.add("show"));
-  });
-}
-
-export function closeFertileRangeModal() {
-  const modal = qs("fertileRangeModal");
-  modal.classList.remove("show");
-  modal.addEventListener("transitionend", () => modal.classList.add("hidden"), { once: true });
-}
-
-export function saveFertileRangeModal(render) {
-  if (!store.selectedKey) return;
-
-  const fertileStart = qs("fertileRangeStart").value || null;
-  const fertileEnd = qs("fertileRangeEnd").value || null;
-
-  store.entries[store.selectedKey] = {
-    ...(store.entries[store.selectedKey] || {}),
-    fertileRangeStart: fertileStart,
-    fertileRangeEnd: fertileEnd,
-  };
-
-  store.save();
-  closeFertileRangeModal();
-  afterModalSave("fertileRangeModal", render);
-}
-
 export function openMarkersModal() {
   if (!store.selectedKey) return showMessage("Select a day first");
 
   const data = store.entries[store.selectedKey] || {};
 
   store.modal.isPeak = data.isPeak === true;
+  store.modal.marker = data.marker ?? "";
+
+  qs("markersMarker").value = store.modal.marker;
 
   const modal = qs("markersModal");
   modal.classList.remove("hidden");
@@ -497,14 +513,56 @@ export function closeMarkersModal() {
 export function saveMarkersModal(render) {
   if (!store.selectedKey) return;
 
+  store.modal.marker = qs("markersMarker").value || "";
+
   store.entries[store.selectedKey] = {
     ...(store.entries[store.selectedKey] || {}),
     isPeak: store.modal.isPeak === true,
+    marker: store.modal.marker,
   };
 
   store.save();
   closeMarkersModal();
   afterModalSave("markersModal", render);
+}
+
+export function openCervixModal() {
+  if (!store.selectedKey) return showMessage("Select a day first");
+
+  const data = store.entries[store.selectedKey] || {};
+  store.modal.cervixFirmness = data.cervixFirmness ?? "";
+  store.modal.cervixHeight = data.cervixHeight ?? "";
+  store.modal.cervixOpenness = data.cervixOpenness ?? "";
+
+  const modal = qs("cervixModal");
+  modal.classList.remove("hidden");
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      syncModalUI();
+      modal.classList.add("show");
+    });
+  });
+}
+
+export function closeCervixModal() {
+  const modal = qs("cervixModal");
+  modal.classList.remove("show");
+  modal.addEventListener("transitionend", () => modal.classList.add("hidden"), { once: true });
+}
+
+export function saveCervixModal(render) {
+  if (!store.selectedKey) return;
+
+  store.entries[store.selectedKey] = {
+    ...(store.entries[store.selectedKey] || {}),
+    cervixFirmness: store.modal.cervixFirmness,
+    cervixHeight: store.modal.cervixHeight,
+    cervixOpenness: store.modal.cervixOpenness,
+  };
+
+  store.save();
+  closeCervixModal();
+  afterModalSave("cervixModal", render);
 }
 
 export function openOtherModal() {
@@ -576,9 +634,36 @@ export function openDayInfoModal(currentColumns) {
     ? `${data.fertileRangeStart} to ${data.fertileRangeEnd}`
     : "-";
 
+  const CERVIX_LABELS = {
+    firmness: {
+      "": "-",
+      hard: "Hard",
+      soft: "Soft",
+    },
+    height: {
+      "": "-",
+      low: "Low",
+      medium: "Medium",
+      high: "High",
+    },
+    openness: {
+      "": "-",
+      closed: "Closed",
+      medium: "Medium",
+      open: "Open",
+    },
+  };
+
+  qs("infoCervix").innerHTML = [
+    `Firmness: ${CERVIX_LABELS.firmness[data.cervixFirmness ?? ""]}`,
+    `Height: ${CERVIX_LABELS.height[data.cervixHeight ?? ""]}`,
+    `Openness: ${CERVIX_LABELS.openness[data.cervixOpenness ?? ""]}`,
+  ].join("<br>");
+
   qs("infoMarkers").innerHTML = [
     `Fertile range: ${fertileRangeText}`,
     `Peak: ${data.isPeak ? "Yes" : "No"}`,
+    `Marker: ${data.marker || "None"}`,
   ].join("<br>");
 
   qs("infoOther").innerText = data.other?.trim() ? data.other : "-";

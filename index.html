@@ -86,7 +86,7 @@
         <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
 
-      <button id="fertileRangeActionBtn" class="action-btn" type="button">
+      <button id="fertileRangeActionBtn" class="action-btn placeholder" type="button">
         <span class="action-icon chip-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2.5 3.5L16 11H5"/></svg></span>
         <span class="action-label">Fertile range</span>
         <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
@@ -194,33 +194,57 @@
           </div>
 
           <div class="map-row">
-            <div class="map-side-label">Disch</div>
+            <div class="map-side-label">Discharge</div>
             <div class="map-temp-spacer"></div>
             <div id="visibleRow" class="map-cells"></div>
           </div>
 
           <div class="map-row">
-            <div class="map-side-label">Cons</div>
+            <div class="map-side-label">Consist...</div>
             <div class="map-temp-spacer"></div>
             <div id="consistencyRow" class="map-cells"></div>
           </div>
 
           <div class="map-row">
-            <div class="map-side-label">Col</div>
+            <div class="map-side-label">Color</div>
             <div class="map-temp-spacer"></div>
             <div id="colorRow" class="map-cells"></div>
           </div>
 
           <div class="map-row">
-            <div class="map-side-label">Pk</div>
+            <div class="map-side-label">Peak</div>
             <div class="map-temp-spacer"></div>
             <div id="peakRow" class="map-cells"></div>
+          </div>
+
+          <div class="map-row">
+            <div class="map-side-label">Marker</div>
+            <div class="map-temp-spacer"></div>
+            <div id="markerRow" class="map-cells"></div>
+          </div>
+
+          <div class="map-row">
+            <div class="map-side-label">Firmness</div>
+            <div class="map-temp-spacer"></div>
+            <div id="cervixFirmnessRow" class="map-cells"></div>
+          </div>
+
+          <div class="map-row">
+            <div class="map-side-label">Height</div>
+            <div class="map-temp-spacer"></div>
+            <div id="cervixHeightRow" class="map-cells"></div>
+          </div>
+
+          <div class="map-row">
+            <div class="map-side-label">Openness</div>
+            <div class="map-temp-spacer"></div>
+            <div id="cervixOpennessRow" class="map-cells"></div>
           </div>
 
           <!-- other -->
 
           <div class="map-row">
-            <div class="map-side-label">Add</div>
+            <div class="map-side-label">Other</div>
             <div class="map-temp-spacer"></div>
             <div id="otherRow" class="map-cells"></div>
           </div>
@@ -271,9 +295,12 @@
               <option value="other">Other</option>
             </select>
 
-            <label class="input-label">Measurement time (optional)</label>
+            <label class="checkbox-row"><input id="measurementTimeCheckbox" type="checkbox"><span>Different measurement time</span></label>
 
-            <input id="measurementTimeInput" type="time">
+            <div id="measurementTimeWrapper" class="hidden">
+              <label class="input-label">Measurement time</label>
+              <input id="measurementTimeInput" type="time">
+            </div>
 
     </div>
 
@@ -311,10 +338,16 @@
     </button>
 
     <button id="markersActionBtn" class="action-btn">
-      <span class="action-icon chip-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2.5 3.5L16 11H5"/></svg></span>
+      <span class="action-icon chip-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M4 12h16"/><circle cx="12" cy="12" r="3"/></svg></span>
       <span class="action-label">Markers</span>
       <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
+
+      <button id="cervixActionBtn" class="action-btn">
+        <span class="action-icon chip-teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/></svg></span>
+        <span class="action-label">Cervix</span>
+        <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
 
     <button id="otherActionBtn" class="action-btn">
       <span class="action-icon chip-gray"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></span>
@@ -338,7 +371,8 @@
 
       <div class="section-title">Bleeding</div>
 
-      <div class="segmented two">
+      <div class="segmented three">
+        <button type="button" data-group="bleeding" data-value="none">No bleeding</button>
         <button type="button" data-group="bleeding" data-value="spotting">Spotting</button>
         <button type="button" data-group="bleeding" data-value="menstruation">Period</button>
       </div>
@@ -423,43 +457,33 @@
 
 </div>
 
-<div id="fertileRangeModal" class="modal hidden">
-
-  <div class="modal-card">
-
-    <h2>Fertile range</h2>
-
-    <div class="modal-section">
-      <label class="input-label">From</label>
-      <input id="fertileRangeStart" type="date">
-    </div>
-
-    <div class="modal-section">
-      <label class="input-label">To</label>
-      <input id="fertileRangeEnd" type="date">
-    </div>
-
-    <div class="modal-actions">
-      <button id="closeFertileRangeModalBtn" class="btn secondary" type="button">Back</button>
-      <button id="saveFertileRangeModalBtn" class="btn primary" type="button">Save</button>
-    </div>
-
-  </div>
-
-</div>
 
 <div id="markersModal" class="modal hidden">
 
 
   <div class="modal-card">
 
-    <h2>Peak day</h2>
+    <h2>Markers</h2>
 
     <div class="modal-section">
+      <div class="section-title">Peak day</div>
       <div class="segmented two">
         <button type="button" data-group="isPeak" data-value="false">No</button>
         <button type="button" data-group="isPeak" data-value="true">Yes</button>
       </div>
+    </div>
+
+    <div class="modal-section">
+      <div class="section-title">Marker</div>
+      <select id="markersMarker">
+        <option value="">None</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+      </select>
     </div>
 
     <div class="modal-actions">
@@ -471,15 +495,52 @@
 
 </div>
 
+<div id="cervixModal" class="modal hidden">
+  <div class="modal-card">
+    <h2>Cervix</h2>
+
+    <div class="modal-section">
+      <div class="section-title">Firmness</div>
+      <div class="segmented two">
+        <button type="button" data-group="cervixFirmness" data-value="hard">Hard</button>
+        <button type="button" data-group="cervixFirmness" data-value="soft">Soft</button>
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <div class="section-title">Height</div>
+      <div class="segmented three">
+        <button type="button" data-group="cervixHeight" data-value="low">Low</button>
+        <button type="button" data-group="cervixHeight" data-value="medium">Medium</button>
+        <button type="button" data-group="cervixHeight" data-value="high">High</button>
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <div class="section-title">Openness</div>
+      <div class="segmented three">
+        <button type="button" data-group="cervixOpenness" data-value="closed">Closed</button>
+        <button type="button" data-group="cervixOpenness" data-value="medium">Medium</button>
+        <button type="button" data-group="cervixOpenness" data-value="open">Open</button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button id="closeCervixModalBtn" class="btn secondary" type="button">Back</button>
+      <button id="saveCervixModalBtn" class="btn primary" type="button">Save</button>
+    </div>
+  </div>
+</div>
+
 <div id="otherModal" class="modal hidden">
 
   <div class="modal-card">
 
-    <h2>Additional symptoms</h2>
+    <h2>Other</h2>
 
     <div class="modal-section">
-      <div class="section-title">Additional symptoms</div>
-      <input id="otherModalInput" type="text" placeholder="Additional symptoms">
+      <div class="section-title">Notes</div>
+      <input id="otherModalInput" type="text" placeholder="Additional symptoms or observations">
     </div>
 
     <div class="modal-actions">
@@ -507,6 +568,10 @@
       <div class="info-group">
         <div class="info-label">Mucus</div>
         <div id="infoMucus" class="info-value">-</div>
+      </div>
+      <div class="info-group">
+        <div class="info-label">Cervix</div>
+        <div id="infoCervix" class="info-value">-</div>
       </div>
       <div class="info-group">
         <div class="info-label">Markers</div>

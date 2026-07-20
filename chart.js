@@ -181,12 +181,12 @@ export function drawTemperaturePoints(ctx, columns) {
     const hasFactors = Boolean(col.tempFactors?.trim());
 
     if (hasFactors) {
-    ctx.beginPath();
-    ctx.arc(col.centerX, chartY(col.temp), 9, 0, Math.PI * 2);
-    ctx.strokeStyle = "#ff0000";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  }
+      ctx.beginPath();
+      ctx.arc(col.centerX, chartY(col.temp), 9, 0, Math.PI * 2);
+      ctx.strokeStyle = "#ff0000";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
 
     ctx.beginPath();
     ctx.arc(col.centerX, chartY(col.temp), 4, 0, Math.PI * 2);
@@ -250,6 +250,7 @@ export function renderChart(columns) {
   drawVerticalCoverline(ctx, columns);
   drawTemperatureLine(ctx, cycleGroups);
   drawTemperaturePoints(ctx, columns);
+
   drawMeasurementTimes(ctx, columns);
   drawMarkers(ctx, columns);
 }

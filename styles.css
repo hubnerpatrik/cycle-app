@@ -378,6 +378,14 @@ h1{
   background:var(--bg);
 }
 
+.action-btn.placeholder{
+  opacity:0.85;
+}
+
+.action-btn.placeholder:hover{
+  background:var(--card);
+}
+
 .action-btn:active{
   transform:scale(0.98);
 }
@@ -690,6 +698,48 @@ h1{
   color:var(--orange);
 }
 
+.cervix-cell{
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding-top: 1px;
+}
+
+.cervix-text{
+  font-size: 8px;
+  line-height: 1;
+  text-transform: capitalize;
+  color: var(--text);
+}
+
+.cervix-indicator{
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.cervix-indicator.closed{
+  width: 8px;
+  height: 8px;
+  border: 1px solid #10b981;
+  background: #10b981;
+}
+
+.cervix-indicator.medium{
+  width: 10px;
+  height: 10px;
+  border: 2px solid #f59e0b;
+  background: rgba(245,158,11,0.2);
+}
+
+.cervix-indicator.open{
+  width: 14px;
+  height: 14px;
+  border: 2px solid #ef4444;
+  background: transparent;
+}
+
 .map-cell.fertile{
   background:rgba(52,199,89,0.08);
 }
@@ -808,6 +858,55 @@ input{
   transition:border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
 }
 
+.date-range{
+  display:grid;
+  gap:14px;
+}
+
+@media (min-width: 560px) {
+  .date-range{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.date-range-item{
+  display:grid;
+  gap:8px;
+}
+
+.date-input-wrapper{
+  position:relative;
+}
+
+.date-input-wrapper input{
+  width:100%;
+  padding-right: 40px;
+}
+
+.date-picker-icon{
+  position:absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+input[type="date"],
+input[type="time"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  color: var(--text);
+  filter: brightness(0.9);
+}
+
 input:focus{
   outline:none;
   border-color:var(--blue);
@@ -882,6 +981,11 @@ input:focus{
   box-shadow:0 1px 3px rgba(0,0,0,0.14);
   color:var(--text);
   font-weight:600;
+}
+
+.segmented button.disabled{
+  opacity:0.35;
+  cursor:not-allowed;
 }
 
 /* ─── modal actions ──────────────────────── */

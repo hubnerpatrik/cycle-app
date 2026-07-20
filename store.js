@@ -35,7 +35,8 @@ _emptyModal() {
   return {
     temp: null,
     tempFactors: "",
-    measurementTime: "",   
+    measurementTime: "",
+    measurementTimeEnabled: false,
     bleeding: "none",
     discharge: "none",
 
@@ -49,8 +50,15 @@ _emptyModal() {
     colorOther: "",
 
     sediment: false,
-
+    marker: "",
     isPeak: false,
+
+    cervixFirmness: "",
+    cervixHeight: "",
+    cervixOpenness: "",
+
+    fertileRangeStart: "",
+    fertileRangeEnd: "",
 
     other: "",
   };

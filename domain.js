@@ -100,6 +100,10 @@ export function buildColumns() {
 
       sediment:        raw.sediment         ?? false,
 
+      cervixFirmness:  raw.cervixFirmness   ?? "",
+      cervixHeight:    raw.cervixHeight     ?? "",
+      cervixOpenness:  raw.cervixOpenness   ?? "",
+
       other:           raw.other            ?? "",
 
       isFertile:       isFertileDay(key, store.entries),
@@ -172,6 +176,9 @@ export function buildCycleColumns() {
       consistency:     raw.consistency     ?? "none",
       color:           raw.color           ?? "none",
       sediment:        raw.sediment        ?? false,
+      cervixFirmness:  raw.cervixFirmness  ?? "",
+      cervixHeight:    raw.cervixHeight    ?? "",
+      cervixOpenness:  raw.cervixOpenness  ?? "",
       other:           raw.other           ?? "",
       isFertile:       isFertileDay(key, store.entries),
       isPeak:          raw.isPeak          ?? false,

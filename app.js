@@ -35,18 +35,20 @@ import {
   openBleedingModal,
   closeBleedingModal,
   saveBleedingModal,
-  openFertileRangeModal,
-  closeFertileRangeModal,
-  saveFertileRangeModal,
   openMarkersModal,
   closeMarkersModal,
   saveMarkersModal,
+  openCervixModal,
+  closeCervixModal,
+  saveCervixModal,
   openOtherModal,
   closeOtherModal,
   saveOtherModal,
   syncModalUI,
+  syncMeasurementTimeUI,
   openDayInfoModal,
-  closeDayInfoModal
+  closeDayInfoModal,
+  showMessage
 } from "./ui.js";
 
 /* ─── DOM helpers ─────────────────────────── */
@@ -348,27 +350,27 @@ function init() {
     setTimeout(() => openMarkersModal(), 250);
   };
 
+  qs("cervixActionBtn").onclick = () => {
+    closeActionModal();
+    setTimeout(() => openCervixModal(), 250);
+  };
+
   qs("fertileRangeActionBtn").onclick = () => {
-    closeActionModal();
-    setTimeout(() => openFertileRangeModal(), 250);
+    showMessage("Fertile range is not available yet");
   };
-
-  qs("otherActionBtn").onclick = () => {
-    closeActionModal();
-    setTimeout(() => openOtherModal(), 250);
-  };
-
-  qs("closeFertileRangeModalBtn").onclick = () => {
-    closeFertileRangeModal();
-    setTimeout(() => openActionModal(), 250);
-  };
-  qs("saveFertileRangeModalBtn").onclick = () => saveFertileRangeModal(render);
 
   qs("closeMarkersModalBtn").onclick = () => {
   closeMarkersModal();
   setTimeout(() => openActionModal(), 250);
 };
   qs("saveMarkersModalBtn").onclick  = () => saveMarkersModal(render);
+
+  qs("closeCervixModalBtn").onclick = () => {
+  closeCervixModal();
+  setTimeout(() => openActionModal(), 250);
+};
+  qs("saveCervixModalBtn").onclick  = () => saveCervixModal(render);
+
   qs("closeOtherModalBtn").onclick = () => {
   closeOtherModal();
   setTimeout(() => openActionModal(), 250);
@@ -450,6 +452,24 @@ function init() {
   if (mucusColorOtherInput) {
     mucusColorOtherInput.oninput = () => {
       store.modal.colorOther = mucusColorOtherInput.value;
+    };
+  }
+
+  const measurementTimeCheckbox = qs("measurementTimeCheckbox");
+  const measurementTimeInput = qs("measurementTimeInput");
+  if (measurementTimeCheckbox) {
+    measurementTimeCheckbox.onchange = () => {
+      store.modal.measurementTimeEnabled = measurementTimeCheckbox.checked;
+      if (!measurementTimeCheckbox.checked && measurementTimeInput) {
+        measurementTimeInput.value = "";
+      }
+      syncMeasurementTimeUI();
+    };
+  }
+
+  if (measurementTimeInput) {
+    measurementTimeInput.oninput = () => {
+      store.modal.measurementTime = measurementTimeInput.value;
     };
   }
   
