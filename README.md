@@ -84,7 +84,7 @@ Observations stored locally via localStorage, keyed by date string.
 FAZE 1
 
 1.chyba at 00:00 HOTOVO
-2.tečka teploty ve prostřed čtverce
+2.tečka teploty ve prostřed čtverce HOTOVO
 3.marker 1-6 znova přidat HOTOVO
 4.Cervix možnosti 3, 1. HARD x Soft 2. low, medium , high 3. close, středně otevřene a Open HOTOVO
 5.udelat novou tabulku  kde jsou informce o osobě: věk , čas bezneho měření, cíl, číslo mapy, zpusib měření 

@@ -149,6 +149,21 @@ export function drawCycleSeparators(ctx, cycleGroups) {
 
 /* ─── temperature data ────────────────────── */
 
+const TEMP_CELL_STEP = 0.1;
+
+function getTemperatureCellY(temp) {
+  if (temp == null) return null;
+
+  const lowerBound = Math.min(
+    LAYOUT.maxTemp - TEMP_CELL_STEP,
+    Math.floor((temp - LAYOUT.minTemp) / TEMP_CELL_STEP) * TEMP_CELL_STEP + LAYOUT.minTemp
+  );
+  const upperBound = Math.min(LAYOUT.maxTemp, lowerBound + TEMP_CELL_STEP);
+  const cellCenterTemp = lowerBound + (upperBound - lowerBound) / 2;
+
+  return chartY(cellCenterTemp);
+}
+
 /** Draws the temperature line — one path per cycle group to avoid cross-cycle connections. */
 export function drawTemperatureLine(ctx, cycleGroups) {
   cycleGroups.forEach(group => {
@@ -157,13 +172,19 @@ export function drawTemperatureLine(ctx, cycleGroups) {
 
     ctx.strokeStyle = "#111";
     ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
 
     valid.forEach((col, i) => {
       if (i === 0) return;
       const prev = valid[i - 1];
+      const prevY = getTemperatureCellY(prev.temp);
+      const colY = getTemperatureCellY(col.temp);
+      if (prevY == null || colY == null) return;
+
       ctx.beginPath();
-      ctx.moveTo(prev.centerX, chartY(prev.temp));
-      ctx.lineTo(col.centerX, chartY(col.temp));
+      ctx.moveTo(prev.centerX, prevY);
+      ctx.lineTo(col.centerX, colY);
       ctx.setLineDash(col.index - prev.index > 1 ? [4, 4] : []);
       ctx.stroke();
     });
@@ -178,18 +199,21 @@ export function drawTemperaturePoints(ctx, columns) {
   columns.forEach(col => {
     if (col.temp == null) return;
 
+    const pointY = getTemperatureCellY(col.temp);
+    if (pointY == null) return;
+
     const hasFactors = Boolean(col.tempFactors?.trim());
 
     if (hasFactors) {
       ctx.beginPath();
-      ctx.arc(col.centerX, chartY(col.temp), 9, 0, Math.PI * 2);
+      ctx.arc(col.centerX, pointY, 9, 0, Math.PI * 2);
       ctx.strokeStyle = "#ff0000";
       ctx.lineWidth = 2;
       ctx.stroke();
     }
 
     ctx.beginPath();
-    ctx.arc(col.centerX, chartY(col.temp), 4, 0, Math.PI * 2);
+    ctx.arc(col.centerX, pointY, 4, 0, Math.PI * 2);
     ctx.fillStyle = store.selectedKey === col.key ? "#2563eb" : "#111";
     ctx.fill();
   });
@@ -201,20 +225,24 @@ export function drawTemperaturePoints(ctx, columns) {
 export function drawMeasurementTimes(ctx, columns) {
   columns.forEach(col => {
     if (col.temp == null || !col.measurementTime) return;
+    const pointY = getTemperatureCellY(col.temp);
+    if (pointY == null) return;
     ctx.font = "10px Inter";
     ctx.fillStyle = "#8e8e93";
     ctx.textAlign = "center";
-    ctx.fillText(col.measurementTime, col.centerX, chartY(col.temp) + 18);
+    ctx.fillText(col.measurementTime, col.centerX, pointY + 18);
   });
 }
 /** Draws anomaly marker labels above temperature dots. */
 export function drawMarkers(ctx, columns) {
   columns.forEach(col => {
     if (col.temp == null || !col.marker) return;
+    const pointY = getTemperatureCellY(col.temp);
+    if (pointY == null) return;
     ctx.font = "bold 14px Inter";
     ctx.fillStyle = "#dc2626";
     ctx.textAlign = "center";
-    ctx.fillText(col.marker, col.centerX, chartY(col.temp) - 14);
+    ctx.fillText(col.marker, col.centerX, pointY - 14);
   });
 }
 
