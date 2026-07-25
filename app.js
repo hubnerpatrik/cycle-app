@@ -41,6 +41,14 @@ import {
   openCervixModal,
   closeCervixModal,
   saveCervixModal,
+  openFertileRangeModal,
+  closeFertileRangeModal,
+  saveFertileRangeModal,
+  clearFertileRangeModal,
+  changeFertileRangeMonth,
+  openProfileModal,
+  closeProfileModal,
+  saveProfileModal,
   openOtherModal,
   closeOtherModal,
   saveOtherModal,
@@ -48,7 +56,6 @@ import {
   syncMeasurementTimeUI,
   openDayInfoModal,
   closeDayInfoModal,
-  showMessage
 } from "./ui.js";
 
 /* ─── DOM helpers ─────────────────────────── */
@@ -94,6 +101,41 @@ export const TEMP_FACTORS = {
   physicalActivity: "Physical activity",
   other:            "Other",
 };
+
+/* ─── measurement time adjustment ─────────── */
+
+const TEMP_ADJUSTMENT_PER_HOUR = 0.1;
+
+/** Converts "HH:MM" to minutes since midnight, or null if empty/invalid. */
+function timeToMinutes(time) {
+  if (!time) return null;
+  const [h, m] = time.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return h * 60 + m;
+}
+
+/**
+ * Rule of thumb: body temperature drifts about 0.1°C per hour relative to
+ * the usual measurement time — later readings run warm, earlier ones run cool.
+ * Returns the signed adjustment in °C: measuring later than usual gives a
+ * negative value (temp gets corrected down), earlier gives a positive one.
+ */
+export function getTimeAdjustment(actualTime, usualTime) {
+  const actual = timeToMinutes(actualTime);
+  const usual  = timeToMinutes(usualTime);
+  if (actual == null || usual == null) return 0;
+
+  const hoursDiff = (actual - usual) / 60; // positive = measured later than usual
+  return Math.round(-hoursDiff * TEMP_ADJUSTMENT_PER_HOUR * 100) / 100;
+}
+
+/** Returns the temperature normalized back to the usual measurement time, or null if not applicable. */
+export function getAdjustedTemp(temp, actualTime, usualTime) {
+  if (temp == null) return null;
+  const adjustment = getTimeAdjustment(actualTime, usualTime);
+  if (adjustment === 0) return null;
+  return Math.round((temp + adjustment) * 100) / 100;
+}
 
 /* ─── date utils ──────────────────────────── */
 
@@ -193,12 +235,18 @@ export function setCycleCoverlineValues(values, cycleIndex = store.currentCycleI
   const key = getCycleCoverlineKey(cycleIndex);
   if (!store.coverlines[key]) store.coverlines[key] = {};
 
+  // only touch an axis if the caller actually passed it in —
+  // otherwise setting one coverline would wipe out the other
   const data = store.coverlines[key];
-  if (values.horizontalGuideY != null) data.horizontalGuideY = values.horizontalGuideY;
-  else delete data.horizontalGuideY;
+  if ("horizontalGuideY" in values) {
+    if (values.horizontalGuideY != null) data.horizontalGuideY = values.horizontalGuideY;
+    else delete data.horizontalGuideY;
+  }
 
-  if (values.verticalGuideX != null) data.verticalGuideX = values.verticalGuideX;
-  else delete data.verticalGuideX;
+  if ("verticalGuideX" in values) {
+    if (values.verticalGuideX != null) data.verticalGuideX = values.verticalGuideX;
+    else delete data.verticalGuideX;
+  }
 
   if (!Object.keys(data).length) delete store.coverlines[key];
 
@@ -206,20 +254,31 @@ export function setCycleCoverlineValues(values, cycleIndex = store.currentCycleI
   if (values.verticalGuideX != null) store.verticalGuideX = values.verticalGuideX;
 }
 
+/** Returns the currently active fertile range, or null if none is set. */
+export function getFertileRange() {
+  const { start, end } = store.fertileRange;
+  return start && end ? { start, end } : null;
+}
+
+/** Replaces the active fertile range with a new start/end pair. */
+export function setFertileRange(start, end) {
+  store.fertileRange = { start, end };
+}
+
+/** Removes the active fertile range. */
+export function clearFertileRange() {
+  store.fertileRange = { start: null, end: null };
+}
+
+/** Returns true if the given day is manually flagged fertile or falls inside the fertile range. */
 export function isFertileDay(key, entries = store.entries) {
-  const entry = entries[key] || {};
-  if (entry.isFertile === true) return true;
+  if (entries[key]?.isFertile === true) return true;
 
-  return Object.entries(entries).some(([candidateKey, candidateEntry]) => {
-    const start = candidateEntry?.fertileRangeStart;
-    const end = candidateEntry?.fertileRangeEnd;
-    if (!start || !end) return false;
+  const range = getFertileRange();
+  if (!range) return false;
 
-    const startDate = normalize(parseDateKey(start));
-    const endDate = normalize(parseDateKey(end));
-    const dayDate = normalize(parseDateKey(key));
-    return dayDate >= startDate && dayDate <= endDate;
-  });
+  const day = normalize(parseDateKey(key));
+  return day >= normalize(parseDateKey(range.start)) && day <= normalize(parseDateKey(range.end));
 }
 
 /** Selects a day column, switches to the correct cycle, and triggers a full re-render. */
@@ -356,8 +415,29 @@ function init() {
   };
 
   qs("fertileRangeActionBtn").onclick = () => {
-    showMessage("Fertile range is not available yet");
+    closeActionModal();
+    setTimeout(() => openFertileRangeModal(), 250);
   };
+
+  qs("closeFertileRangeModalBtn").onclick = () => {
+    closeFertileRangeModal();
+    setTimeout(() => openActionModal(), 250);
+  };
+  qs("saveFertileRangeModalBtn").onclick  = () => saveFertileRangeModal(render);
+  qs("clearFertileRangeBtn").onclick      = () => clearFertileRangeModal(render);
+  qs("fertileRangePrevMonth").onclick     = () => changeFertileRangeMonth(-1);
+  qs("fertileRangeNextMonth").onclick     = () => changeFertileRangeMonth(1);
+
+  qs("profileActionBtn").onclick = () => {
+    closeActionModal();
+    setTimeout(() => openProfileModal(), 250);
+  };
+
+  qs("closeProfileModalBtn").onclick = () => {
+    closeProfileModal();
+    setTimeout(() => openActionModal(), 250);
+  };
+  qs("saveProfileModalBtn").onclick = () => saveProfileModal(render);
 
   qs("closeMarkersModalBtn").onclick = () => {
   closeMarkersModal();
@@ -370,6 +450,11 @@ function init() {
   setTimeout(() => openActionModal(), 250);
 };
   qs("saveCervixModalBtn").onclick  = () => saveCervixModal(render);
+
+  qs("otherActionBtn").onclick = () => {
+    closeActionModal();
+    setTimeout(() => openOtherModal(), 250);
+  };
 
   qs("closeOtherModalBtn").onclick = () => {
   closeOtherModal();
@@ -470,6 +555,7 @@ function init() {
   if (measurementTimeInput) {
     measurementTimeInput.oninput = () => {
       store.modal.measurementTime = measurementTimeInput.value;
+      syncMeasurementTimeUI();
     };
   }
   

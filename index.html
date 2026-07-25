@@ -44,13 +44,13 @@
 
         <button id="prevMonth" type="button">‹</button>
 
-        <div id="monthLabel"></div>
+        <div id="monthLabel" class="month-label"></div>
 
         <button id="nextMonth" type="button">›</button>
 
       </div>
 
-      <div id="calendar"></div>
+      <div id="calendar" class="calendar-grid"></div>
 
       <div class="legend">
 
@@ -86,15 +86,15 @@
         <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
 
-      <button id="fertileRangeActionBtn" class="action-btn placeholder" type="button">
+      <button id="fertileRangeActionBtn" class="action-btn" type="button">
         <span class="action-icon chip-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2.5 3.5L16 11H5"/></svg></span>
         <span class="action-label">Fertile range</span>
         <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
 
-      <button id="cycleActionBtn" class="action-btn" type="button">
-        <span class="action-icon chip-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 14-5"/><path d="M18 3v4h-4"/><path d="M20 12a8 8 0 0 1-14 5"/><path d="M6 21v-4h4"/></svg></span>
-        <span class="action-label">Placeholder 2</span>
+      <button id="profileActionBtn" class="action-btn" type="button">
+        <span class="action-icon chip-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg></span>
+        <span class="action-label">Profile</span>
         <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
 
@@ -244,7 +244,7 @@
           <!-- other -->
 
           <div class="map-row">
-            <div class="map-side-label">Other</div>
+            <div class="map-side-label">Symptoms</div>
             <div class="map-temp-spacer"></div>
             <div id="otherRow" class="map-cells"></div>
           </div>
@@ -261,7 +261,7 @@
 
   <div class="dev-panel">
     
-    <button id="devReset" type="button">DEV RESET</button>
+    <button id="devReset" class="text-btn" type="button">DEV RESET</button>
   </div>
 
 </div>
@@ -300,6 +300,7 @@
             <div id="measurementTimeWrapper" class="hidden">
               <label class="input-label">Measurement time</label>
               <input id="measurementTimeInput" type="time">
+              <div id="timeAdjustmentHint" class="field-hint"></div>
             </div>
 
     </div>
@@ -337,21 +338,21 @@
       <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
 
+    <button id="cervixActionBtn" class="action-btn">
+      <span class="action-icon chip-teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/></svg></span>
+      <span class="action-label">Cervix</span>
+      <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+
     <button id="markersActionBtn" class="action-btn">
       <span class="action-icon chip-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M4 12h16"/><circle cx="12" cy="12" r="3"/></svg></span>
       <span class="action-label">Markers</span>
       <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
 
-      <button id="cervixActionBtn" class="action-btn">
-        <span class="action-icon chip-teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/></svg></span>
-        <span class="action-label">Cervix</span>
-        <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
-
     <button id="otherActionBtn" class="action-btn">
       <span class="action-icon chip-gray"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></span>
-      <span class="action-label">Other</span>
+      <span class="action-label">Additional symptoms</span>
       <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
 
@@ -430,9 +431,9 @@
       <div class="section-title">Consistency</div>
       <div class="segmented four">
         <button type="button" data-group="consistency" data-value="">No mucus</button>
-        <button type="button" data-group="consistency" data-value="sticky">Creamy</button>
-        <button type="button" data-group="consistency" data-value="creamy">Slightly stretchy</button>
-        <button type="button" data-group="consistency" data-value="eggwhite">Stretchy</button>
+        <button type="button" data-group="consistency" data-value="creamy">Creamy</button>
+        <button type="button" data-group="consistency" data-value="slightlyStretchy">Slightly stretchy</button>
+        <button type="button" data-group="consistency" data-value="stretchy">Stretchy</button>
       </div>
     </div>
 
@@ -532,14 +533,93 @@
   </div>
 </div>
 
+<div id="fertileRangeModal" class="modal hidden">
+
+  <div class="modal-card wide">
+
+    <h2>Fertile range</h2>
+
+    <div class="calendar-nav">
+      <button id="fertileRangePrevMonth" type="button">‹</button>
+      <div id="fertileRangeMonthLabel" class="month-label"></div>
+      <button id="fertileRangeNextMonth" type="button">›</button>
+    </div>
+
+    <div id="fertileRangeCalendar" class="calendar-grid"></div>
+
+    <div id="fertileRangeSummary" class="range-summary"></div>
+
+    <div class="text-btn-row">
+      <button id="clearFertileRangeBtn" class="text-btn" type="button">Clear range</button>
+    </div>
+
+    <div class="modal-actions">
+      <button id="closeFertileRangeModalBtn" class="btn secondary" type="button">Back</button>
+      <button id="saveFertileRangeModalBtn" class="btn primary" type="button">Save</button>
+    </div>
+
+  </div>
+
+</div>
+
+<div id="profileModal" class="modal hidden">
+
+  <div class="modal-card">
+
+    <h2>Profile</h2>
+
+    <div class="modal-section">
+      <div class="input-label">Age</div>
+      <input id="profileAgeInput" type="number" min="10" max="60" placeholder="e.g. 29">
+    </div>
+
+    <div class="modal-section">
+      <div class="input-label">Usual measurement time</div>
+      <input id="profileUsualTimeInput" type="time">
+    </div>
+
+    <div class="modal-section">
+      <div class="input-label">Goal</div>
+      <select id="profileGoalInput">
+        <option value="">Not set</option>
+        <option value="avoid">Avoid pregnancy</option>
+        <option value="achieve">Achieve pregnancy</option>
+        <option value="observation">Observation only</option>
+      </select>
+    </div>
+
+    <div class="modal-section">
+      <div class="input-label">Map number</div>
+      <input id="profileMapNumberInput" type="number" min="1" placeholder="e.g. 3">
+    </div>
+
+    <div class="modal-section">
+      <div class="input-label">Measurement method</div>
+      <select id="profileMeasurementMethodInput">
+        <option value="">Not set</option>
+        <option value="oral">Oral</option>
+        <option value="vaginal">Vaginal</option>
+        <option value="rectal">Rectal</option>
+      </select>
+    </div>
+
+    <div class="modal-actions">
+      <button id="closeProfileModalBtn" class="btn secondary" type="button">Back</button>
+      <button id="saveProfileModalBtn" class="btn primary" type="button">Save</button>
+    </div>
+
+  </div>
+
+</div>
+
 <div id="otherModal" class="modal hidden">
 
   <div class="modal-card">
 
-    <h2>Other</h2>
+    <h2>Additional symptoms</h2>
 
     <div class="modal-section">
-      <div class="section-title">Notes</div>
+      <div class="section-title">Additional symptoms</div>
       <input id="otherModalInput" type="text" placeholder="Additional symptoms or observations">
     </div>
 
@@ -578,7 +658,7 @@
         <div id="infoMarkers" class="info-value">-</div>
       </div>
       <div class="info-group">
-        <div class="info-label">Other</div>
+        <div class="info-label">Additional symptoms</div>
         <div id="infoOther" class="info-value">-</div>
       </div>
     </div>

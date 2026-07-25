@@ -221,6 +221,20 @@ export function drawTemperaturePoints(ctx, columns) {
   ctx.lineWidth = 1;
 }
 
+/** Draws a secondary dot for the time-adjusted temperature — a different color marks it as an alt reading. */
+export function drawAdjustedTemperaturePoints(ctx, columns) {
+  columns.forEach(col => {
+    if (col.adjustedTemp == null) return;
+    const pointY = getTemperatureCellY(col.adjustedTemp);
+    if (pointY == null) return;
+
+    ctx.beginPath();
+    ctx.arc(col.centerX, pointY, 4, 0, Math.PI * 2);
+    ctx.fillStyle = "#f59e0b";
+    ctx.fill();
+  });
+}
+
 /** Draws the measurement time label under a temperature dot, when set. */
 export function drawMeasurementTimes(ctx, columns) {
   columns.forEach(col => {
@@ -278,6 +292,7 @@ export function renderChart(columns) {
   drawVerticalCoverline(ctx, columns);
   drawTemperatureLine(ctx, cycleGroups);
   drawTemperaturePoints(ctx, columns);
+  drawAdjustedTemperaturePoints(ctx, columns);
 
   drawMeasurementTimes(ctx, columns);
   drawMarkers(ctx, columns);

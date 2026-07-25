@@ -7,8 +7,9 @@ import { store } from "./store.js";
 import {
   LAYOUT, TEMP_FACTORS, qs, qsa,
   chartY, chartWidth,
-  getDaysInMonth, getMonthOffset, formatDateKey, formatTemp,
-  isFertileDay,
+  getDaysInMonth, getMonthOffset, formatDateKey, parseDateKey, formatTemp,
+  isFertileDay, getFertileRange, setFertileRange, clearFertileRange,
+  getTimeAdjustment, getAdjustedTemp,
 } from "./app.js";
 
 /* ─── month label ─────────────────────────── */
@@ -154,9 +155,9 @@ const rowIds = [
 
   const CONSISTENCY_LABELS = {
   "": "",
-  sticky: "ST",
   creamy: "CR",
-  eggwhite: "EW",
+  slightlyStretchy: "SS",
+  stretchy: "ST",
 };
   const COLOR_LABELS = {
     "": "",
@@ -166,8 +167,31 @@ const rowIds = [
     other: "O",
 };
 
+  const SENSATION_LABELS = {
+    "": "",
+    dry: "D",
+    moist: "M",
+    wet: "W",
+};
+
+  const CERVIX_FIRMNESS_LABELS = {
+    "": "",
+    hard: "H",
+    soft: "S",
+};
+
+  const CERVIX_HEIGHT_LABELS = {
+    "": "",
+    low: "L",
+    medium: "M",
+    high: "H",
+};
+
   columns.forEach(col => {
-    const sel = store.selectedKey === col.key ? "selected-column" : "";
+    const sel = [
+      store.selectedKey === col.key ? "selected-column" : "",
+      col.isFertile ? "fertile" : "",
+    ].filter(Boolean).join(" ");
 
     const dayCell       = document.createElement("div");
     dayCell.className   = ["map-day", sel].filter(Boolean).join(" ");
@@ -179,7 +203,7 @@ const rowIds = [
     attach(cdCell, col);
     rows.cycleDayRow.appendChild(cdCell);
 
-    const sensationCell = makeCell(col.sensation || "", sel);
+    const sensationCell = makeCell(SENSATION_LABELS[col.sensation] || "", sel);
     attach(sensationCell, col);
     rows.sensationRow.appendChild(sensationCell);
 
@@ -207,11 +231,11 @@ const rowIds = [
     attach(markerCell, col);
     rows.markerRow.appendChild(markerCell);
 
-    const firmnessCell = makeCell(col.cervixFirmness || "", sel);
+    const firmnessCell = makeCell(CERVIX_FIRMNESS_LABELS[col.cervixFirmness] || "", sel);
     attach(firmnessCell, col);
     rows.cervixFirmnessRow.appendChild(firmnessCell);
 
-    const heightCell = makeCell(col.cervixHeight || "", sel);
+    const heightCell = makeCell(CERVIX_HEIGHT_LABELS[col.cervixHeight] || "", sel);
     attach(heightCell, col);
     rows.cervixHeightRow.appendChild(heightCell);
 
@@ -381,6 +405,16 @@ export function syncMeasurementTimeUI() {
   }
   if (wrapper) {
     wrapper.classList.toggle("hidden", !store.modal.measurementTimeEnabled);
+  }
+
+  const hint = qs("timeAdjustmentHint");
+  if (hint) {
+    const adjustment = store.modal.measurementTimeEnabled
+      ? getTimeAdjustment(store.modal.measurementTime, store.profile.usualMeasurementTime)
+      : 0;
+    hint.innerText = adjustment !== 0
+      ? `≈ ${adjustment > 0 ? "+" : ""}${adjustment.toFixed(2)} °C vs usual time`
+      : "";
   }
 }
 
@@ -565,6 +599,168 @@ export function saveCervixModal(render) {
   afterModalSave("cervixModal", render);
 }
 
+/* ─── fertile range modal ─────────────────── */
+
+// draft state for the in-modal calendar — discarded on close without saving
+let fertileRangeDraft = null;
+
+/** Renders the mini calendar inside the fertile range modal from the current draft. */
+function renderFertileRangeModal() {
+  qs("fertileRangeMonthLabel").innerText = new Date(fertileRangeDraft.year, fertileRangeDraft.month)
+    .toLocaleString("en-US", { month: "long", year: "numeric" });
+
+  const el = qs("fertileRangeCalendar");
+  el.innerHTML = "";
+
+  ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].forEach(day => {
+    const w       = document.createElement("div");
+    w.textContent = day;
+    w.className   = "calendar-weekday";
+    el.appendChild(w);
+  });
+
+  const totalDays = getDaysInMonth(fertileRangeDraft.year, fertileRangeDraft.month);
+  const offset    = getMonthOffset(fertileRangeDraft.year, fertileRangeDraft.month);
+
+  for (let i = 0; i < offset; i++) el.appendChild(document.createElement("div"));
+
+  for (let d = 1; d <= totalDays; d++) {
+    const key = formatDateKey(new Date(fertileRangeDraft.year, fertileRangeDraft.month, d));
+
+    const div       = document.createElement("div");
+    div.className   = "day";
+    div.textContent = d;
+
+    // full range picked — paint every day in it the same green used everywhere else
+    if (fertileRangeDraft.start && fertileRangeDraft.end && key >= fertileRangeDraft.start && key <= fertileRangeDraft.end) {
+      div.classList.add("fertile-day");
+    } else if (key === fertileRangeDraft.start) {
+      // only a start day picked so far — mark it, waiting for the end day
+      div.classList.add("selected");
+    }
+
+    div.onclick = () => pickFertileRangeDay(key);
+    el.appendChild(div);
+  }
+
+  const summary = qs("fertileRangeSummary");
+  if (fertileRangeDraft.start && fertileRangeDraft.end) {
+    summary.innerText = `${fertileRangeDraft.start} → ${fertileRangeDraft.end}`;
+  } else if (fertileRangeDraft.start) {
+    summary.innerText = "Pick an end day";
+  } else {
+    summary.innerText = "Pick a start day";
+  }
+}
+
+/** Handles a day tap inside the fertile range picker. */
+function pickFertileRangeDay(key) {
+  if (fertileRangeDraft.start && !fertileRangeDraft.end) {
+    // second tap completes the range — swap if the end was picked before the start
+    fertileRangeDraft.end   = key < fertileRangeDraft.start ? fertileRangeDraft.start : key;
+    fertileRangeDraft.start = key < fertileRangeDraft.start ? key : fertileRangeDraft.start;
+  } else {
+    // first tap, or restarting after a full range was already picked
+    fertileRangeDraft.start = key;
+    fertileRangeDraft.end   = null;
+  }
+  renderFertileRangeModal();
+}
+
+/** Moves the picker's visible month forward or back by one. */
+export function changeFertileRangeMonth(delta) {
+  fertileRangeDraft.month += delta;
+  if (fertileRangeDraft.month < 0)  { fertileRangeDraft.month = 11; fertileRangeDraft.year--; }
+  if (fertileRangeDraft.month > 11) { fertileRangeDraft.month = 0;  fertileRangeDraft.year++; }
+  renderFertileRangeModal();
+}
+
+/** Opens the fertile range modal, preloading the currently active range if any. */
+export function openFertileRangeModal() {
+  const existing = getFertileRange();
+  const base     = existing ? parseDateKey(existing.start) : new Date();
+
+  fertileRangeDraft = {
+    month: base.getMonth(),
+    year:  base.getFullYear(),
+    start: existing?.start ?? null,
+    end:   existing?.end   ?? null,
+  };
+
+  renderFertileRangeModal();
+
+  const modal = qs("fertileRangeModal");
+  modal.classList.remove("hidden");
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => modal.classList.add("show"));
+  });
+}
+
+export function closeFertileRangeModal() {
+  const modal = qs("fertileRangeModal");
+  modal.classList.remove("show");
+  modal.addEventListener("transitionend", () => modal.classList.add("hidden"), { once: true });
+}
+
+export function saveFertileRangeModal(render) {
+  if (!fertileRangeDraft?.start || !fertileRangeDraft?.end) {
+    return showMessage("Pick a start and an end day");
+  }
+
+  setFertileRange(fertileRangeDraft.start, fertileRangeDraft.end);
+  store.save();
+  closeFertileRangeModal();
+  afterModalSave("fertileRangeModal", render);
+}
+
+/** Clears the active fertile range entirely. */
+export function clearFertileRangeModal(render) {
+  clearFertileRange();
+  store.save();
+  closeFertileRangeModal();
+  showMessage("Fertile range cleared");
+  afterModalSave("fertileRangeModal", render);
+}
+
+/* ─── profile modal ────────────────────────── */
+
+/** Opens the profile modal, preloading the currently saved values. */
+export function openProfileModal() {
+  const profile = store.profile;
+
+  qs("profileAgeInput").value               = profile.age;
+  qs("profileUsualTimeInput").value          = profile.usualMeasurementTime;
+  qs("profileGoalInput").value               = profile.goal;
+  qs("profileMapNumberInput").value          = profile.mapNumber;
+  qs("profileMeasurementMethodInput").value  = profile.measurementMethod;
+
+  const modal = qs("profileModal");
+  modal.classList.remove("hidden");
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => modal.classList.add("show"));
+  });
+}
+
+export function closeProfileModal() {
+  const modal = qs("profileModal");
+  modal.classList.remove("show");
+  modal.addEventListener("transitionend", () => modal.classList.add("hidden"), { once: true });
+}
+
+export function saveProfileModal(render) {
+  store.profile = {
+    age:                  qs("profileAgeInput").value,
+    usualMeasurementTime: qs("profileUsualTimeInput").value,
+    goal:                 qs("profileGoalInput").value,
+    mapNumber:            qs("profileMapNumberInput").value,
+    measurementMethod:    qs("profileMeasurementMethodInput").value,
+  };
+
+  store.save();
+  closeProfileModal();
+  afterModalSave("profileModal", render);
+}
+
 export function openOtherModal() {
   if (!store.selectedKey) return showMessage("Select a day first");
 
@@ -602,7 +798,7 @@ const BLEEDING_LABELS = { none: "None", spotting: "Spotting", menstruation: "Per
 const SENSATION_LABELS = { dry: "Dry", moist: "Moist", wet: "Wet" };
 
 // full-word versions of the abbreviated map labels — used only in day-info modal
-const CONSISTENCY_FULL_LABELS = { "": "-", sticky: "Creamy", creamy: "Slightly stretchy", eggwhite: "Stretchy" };
+const CONSISTENCY_FULL_LABELS = { "": "-", creamy: "Creamy", slightlyStretchy: "Slightly stretchy", stretchy: "Stretchy" };
 const COLOR_FULL_LABELS = { "": "-", clear: "Clear", white: "White", yellow: "Yellow", other: "Other" };
 
 /** Opens the read-only day info modal for the currently selected day. */
@@ -615,8 +811,9 @@ export function openDayInfoModal(currentColumns) {
 
   qs("dayInfoTitle").innerText = `${key} (CD ${column?.cycleDay ?? "-"})`;
 
+  const adjustedTemp = getAdjustedTemp(data.temp, data.measurementTime, store.profile.usualMeasurementTime);
   qs("infoTemp").innerText = data.temp != null
-    ? `${formatTemp(data.temp)} °C${data.measurementTime ? ` at ${data.measurementTime}` : ""}`
+    ? `${formatTemp(data.temp)} °C${data.measurementTime ? ` at ${data.measurementTime}` : ""}${adjustedTemp != null ? ` (adjusted ${formatTemp(adjustedTemp)} °C)` : ""}`
     : "-";
   qs("infoTempFactors").innerText = data.tempFactors ? TEMP_FACTORS[data.tempFactors] : "-";
   qs("infoBleeding").innerText    = BLEEDING_LABELS[data.bleeding ?? "none"];
@@ -630,9 +827,8 @@ export function openDayInfoModal(currentColumns) {
     `Clots: ${data.sediment ? "Yes" : "No"}`,
   ].join("<br>");
 
-  const fertileRangeText = data.fertileRangeStart && data.fertileRangeEnd
-    ? `${data.fertileRangeStart} to ${data.fertileRangeEnd}`
-    : "-";
+  const range = getFertileRange();
+  const fertileRangeText = range ? `${range.start} to ${range.end}` : "-";
 
   const CERVIX_LABELS = {
     firmness: {

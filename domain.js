@@ -5,7 +5,7 @@
 // and building the column array consumed by render.
 
 import { store } from "./store.js";
-import { normalize, parseDateKey, columnX, columnCenterX, isFertileDay } from "./app.js";
+import { normalize, parseDateKey, columnX, columnCenterX, isFertileDay, getTimeAdjustment, getAdjustedTemp } from "./app.js";
 
 /* ─── cycle detection ─────────────────────── */
 
@@ -86,6 +86,8 @@ export function buildColumns() {
       temp:            raw.temp             ?? null,
       tempFactors:     raw.tempFactors      ?? "",
       measurementTime: raw.measurementTime  ?? "",
+      timeAdjustment:  getTimeAdjustment(raw.measurementTime, store.profile.usualMeasurementTime),
+      adjustedTemp:    getAdjustedTemp(raw.temp, raw.measurementTime, store.profile.usualMeasurementTime),
 
       bleeding:        raw.bleeding         ?? "none",
       discharge:       raw.discharge        ?? "none",
@@ -95,8 +97,8 @@ export function buildColumns() {
       stretch:         raw.stretch          ?? false,
       visible:         raw.visible          ?? false,
 
-      consistency:     raw.consistency      ?? "none",
-      color:           raw.color            ?? "none",
+      consistency:     raw.consistency      ?? "",
+      color:           raw.color            ?? "",
 
       sediment:        raw.sediment         ?? false,
 
@@ -168,13 +170,15 @@ export function buildCycleColumns() {
       temp:            raw.temp            ?? null,
       tempFactors:     raw.tempFactors     ?? "",
       measurementTime: raw.measurementTime ?? "",
+      timeAdjustment:  getTimeAdjustment(raw.measurementTime, store.profile.usualMeasurementTime),
+      adjustedTemp:    getAdjustedTemp(raw.temp, raw.measurementTime, store.profile.usualMeasurementTime),
       bleeding:        raw.bleeding        ?? "none",
       discharge:       raw.discharge       ?? "none",
       sensation:       raw.sensation       ?? "dry",
       stretch:         raw.stretch         ?? false,
       visible:         raw.visible         ?? false,
-      consistency:     raw.consistency     ?? "none",
-      color:           raw.color           ?? "none",
+      consistency:     raw.consistency     ?? "",
+      color:           raw.color           ?? "",
       sediment:        raw.sediment        ?? false,
       cervixFirmness:  raw.cervixFirmness  ?? "",
       cervixHeight:    raw.cervixHeight    ?? "",

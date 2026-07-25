@@ -28,7 +28,24 @@ constructor() {
   this.horizontalGuideY = null;
   this.verticalGuideX = null;
   this.coverlines = {};
+
+  // manually picked fertile window — one active range at a time
+  this.fertileRange = { start: null, end: null };
+
+  // person-level info, not tied to any single day
+  this.profile = this._emptyProfile();
 }
+
+  /** Returns a blank profile state object. */
+  _emptyProfile() {
+    return {
+      age: "",
+      usualMeasurementTime: "",
+      goal: "",
+      mapNumber: "",
+      measurementMethod: "",
+    };
+  }
 
   /** Returns a blank modal state object. */
 _emptyModal() {
@@ -57,9 +74,6 @@ _emptyModal() {
     cervixHeight: "",
     cervixOpenness: "",
 
-    fertileRangeStart: "",
-    fertileRangeEnd: "",
-
     other: "",
   };
 }
@@ -78,6 +92,8 @@ _emptyModal() {
         this.horizontalGuideY = parsed.horizontalGuideY ?? null;
         this.verticalGuideX = parsed.verticalGuideX ?? null;
         this.coverlines = parsed.coverlines ?? {};
+        this.fertileRange = parsed.fertileRange ?? { start: null, end: null };
+        this.profile = parsed.profile ?? this._emptyProfile();
         return parsed.entries;
       }
 
@@ -95,6 +111,8 @@ _emptyModal() {
       horizontalGuideY: this.horizontalGuideY,
       verticalGuideX: this.verticalGuideX,
       coverlines: this.coverlines,
+      fertileRange: this.fertileRange,
+      profile: this.profile,
     }));
   }
 
@@ -113,6 +131,8 @@ _emptyModal() {
     this.horizontalGuideY        = null;
     this.verticalGuideX          = null;
     this.coverlines              = {};
+    this.fertileRange            = { start: null, end: null };
+    this.profile                 = this._emptyProfile();
     this.currentCycleIndex       = null;
     this.modal = this._emptyModal();
   }

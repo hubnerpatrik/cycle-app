@@ -134,7 +134,7 @@ h1{
   margin-bottom:14px;
 }
 
-#monthLabel{
+.month-label{
   text-align:center;
 
   font-size:16px;
@@ -166,7 +166,7 @@ h1{
   transform:scale(0.92);
 }
 
-#calendar{
+.calendar-grid{
   display:grid;
   grid-template-columns:repeat(7,1fr);
 
@@ -695,7 +695,7 @@ h1{
 }
 
 .map-cell.spotting{
-  color:var(--orange);
+  color:var(--red);
 }
 
 .cervix-cell{
@@ -722,25 +722,26 @@ h1{
 .cervix-indicator.closed{
   width: 8px;
   height: 8px;
-  border: 1px solid #10b981;
-  background: #10b981;
+  border: 1px solid #111;
+  background: #111;
 }
 
 .cervix-indicator.medium{
   width: 10px;
   height: 10px;
-  border: 2px solid #f59e0b;
-  background: rgba(245,158,11,0.2);
+  border: 2px solid #10b981;
+  background: rgba(16,185,129,0.2);
 }
 
 .cervix-indicator.open{
   width: 14px;
   height: 14px;
-  border: 2px solid #ef4444;
+  border: 2px solid #10b981;
   background: transparent;
 }
 
-.map-cell.fertile{
+.map-cell.fertile,
+.map-day.fertile{
   background:rgba(52,199,89,0.08);
 }
 
@@ -794,6 +795,10 @@ h1{
 
   transform:scale(0.96) translateY(6px);
   transition:transform 0.25s var(--ease);
+}
+
+.modal-card.wide{
+  width:380px;
 }
 
 .modal.show .modal-card{
@@ -1023,6 +1028,24 @@ input:focus{
   background:var(--bg);
   color:var(--text);
 }
+
+.range-summary{
+  text-align:center;
+
+  font-size:13px;
+  font-weight:600;
+
+  color:var(--muted);
+}
+
+.field-hint{
+  min-height:14px;
+
+  font-size:12px;
+  font-weight:500;
+
+  color:var(--muted);
+}
 /* ─── toast ──────────────────────────────── */
 
 .toast{
@@ -1061,7 +1084,11 @@ input:focus{
   text-align:right;
 }
 
-#devReset{
+.text-btn-row{
+  text-align:center;
+}
+
+.text-btn{
   height:26px;
 
   padding:0 10px;
@@ -1078,7 +1105,7 @@ input:focus{
   cursor:pointer;
 }
 
-#devReset:hover{
+.text-btn:hover{
   color:var(--red);
 }
 
