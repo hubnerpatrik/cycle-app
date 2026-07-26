@@ -4,7 +4,7 @@
 // Draw order: bg → overlays → grid → annotations → data
 
 import { store } from "./store.js";
-import { LAYOUT, qs, chartY, graphHeight, chartWidth, getCycleCoverlineValues, setCycleCoverlineValues } from "./app.js";
+import { LAYOUT, qs, chartY, chartGridY, tempSlotCount, graphHeight, chartWidth, getCycleCoverlineValues, setCycleCoverlineValues } from "./app.js";
 
 /* ─── cycle grouping ──────────────────────── */
 
@@ -45,13 +45,14 @@ export function drawVerticalGrid(ctx, columns) {
   ctx.lineWidth = 1;
 }
 
-/** Draws horizontal temperature grid lines. Every 5th line is darker. */
+/** Draws horizontal temperature grid lines — one per cell boundary. Every 5th line is darker. */
 export function drawHorizontalGrid(ctx, canvasWidth) {
-  for (let i = 0; i <= 15; i++) {
-    const y = Math.floor(chartY(LAYOUT.minTemp + i / 10)) + 0.5;
+  const slots = tempSlotCount();
+  for (let i = 0; i <= slots; i++) {
+    const y = Math.floor(chartGridY(i)) + 0.5;
     ctx.beginPath();
     ctx.lineWidth   = 1;
-    ctx.strokeStyle = i % 5 === 0 ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.3)";
+    ctx.strokeStyle = i % 5 === 0 ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.12)";
     ctx.moveTo(0, y);
     ctx.lineTo(canvasWidth, y);
     ctx.stroke();
@@ -149,21 +150,6 @@ export function drawCycleSeparators(ctx, cycleGroups) {
 
 /* ─── temperature data ────────────────────── */
 
-const TEMP_CELL_STEP = 0.1;
-
-function getTemperatureCellY(temp) {
-  if (temp == null) return null;
-
-  const lowerBound = Math.min(
-    LAYOUT.maxTemp - TEMP_CELL_STEP,
-    Math.floor((temp - LAYOUT.minTemp) / TEMP_CELL_STEP) * TEMP_CELL_STEP + LAYOUT.minTemp
-  );
-  const upperBound = Math.min(LAYOUT.maxTemp, lowerBound + TEMP_CELL_STEP);
-  const cellCenterTemp = lowerBound + (upperBound - lowerBound) / 2;
-
-  return chartY(cellCenterTemp);
-}
-
 /** Draws the temperature line — one path per cycle group to avoid cross-cycle connections. */
 export function drawTemperatureLine(ctx, cycleGroups) {
   cycleGroups.forEach(group => {
@@ -178,9 +164,8 @@ export function drawTemperatureLine(ctx, cycleGroups) {
     valid.forEach((col, i) => {
       if (i === 0) return;
       const prev = valid[i - 1];
-      const prevY = getTemperatureCellY(prev.temp);
-      const colY = getTemperatureCellY(col.temp);
-      if (prevY == null || colY == null) return;
+      const prevY = chartY(prev.temp);
+      const colY = chartY(col.temp);
 
       ctx.beginPath();
       ctx.moveTo(prev.centerX, prevY);
@@ -199,8 +184,7 @@ export function drawTemperaturePoints(ctx, columns) {
   columns.forEach(col => {
     if (col.temp == null) return;
 
-    const pointY = getTemperatureCellY(col.temp);
-    if (pointY == null) return;
+    const pointY = chartY(col.temp);
 
     const hasFactors = Boolean(col.tempFactors?.trim());
 
@@ -225,8 +209,7 @@ export function drawTemperaturePoints(ctx, columns) {
 export function drawAdjustedTemperaturePoints(ctx, columns) {
   columns.forEach(col => {
     if (col.adjustedTemp == null) return;
-    const pointY = getTemperatureCellY(col.adjustedTemp);
-    if (pointY == null) return;
+    const pointY = chartY(col.adjustedTemp);
 
     ctx.beginPath();
     ctx.arc(col.centerX, pointY, 4, 0, Math.PI * 2);
@@ -239,8 +222,7 @@ export function drawAdjustedTemperaturePoints(ctx, columns) {
 export function drawMeasurementTimes(ctx, columns) {
   columns.forEach(col => {
     if (col.temp == null || !col.measurementTime) return;
-    const pointY = getTemperatureCellY(col.temp);
-    if (pointY == null) return;
+    const pointY = chartY(col.temp);
     ctx.font = "10px Inter";
     ctx.fillStyle = "#8e8e93";
     ctx.textAlign = "center";
@@ -251,8 +233,7 @@ export function drawMeasurementTimes(ctx, columns) {
 export function drawMarkers(ctx, columns) {
   columns.forEach(col => {
     if (col.temp == null || !col.marker) return;
-    const pointY = getTemperatureCellY(col.temp);
-    if (pointY == null) return;
+    const pointY = chartY(col.temp);
     ctx.font = "bold 14px Inter";
     ctx.fillStyle = "#dc2626";
     ctx.textAlign = "center";

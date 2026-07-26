@@ -70,11 +70,12 @@ export const LAYOUT = {
   columnWidth:        50,
   sideLabelWidth:     68,
   tempScaleWidth:     72,
-  chartHeight:        600,
+  chartHeight:        840,
   chartPaddingTop:    12,
   chartPaddingBottom: 8,
   minTemp:            36.0,
-  maxTemp:            37.5,
+  maxTemp:            38.0,
+  tempStep:           0.05,
 };
   const ZOOM_MIN  = 24;
   const ZOOM_MAX  = 90;
@@ -196,12 +197,34 @@ export function graphHeight() {
   return LAYOUT.chartHeight - LAYOUT.chartPaddingTop - LAYOUT.chartPaddingBottom;
 }
 
-/** Converts a temperature value to a canvas y coordinate. */
+/** Number of discrete temperature cells on the chart — one per 0.05°C step, both ends inclusive. */
+export function tempSlotCount() {
+  return Math.round((LAYOUT.maxTemp - LAYOUT.minTemp) / LAYOUT.tempStep) + 1;
+}
+
+/** Pixel height of a single temperature cell. */
+export function tempSlotHeight() {
+  return graphHeight() / tempSlotCount();
+}
+
+/** Y position of the boundary line above cell index (0 = chart top edge, tempSlotCount() = bottom edge). */
+export function chartGridY(boundaryIndex) {
+  return LAYOUT.chartPaddingTop + boundaryIndex * tempSlotHeight();
+}
+
+/**
+ * Converts a temperature to a canvas y coordinate — snapped to the
+ * vertical center of its 0.05°C cell. Grid lines, scale labels, and
+ * plotted points all derive from this same function, so a point
+ * always lands exactly in the middle of its cell.
+ */
 export function chartY(temp) {
-  return (
-    LAYOUT.chartPaddingTop +
-    ((LAYOUT.maxTemp - temp) / (LAYOUT.maxTemp - LAYOUT.minTemp)) * graphHeight()
-  );
+  const slots         = tempSlotCount();
+  const rawIndex      = Math.round((temp - LAYOUT.minTemp) / LAYOUT.tempStep);
+  const index          = Math.min(Math.max(rawIndex, 0), slots - 1);
+  const indexFromTop   = slots - 1 - index; // maxTemp sits at the top of the chart
+
+  return chartGridY(indexFromTop) + tempSlotHeight() / 2;
 }
 
 /** Pushes LAYOUT values into CSS custom properties so CSS rows stay in sync. */

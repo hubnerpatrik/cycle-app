@@ -27,11 +27,11 @@ export function renderTempScale() {
   const scale = qs("tempScale");
   if (!scale) return;
   scale.innerHTML = "";
-  for (let temp = LAYOUT.maxTemp; temp >= LAYOUT.minTemp - 0.001; temp -= 0.1) {
+  for (let temp = LAYOUT.maxTemp; temp >= LAYOUT.minTemp - LAYOUT.tempStep / 2; temp -= LAYOUT.tempStep) {
     const label       = document.createElement("div");
     label.className   = "temp-scale-label";
     label.textContent = Number(temp).toFixed(2);
-    label.style.top   = `${chartY(temp) - 9}px`;
+    label.style.top   = `${chartY(temp)}px`;
     scale.appendChild(label);
   }
 }
