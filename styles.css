@@ -697,21 +697,7 @@ h1{
 .map-cell.spotting{
   color:var(--red);
 }
-
-.cervix-cell{
-  flex-direction: column;
-  justify-content: center;
-  gap: 2px;
-  padding-top: 1px;
-}
-
-.cervix-text{
-  font-size: 8px;
-  line-height: 1;
-  text-transform: capitalize;
-  color: var(--text);
-}
-
+  
 .cervix-indicator{
   width: 8px;
   height: 8px;
@@ -743,11 +729,6 @@ h1{
 .map-cell.fertile,
 .map-day.fertile{
   background:rgba(52,199,89,0.08);
-}
-
-.map-cell.peak-helper{
-  box-shadow:
-    inset 0 -2px 0 var(--purple);
 }
 
 

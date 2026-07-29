@@ -106,6 +106,17 @@ export function renderCalendar(selectColumn) {
   }
 }
 
+/** Fills the temperature-influence-factor dropdown from the single TEMP_FACTORS source. */
+export function renderTempFactorsOptions() {
+  const select = qs("tempFactorsInput");
+  if (!select) return;
+
+  select.innerHTML = `<option value="">None</option>` +
+    Object.entries(TEMP_FACTORS)
+      .map(([value, label]) => `<option value="${value}">${label}</option>`)
+      .join("");
+}
+
 /* ─── cycle map rows ──────────────────────── */
 
 /** Creates a single map cell div with optional CSS classes. */

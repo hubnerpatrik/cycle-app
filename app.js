@@ -20,6 +20,7 @@ import { renderChart, handleCanvasClick } from "./chart.js";
 import {
   renderMonth,
   renderTempScale,
+  renderTempFactorsOptions, 
   renderCalendar,
   renderMapRows,
   openModal,
@@ -245,18 +246,41 @@ export function getCycleCoverlineKey(cycleIndex = store.currentCycleIndex) {
   return cycleIndex == null ? "default" : `cycle-${cycleIndex}`;
 }
 
+/** Returns the coverline anchors for a cycle — a temperature and a day key, not pixels — so they stay accurate across zoom and cycle changes. */
 export function getCycleCoverlineValues(cycleIndex = store.currentCycleIndex) {
   const key = getCycleCoverlineKey(cycleIndex);
-  const data = store.coverlines?.[key] ?? {};
-  return {
-    horizontalGuideY: data.horizontalGuideY ?? store.horizontalGuideY ?? null,
-    verticalGuideX: data.verticalGuideX ?? store.verticalGuideX ?? null,
-  };
+  return store.coverlines?.[key] ?? {};
 }
 
 export function setCycleCoverlineValues(values, cycleIndex = store.currentCycleIndex) {
   const key = getCycleCoverlineKey(cycleIndex);
   if (!store.coverlines[key]) store.coverlines[key] = {};
+
+  // only touch an axis if the caller actually passed it in —
+  // otherwise setting one coverline would wipe out the other
+  const data = store.coverlines[key];
+  if ("horizontalTemp" in values) {
+    if (values.horizontalTemp != null) data.horizontalTemp = values.horizontalTemp;
+    else delete data.horizontalTemp;
+  }
+
+  if ("verticalKey" in values) {
+    if (values.verticalKey != null) data.verticalKey = values.verticalKey;
+    else delete data.verticalKey;
+  }
+
+  if (!Object.keys(data).length) delete store.coverlines[key];
+}
+
+/** Converts a click's y pixel back to the temperature of the cell it landed in — inverse of chartY(). */
+export function pixelYToTemp(y) {
+  const slots       = tempSlotCount();
+  const slotHeight  = tempSlotHeight();
+  const relativeY   = y - LAYOUT.chartPaddingTop;
+  const indexFromTop = Math.min(Math.max(Math.round(relativeY / slotHeight - 0.5), 0), slots - 1);
+  const index       = slots - 1 - indexFromTop;
+  return LAYOUT.minTemp + index * LAYOUT.tempStep;
+}
 
   // only touch an axis if the caller actually passed it in —
   // otherwise setting one coverline would wipe out the other
@@ -357,11 +381,21 @@ function renderZoomLabel() {
   const pct = Math.round((LAYOUT.columnWidth / ZOOM_BASE) * 100);
   qs("zoomLabel").innerText = `${pct}%`;
 }
+
+/** Binds a modal's "Back" button: closes it, then reopens the action modal after the transition. */
+function bindBackButton(btnId, closeFn) {
+  qs(btnId).onclick = () => {
+    closeFn();
+    setTimeout(() => openActionModal(), 250);
+  };
+}
+
 /* ─── init ────────────────────────────────── */
 
 /** Binds all event listeners. Called once on DOMContentLoaded. */
 function init() {
   syncCSSVariables();
+  renderTempFactorsOptions();
 
   // calendar navigation
   qs("prevMonth").onclick = () => {
@@ -410,10 +444,6 @@ function init() {
     setTimeout(() => openBleedingModal(), 250);
   };
 
-  qs("closeBleedingModalBtn").onclick = () => {
-  closeBleedingModal();
-  setTimeout(() => openActionModal(), 250);
-};
   qs("saveBleedingModalBtn").onclick   = () => saveBleedingModal(render);
 
   qs("mucusActionBtn").onclick = () => {
@@ -421,10 +451,6 @@ function init() {
     setTimeout(() => openMucusModal(), 250);
   };
 
-  qs("closeMucusModalBtn").onclick = () => {
-  closeMucusModal();
-  setTimeout(() => openActionModal(), 250);
-};
   qs("saveMucusModalBtn").onclick  = () => saveMucusModal(render);
 
   qs("markersActionBtn").onclick = () => {
@@ -442,10 +468,6 @@ function init() {
     setTimeout(() => openFertileRangeModal(), 250);
   };
 
-  qs("closeFertileRangeModalBtn").onclick = () => {
-    closeFertileRangeModal();
-    setTimeout(() => openActionModal(), 250);
-  };
   qs("saveFertileRangeModalBtn").onclick  = () => saveFertileRangeModal(render);
   qs("clearFertileRangeBtn").onclick      = () => clearFertileRangeModal(render);
   qs("fertileRangePrevMonth").onclick     = () => changeFertileRangeMonth(-1);
@@ -456,22 +478,10 @@ function init() {
     setTimeout(() => openProfileModal(), 250);
   };
 
-  qs("closeProfileModalBtn").onclick = () => {
-    closeProfileModal();
-    setTimeout(() => openActionModal(), 250);
-  };
   qs("saveProfileModalBtn").onclick = () => saveProfileModal(render);
 
-  qs("closeMarkersModalBtn").onclick = () => {
-  closeMarkersModal();
-  setTimeout(() => openActionModal(), 250);
-};
   qs("saveMarkersModalBtn").onclick  = () => saveMarkersModal(render);
 
-  qs("closeCervixModalBtn").onclick = () => {
-  closeCervixModal();
-  setTimeout(() => openActionModal(), 250);
-};
   qs("saveCervixModalBtn").onclick  = () => saveCervixModal(render);
 
   qs("otherActionBtn").onclick = () => {
@@ -479,11 +489,16 @@ function init() {
     setTimeout(() => openOtherModal(), 250);
   };
 
-  qs("closeOtherModalBtn").onclick = () => {
-  closeOtherModal();
-  setTimeout(() => openActionModal(), 250);
-};
   qs("saveOtherModalBtn").onclick    = () => saveOtherModal(render);
+
+  // back buttons — close current modal, reopen the action modal
+  bindBackButton("closeBleedingModalBtn",     closeBleedingModal);
+  bindBackButton("closeMucusModalBtn",        closeMucusModal);
+  bindBackButton("closeFertileRangeModalBtn", closeFertileRangeModal);
+  bindBackButton("closeProfileModalBtn",      closeProfileModal);
+  bindBackButton("closeMarkersModalBtn",      closeMarkersModal);
+  bindBackButton("closeCervixModalBtn",       closeCervixModal);
+  bindBackButton("closeOtherModalBtn",        closeOtherModal);
 
   // coverline tools
   qs("horizontalCoverlineBtn").onclick = () => {

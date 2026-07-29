@@ -4,7 +4,7 @@
 // Draw order: bg → overlays → grid → annotations → data
 
 import { store } from "./store.js";
-import { LAYOUT, qs, chartY, chartGridY, tempSlotCount, graphHeight, chartWidth, getCycleCoverlineValues, setCycleCoverlineValues } from "./app.js";
+import { LAYOUT, qs, chartY, chartGridY, tempSlotCount, graphHeight, chartWidth, getCycleCoverlineValues, setCycleCoverlineValues, currentColumns, pixelYToTemp } from "./app.js";
 
 /* ─── cycle grouping ──────────────────────── */
 
@@ -24,39 +24,46 @@ export function groupColumnsByCycle(columns) {
 
 /* ─── grid ────────────────────────────────── */
 
-/** Draws vertical column separators. Every 5th line is darker. */
-export function drawVerticalGrid(ctx, columns) {
-  columns.forEach(col => {
-    const x = Math.round(col.x) + 0.5;
-    ctx.beginPath();
-    ctx.lineWidth   = 1;
-    ctx.strokeStyle = col.index % 5 === 0 ? "#d4d4da" : "#e5e5ea";
-    ctx.moveTo(x, LAYOUT.chartPaddingTop);
-    ctx.lineTo(x, LAYOUT.chartHeight - LAYOUT.chartPaddingBottom);
-    ctx.stroke();
-  });
-  const lastX = chartWidth(columns) + 0.5;
+/** Draws the manually placed vertical coverline — anchored to a day, recomputed to pixels each render. */
+export function drawVerticalCoverline(ctx, columns) {
+  const { verticalKey } = getCycleCoverlineValues();
+  if (verticalKey == null) return;
+
+  const col = columns.find(c => c.key === verticalKey);
+  if (!col) return; // anchor day isn't visible in this cycle
+
   ctx.beginPath();
-  ctx.lineWidth   = 1;
-  ctx.strokeStyle = "#d4d4da";
-  ctx.moveTo(lastX, LAYOUT.chartPaddingTop);
-  ctx.lineTo(lastX, LAYOUT.chartHeight - LAYOUT.chartPaddingBottom);
+  ctx.setLineDash([6, 4]);
+  ctx.strokeStyle = "rgba(180,20,20,0.8)";
+  ctx.lineWidth = 1.5;
+
+  ctx.moveTo(col.centerX, LAYOUT.chartPaddingTop);
+  ctx.lineTo(col.centerX, LAYOUT.chartHeight - LAYOUT.chartPaddingBottom);
+
   ctx.stroke();
+
+  ctx.setLineDash([]);
   ctx.lineWidth = 1;
 }
 
-/** Draws horizontal temperature grid lines — one per cell boundary. Every 5th line is darker. */
-export function drawHorizontalGrid(ctx, canvasWidth) {
-  const slots = tempSlotCount();
-  for (let i = 0; i <= slots; i++) {
-    const y = Math.floor(chartGridY(i)) + 0.5;
-    ctx.beginPath();
-    ctx.lineWidth   = 1;
-    ctx.strokeStyle = i % 5 === 0 ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.12)";
-    ctx.moveTo(0, y);
-    ctx.lineTo(canvasWidth, y);
-    ctx.stroke();
-  }
+/** Draws the manually placed horizontal coverline — anchored to a temperature, recomputed to pixels each render. */
+export function drawHorizontalCoverline(ctx, columns) {
+  const { horizontalTemp } = getCycleCoverlineValues();
+  if (horizontalTemp == null) return;
+
+  const y = chartY(horizontalTemp);
+
+  ctx.beginPath();
+  ctx.setLineDash([6, 4]);
+  ctx.strokeStyle = "rgba(180,20,20,0.8)";
+  ctx.lineWidth = 1.5;
+
+  ctx.moveTo(0, y);
+  ctx.lineTo(chartWidth(columns), y);
+
+  ctx.stroke();
+
+  ctx.setLineDash([]);
   ctx.lineWidth = 1;
 }
 
@@ -167,10 +174,12 @@ export function drawTemperatureLine(ctx, cycleGroups) {
       const prevY = chartY(prev.temp);
       const colY = chartY(col.temp);
 
+      const daysBetween = (col.date - prev.date) / 86_400_000;
+
       ctx.beginPath();
       ctx.moveTo(prev.centerX, prevY);
       ctx.lineTo(col.centerX, colY);
-      ctx.setLineDash(col.index - prev.index > 1 ? [4, 4] : []);
+      ctx.setLineDash(daysBetween > 1 ? [4, 4] : []);
       ctx.stroke();
     });
 
@@ -287,6 +296,18 @@ export function renderChart(columns) {
  * Deactivates coverline mode after placement.
  */
 
+/** Finds the column whose center is closest to a click's x pixel. */
+function pixelXToColumnKey(x, columns) {
+  if (!columns.length) return null;
+  let closest = columns[0];
+  let minDist = Math.abs(x - closest.centerX);
+  columns.forEach(col => {
+    const dist = Math.abs(x - col.centerX);
+    if (dist < minDist) { minDist = dist; closest = col; }
+  });
+  return closest.key;
+}
+
 export function handleCanvasClick(event) {
   if (!store.horizontalCoverlineMode && !store.verticalCoverlineMode) {
     return;
@@ -299,11 +320,12 @@ export function handleCanvasClick(event) {
   const y = event.clientY - rect.top;
 
   if (store.horizontalCoverlineMode) {
-    setCycleCoverlineValues({ horizontalGuideY: y });
+    setCycleCoverlineValues({ horizontalTemp: pixelYToTemp(y) });
   }
 
   if (store.verticalCoverlineMode) {
-    setCycleCoverlineValues({ verticalGuideX: x });
+    const key = pixelXToColumnKey(x, currentColumns);
+    if (key != null) setCycleCoverlineValues({ verticalKey: key });
   }
 
   store.horizontalCoverlineMode = false;

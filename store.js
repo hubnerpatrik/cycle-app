@@ -25,8 +25,6 @@ constructor() {
   this.verticalCoverlineMode = false;
 
   // visual guides only
-  this.horizontalGuideY = null;
-  this.verticalGuideX = null;
   this.coverlines = {};
 
   // manually picked fertile window — one active range at a time
@@ -89,8 +87,6 @@ _emptyModal() {
       }
 
       if (parsed.entries) {
-        this.horizontalGuideY = parsed.horizontalGuideY ?? null;
-        this.verticalGuideX = parsed.verticalGuideX ?? null;
         this.coverlines = parsed.coverlines ?? {};
         this.fertileRange = parsed.fertileRange ?? { start: null, end: null };
         this.profile = parsed.profile ?? this._emptyProfile();
@@ -108,8 +104,6 @@ _emptyModal() {
   save() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       entries: this.entries,
-      horizontalGuideY: this.horizontalGuideY,
-      verticalGuideX: this.verticalGuideX,
       coverlines: this.coverlines,
       fertileRange: this.fertileRange,
       profile: this.profile,
@@ -128,8 +122,6 @@ _emptyModal() {
 
     this.horizontalCoverlineMode = false;
     this.verticalCoverlineMode   = false;
-    this.horizontalGuideY        = null;
-    this.verticalGuideX          = null;
     this.coverlines              = {};
     this.fertileRange            = { start: null, end: null };
     this.profile                 = this._emptyProfile();
