@@ -282,25 +282,6 @@ export function pixelYToTemp(y) {
   return LAYOUT.minTemp + index * LAYOUT.tempStep;
 }
 
-  // only touch an axis if the caller actually passed it in —
-  // otherwise setting one coverline would wipe out the other
-  const data = store.coverlines[key];
-  if ("horizontalGuideY" in values) {
-    if (values.horizontalGuideY != null) data.horizontalGuideY = values.horizontalGuideY;
-    else delete data.horizontalGuideY;
-  }
-
-  if ("verticalGuideX" in values) {
-    if (values.verticalGuideX != null) data.verticalGuideX = values.verticalGuideX;
-    else delete data.verticalGuideX;
-  }
-
-  if (!Object.keys(data).length) delete store.coverlines[key];
-
-  if (values.horizontalGuideY != null) store.horizontalGuideY = values.horizontalGuideY;
-  if (values.verticalGuideX != null) store.verticalGuideX = values.verticalGuideX;
-}
-
 /** Returns the currently active fertile range, or null if none is set. */
 export function getFertileRange() {
   const { start, end } = store.fertileRange;

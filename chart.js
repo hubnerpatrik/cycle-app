@@ -23,6 +23,41 @@ export function groupColumnsByCycle(columns) {
 }
 
 /* ─── grid ────────────────────────────────── */
+/** Draws vertical column separators. Every 5th line is darker. */
+export function drawVerticalGrid(ctx, columns) {
+  columns.forEach(col => {
+    const x = Math.round(col.x) + 0.5;
+    ctx.beginPath();
+    ctx.lineWidth   = 1;
+    ctx.strokeStyle = col.index % 5 === 0 ? "rgba(0,0,0,0.30)" : "rgba(0,0,0,0.10)";
+    ctx.moveTo(x, LAYOUT.chartPaddingTop);
+    ctx.lineTo(x, LAYOUT.chartHeight - LAYOUT.chartPaddingBottom);
+    ctx.stroke();
+  });
+  const lastX = chartWidth(columns) + 0.5;
+  ctx.beginPath();
+  ctx.lineWidth   = 1;
+  ctx.strokeStyle = "rgba(0,0,0,0.30)";
+  ctx.moveTo(lastX, LAYOUT.chartPaddingTop);
+  ctx.lineTo(lastX, LAYOUT.chartHeight - LAYOUT.chartPaddingBottom);
+  ctx.stroke();
+  ctx.lineWidth = 1;
+}
+
+/** Draws horizontal temperature grid lines — one per 0.05°C cell boundary. Every 5th line is darker. */
+export function drawHorizontalGrid(ctx, canvasWidth) {
+  const slots = tempSlotCount();
+  for (let i = 0; i <= slots; i++) {
+    const y = Math.floor(chartGridY(i)) + 0.5;
+    ctx.beginPath();
+    ctx.lineWidth   = 1;
+    ctx.strokeStyle = i % 5 === 0 ? "rgba(0,0,0,0.30)" : "rgba(0,0,0,0.10)";
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvasWidth, y);
+    ctx.stroke();
+  }
+  ctx.lineWidth = 1;
+}
 
 /** Draws the manually placed vertical coverline — anchored to a day, recomputed to pixels each render. */
 export function drawVerticalCoverline(ctx, columns) {
@@ -100,48 +135,6 @@ export function drawHoverLine(ctx, columns) {
   ctx.stroke();
 }
 
-/* ─── coverlines ──────────────────────────── */
-
-/** Draws the manually placed horizontal coverline as a dashed red line. */
-export function drawHorizontalCoverline(ctx, columns) {
-  const { horizontalGuideY } = getCycleCoverlineValues();
-  if (horizontalGuideY == null) return;
-
-  ctx.beginPath();
-  ctx.setLineDash([6, 4]);
-  ctx.strokeStyle = "rgba(180,20,20,0.8)";
-  ctx.lineWidth = 1.5;
-
-  ctx.moveTo(0, horizontalGuideY);
-  ctx.lineTo(chartWidth(columns), horizontalGuideY);
-
-  ctx.stroke();
-
-  ctx.setLineDash([]);
-  ctx.lineWidth = 1;
-}
-
-/** Draws the manually placed vertical coverline as a dashed red line. */
-export function drawVerticalCoverline(ctx) {
-  const { verticalGuideX } = getCycleCoverlineValues();
-  if (verticalGuideX == null) return;
-
-  ctx.beginPath();
-  ctx.setLineDash([6, 4]);
-  ctx.strokeStyle = "rgba(180,20,20,0.8)";
-  ctx.lineWidth = 1.5;
-
-  ctx.moveTo(verticalGuideX, LAYOUT.chartPaddingTop);
-  ctx.lineTo(
-    verticalGuideX,
-    LAYOUT.chartHeight - LAYOUT.chartPaddingBottom
-  );
-
-  ctx.stroke();
-
-  ctx.setLineDash([]);
-  ctx.lineWidth = 1;
-}
 /** Draws vertical separators between cycle groups. */
 export function drawCycleSeparators(ctx, cycleGroups) {
   cycleGroups.slice(1).forEach(group => {
