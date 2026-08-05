@@ -11,8 +11,6 @@ export const STORAGE_KEY = "cycleData";
 
 export class Store {
 constructor() {
-  this.entries = this._load();
-
   this.selectedKey = null;
   this.selectedPointType = "temp";
   this.hoveredKey = null;
@@ -34,6 +32,8 @@ constructor() {
 
   // person-level info, not tied to any single day
   this.profile = this._emptyProfile();
+
+  this.entries = this._load();
 }
 
   /** Returns a blank profile state object. */

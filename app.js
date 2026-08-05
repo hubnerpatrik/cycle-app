@@ -38,6 +38,7 @@ import {
   saveBleedingModal,
   openMarkersModal,
   closeMarkersModal,
+  clearMarkersModalInput,
   saveMarkersModal,
   openCervixModal,
   closeCervixModal,
@@ -481,6 +482,7 @@ function init() {
   qs("editBtn").onclick        = () => openActionModal();
   qs("closeBtn").onclick = () => {
     closeModal();
+    setTimeout(() => openActionModal(), 250);
   };
   animatePrimaryButton(qs("saveBtn"));
   qs("saveBtn").onclick        = () => saveModal(render);
@@ -534,6 +536,7 @@ function init() {
 
   qs("saveProfileModalBtn").onclick = () => saveProfileModal(render);
 
+  qs("clearMarkersModalBtn").onclick = () => clearMarkersModalInput();
   qs("saveMarkersModalBtn").onclick  = () => saveMarkersModal(render);
 
   qs("saveCervixModalBtn").onclick  = () => saveCervixModal(render);
@@ -545,14 +548,26 @@ function init() {
 
   qs("saveOtherModalBtn").onclick    = () => saveOtherModal(render);
 
-  // back buttons — close current modal without reopening the action modal
-  qs("closeBleedingModalBtn").onclick = closeBleedingModal;
-  qs("closeMucusModalBtn").onclick = closeMucusModal;
+  // back buttons — close current modal and reopen the main action menu
+  qs("closeBleedingModalBtn").onclick = () => {
+    closeBleedingModal();
+    setTimeout(() => openActionModal(), 250);
+  };
+  qs("closeMucusModalBtn").onclick = () => {
+    closeMucusModal();
+    setTimeout(() => openActionModal(), 250);
+  };
   qs("closeFertileRangeModalBtn").onclick = closeFertileRangeModal;
   qs("closeProfileModalBtn").onclick = closeProfileModal;
   qs("closeMarkersModalBtn").onclick = closeMarkersModal;
-  qs("closeCervixModalBtn").onclick = closeCervixModal;
-  qs("closeOtherModalBtn").onclick = closeOtherModal;
+  qs("closeCervixModalBtn").onclick = () => {
+    closeCervixModal();
+    setTimeout(() => openActionModal(), 250);
+  };
+  qs("closeOtherModalBtn").onclick = () => {
+    closeOtherModal();
+    setTimeout(() => openActionModal(), 250);
+  };
 
   [
     ["modal", closeModal],

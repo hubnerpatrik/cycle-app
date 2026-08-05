@@ -569,6 +569,12 @@ export function closeMarkersModal() {
   modal.addEventListener("transitionend", () => modal.classList.add("hidden"), { once: true });
 }
 
+export function clearMarkersModalInput() {
+  store.modal.marker = "";
+  const markerInput = qs("markersMarker");
+  if (markerInput) markerInput.value = "";
+}
+
 export function saveMarkersModal(render) {
   if (!store.selectedKey) return;
 
