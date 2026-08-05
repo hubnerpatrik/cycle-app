@@ -24,6 +24,11 @@
     href="styles.css"
   >
 
+  <link
+    rel="stylesheet"
+    href="playful.css"
+  >
+
 </head>
 
 <body>
@@ -107,20 +112,28 @@
   <div class="chart-card">
 
     <div class="chart-tools">
-      <button id="horizontalCoverlineBtn" class="tool-btn" type="button">Horizontal coverline</button>
-      <button id="verticalCoverlineBtn" class="tool-btn" type="button">Vertical coverline</button>
-    </div>
-
-    <div class="cycle-nav">
-      <button id="prevCycleBtn" class="tool-btn" type="button">‹</button>
-      <span id="cycleNavLabel"></span>
-      <button id="nextCycleBtn" class="tool-btn" type="button">›</button>
-    </div>
-
-    <div class="zoom-controls">
-      <button id="zoomOutBtn" class="tool-btn" type="button">−</button>
-      <span id="zoomLabel">100%</span>
-      <button id="zoomInBtn" class="tool-btn" type="button">+</button>
+      <div class="chart-tools-left">
+        <div class="cycle-nav">
+          <button id="prevCycleBtn" class="tool-btn" type="button">‹</button>
+          <span id="cycleNavLabel"></span>
+          <button id="nextCycleBtn" class="tool-btn" type="button">›</button>
+        </div>
+        <div class="zoom-controls">
+          <button id="zoomOutBtn" class="tool-btn" type="button">−</button>
+          <span id="zoomLabel">100%</span>
+          <button id="zoomInBtn" class="tool-btn" type="button">+</button>
+        </div>
+      </div>
+      <div class="chart-tools-right">
+        <div class="coverline-menu-wrapper">
+          <button id="coverlineBtn" class="tool-btn coverline-btn" type="button">Coverline</button>
+          <div id="coverlineMenu" class="coverline-menu hidden">
+            <button type="button" data-coverline="horizontal" class="coverline-option">Horizontal</button>
+            <button type="button" data-coverline="vertical" class="coverline-option">Vertical</button>
+          </div>
+        </div>
+        <button id="markersActionBtn" class="tool-btn marker-btn" type="button">Markers</button>
+      </div>
     </div>
 
     <div class="cycle-map">
@@ -295,7 +308,7 @@
     </div>
 
     <div class="modal-actions">
-      <button id="closeBtn" class="btn secondary" type="button">Back</button>
+      <button id="closeBtn" class="btn secondary" type="button">Close</button>
       <button id="saveBtn" class="btn primary" type="button">Save</button>
     </div>
 
@@ -330,12 +343,6 @@
     <button id="cervixActionBtn" class="action-btn">
       <span class="action-icon chip-teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/></svg></span>
       <span class="action-label">Cervix</span>
-      <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-    </button>
-
-    <button id="markersActionBtn" class="action-btn">
-      <span class="action-icon chip-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M4 12h16"/><circle cx="12" cy="12" r="3"/></svg></span>
-      <span class="action-label">Markers</span>
       <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
 
@@ -377,7 +384,7 @@
           </div>
           
     <div class="modal-actions">
-      <button id="closeBleedingModalBtn" class="btn secondary" type="button">Back</button>
+      <button id="closeBleedingModalBtn" class="btn secondary" type="button">Close</button>
       <button id="saveBleedingModalBtn" class="btn primary" type="button">Save</button>
     </div>
 
@@ -393,7 +400,8 @@
 
     <div class="modal-section">
       <div class="section-title">Sensation</div>
-      <div class="segmented three">
+      <div class="segmented four">
+        <button type="button" data-group="sensation" data-value="">None</button>
         <button type="button" data-group="sensation" data-value="dry">Dry</button>
         <button type="button" data-group="sensation" data-value="moist">Moist</button>
         <button type="button" data-group="sensation" data-value="wet">Wet</button>
@@ -411,7 +419,7 @@
     <div class="modal-section">
       <div class="section-title">Presence of discharge?</div>
       <div class="segmented two">
-        <button type="button" data-group="visible" data-value="false">No</button>
+        <button type="button" data-group="visible" data-value="false">None</button>
         <button type="button" data-group="visible" data-value="true">Yes</button>
       </div>
     </div>
@@ -419,7 +427,7 @@
     <div class="modal-section">
       <div class="section-title">Consistency</div>
       <div class="segmented four">
-        <button type="button" data-group="consistency" data-value="">No mucus</button>
+        <button type="button" data-group="consistency" data-value="">None</button>
         <button type="button" data-group="consistency" data-value="creamy">Creamy</button>
         <button type="button" data-group="consistency" data-value="slightlyStretchy">Slightly stretchy</button>
         <button type="button" data-group="consistency" data-value="stretchy">Stretchy</button>
@@ -439,7 +447,7 @@
     </div>
 
     <div class="modal-actions">
-      <button id="closeMucusModalBtn" class="btn secondary" type="button">Back</button>
+      <button id="closeMucusModalBtn" class="btn secondary" type="button">Close</button>
       <button id="saveMucusModalBtn" class="btn primary" type="button">Save</button>
     </div>
 
@@ -464,20 +472,21 @@
     </div>
 
     <div class="modal-section">
-      <div class="section-title">Marker</div>
-      <select id="markersMarker">
-        <option value="">None</option>
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3">3</option>
-        <option value="4">4</option>
-        <option value="5">5</option>
-        <option value="6">6</option>
-      </select>
+      <div class="section-title">Marker color</div>
+      <div class="segmented three">
+        <button type="button" data-group="markerColor" data-value="blue">Blue</button>
+        <button type="button" data-group="markerColor" data-value="green">Green</button>
+        <button type="button" data-group="markerColor" data-value="orange">Orange</button>
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <div class="section-title">Marker number</div>
+      <input id="markersMarker" type="number" min="1" max="6" placeholder="Enter number" />
     </div>
 
     <div class="modal-actions">
-      <button id="closeMarkersModalBtn" class="btn secondary" type="button">Back</button>
+      <button id="closeMarkersModalBtn" class="btn secondary" type="button">Close</button>
       <button id="saveMarkersModalBtn" class="btn primary" type="button">Save</button>
     </div>
 
@@ -516,7 +525,7 @@
     </div>
 
     <div class="modal-actions">
-      <button id="closeCervixModalBtn" class="btn secondary" type="button">Back</button>
+      <button id="closeCervixModalBtn" class="btn secondary" type="button">Close</button>
       <button id="saveCervixModalBtn" class="btn primary" type="button">Save</button>
     </div>
   </div>
@@ -543,7 +552,7 @@
     </div>
 
     <div class="modal-actions">
-      <button id="closeFertileRangeModalBtn" class="btn secondary" type="button">Back</button>
+      <button id="closeFertileRangeModalBtn" class="btn secondary" type="button">Close</button>
       <button id="saveFertileRangeModalBtn" class="btn primary" type="button">Save</button>
     </div>
 
@@ -593,7 +602,7 @@
     </div>
 
     <div class="modal-actions">
-      <button id="closeProfileModalBtn" class="btn secondary" type="button">Back</button>
+      <button id="closeProfileModalBtn" class="btn secondary" type="button">Close</button>
       <button id="saveProfileModalBtn" class="btn primary" type="button">Save</button>
     </div>
 
@@ -613,7 +622,7 @@
     </div>
 
     <div class="modal-actions">
-      <button id="closeOtherModalBtn" class="btn secondary" type="button">Back</button>
+      <button id="closeOtherModalBtn" class="btn secondary" type="button">Close</button>
       <button id="saveOtherModalBtn" class="btn primary" type="button">Save</button>
     </div>
 </div>

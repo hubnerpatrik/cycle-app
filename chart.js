@@ -4,7 +4,7 @@
 // Draw order: bg → overlays → grid → annotations → data
 
 import { store } from "./store.js";
-import { LAYOUT, qs, chartY, chartGridY, tempSlotCount, graphHeight, chartWidth, getCycleCoverlineValues, setCycleCoverlineValues, currentColumns, pixelYToTemp } from "./app.js";
+import { LAYOUT, qs, chartY, chartLineY, chartGridY, tempSlotCount, graphHeight, chartWidth, getCycleCoverlineValues, setCycleCoverlineValues, currentColumns, pixelYToTemp } from "./app.js";
 
 /* ─── cycle grouping ──────────────────────── */
 
@@ -72,8 +72,8 @@ export function drawVerticalCoverline(ctx, columns) {
   ctx.strokeStyle = "rgba(180,20,20,0.8)";
   ctx.lineWidth = 1.5;
 
-  ctx.moveTo(col.centerX, LAYOUT.chartPaddingTop);
-  ctx.lineTo(col.centerX, LAYOUT.chartHeight - LAYOUT.chartPaddingBottom);
+  ctx.moveTo(col.x, LAYOUT.chartPaddingTop);
+  ctx.lineTo(col.x, LAYOUT.chartHeight - LAYOUT.chartPaddingBottom);
 
   ctx.stroke();
 
@@ -86,7 +86,7 @@ export function drawHorizontalCoverline(ctx, columns) {
   const { horizontalTemp } = getCycleCoverlineValues();
   if (horizontalTemp == null) return;
 
-  const y = chartY(horizontalTemp);
+  const y = chartLineY(horizontalTemp);
 
   ctx.beginPath();
   ctx.setLineDash([6, 4]);
@@ -188,6 +188,14 @@ export function drawTemperaturePoints(ctx, columns) {
 
     const pointY = chartY(col.temp);
 
+    if (col.isPeak) {
+      ctx.beginPath();
+      ctx.arc(col.centerX, pointY, 7, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(37,99,235,0.65)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
     const hasFactors = Boolean(col.tempFactors?.trim());
 
     if (hasFactors) {
@@ -207,17 +215,64 @@ export function drawTemperaturePoints(ctx, columns) {
   ctx.lineWidth = 1;
 }
 
-/** Draws a secondary dot for the time-adjusted temperature — a different color marks it as an alt reading. */
+export function drawSelectedPointHighlight(ctx, columns) {
+  if (!store.selectedKey) return;
+  const col = columns.find(c => c.key === store.selectedKey && c.temp != null);
+  if (!col) return;
+
+  const pointY = store.selectedPointType === "adjusted" && col.adjustedTemp != null
+    ? chartY(col.adjustedTemp)
+    : chartY(col.temp);
+
+  ctx.beginPath();
+  ctx.arc(col.centerX, pointY, 10, 0, Math.PI * 2);
+  ctx.strokeStyle = store.markerSelectionMode ? "rgba(37,99,235,0.85)" : "rgba(37,99,235,0.45)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+export function drawHoveredPointHighlight(ctx, columns) {
+  if (!store.hoveredKey) return;
+  const col = columns.find(c => c.key === store.hoveredKey && c.temp != null);
+  if (!col) return;
+
+  const pointY = store.hoveredPointType === "adjusted" && col.adjustedTemp != null
+    ? chartY(col.adjustedTemp)
+    : chartY(col.temp);
+
+  ctx.beginPath();
+  ctx.arc(col.centerX, pointY, 12, 0, Math.PI * 2);
+  ctx.strokeStyle = "rgba(37,99,235,0.5)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+/** Draws a secondary dot for the time-adjusted temperature — connects it to the measured point with a dashed blue line. */
 export function drawAdjustedTemperaturePoints(ctx, columns) {
   columns.forEach(col => {
-    if (col.adjustedTemp == null) return;
-    const pointY = chartY(col.adjustedTemp);
+    if (col.adjustedTemp == null || col.temp == null) return;
+
+    const baseY = chartY(col.temp);
+    const adjY = chartY(col.adjustedTemp);
 
     ctx.beginPath();
-    ctx.arc(col.centerX, pointY, 4, 0, Math.PI * 2);
-    ctx.fillStyle = "#f59e0b";
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = "#2563eb";
+    ctx.lineWidth = 1.5;
+    ctx.moveTo(col.centerX, baseY);
+    ctx.lineTo(col.centerX, adjY);
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.arc(col.centerX, adjY, 4, 0, Math.PI * 2);
+    ctx.fillStyle = "#2563eb";
     ctx.fill();
   });
+
+  ctx.lineWidth = 1;
 }
 
 /** Draws the measurement time label under a temperature dot, when set. */
@@ -233,11 +288,17 @@ export function drawMeasurementTimes(ctx, columns) {
 }
 /** Draws anomaly marker labels above temperature dots. */
 export function drawMarkers(ctx, columns) {
+  const MARKER_COLORS = {
+    blue: "#2563eb",
+    green: "#16a34a",
+    orange: "#ea580c",
+  };
+
   columns.forEach(col => {
     if (col.temp == null || !col.marker) return;
     const pointY = chartY(col.temp);
     ctx.font = "bold 14px Inter";
-    ctx.fillStyle = "#dc2626";
+    ctx.fillStyle = MARKER_COLORS[col.markerColor] || "#111";
     ctx.textAlign = "center";
     ctx.fillText(col.marker, col.centerX, pointY - 14);
   });
@@ -275,6 +336,8 @@ export function renderChart(columns) {
   drawVerticalCoverline(ctx, columns);
   drawTemperatureLine(ctx, cycleGroups);
   drawTemperaturePoints(ctx, columns);
+  drawHoveredPointHighlight(ctx, columns);
+  drawSelectedPointHighlight(ctx, columns);
   drawAdjustedTemperaturePoints(ctx, columns);
 
   drawMeasurementTimes(ctx, columns);
@@ -324,11 +387,11 @@ export function handleCanvasClick(event) {
   store.horizontalCoverlineMode = false;
   store.verticalCoverlineMode = false;
 
-  qs("horizontalCoverlineBtn").classList.remove("active");
-  qs("verticalCoverlineBtn").classList.remove("active");
-
-  qs("horizontalCoverlineBtn").innerText = "Horizontal coverline";
-  qs("verticalCoverlineBtn").innerText = "Vertical coverline";
+  const btn = qs("coverlineBtn");
+  if (btn) {
+    btn.classList.remove("active");
+    btn.innerText = "Coverline";
+  }
 
   store.save();
 

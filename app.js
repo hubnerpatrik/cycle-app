@@ -57,6 +57,7 @@ import {
   syncMeasurementTimeUI,
   openDayInfoModal,
   closeDayInfoModal,
+  showMessage,
 } from "./ui.js";
 
 /* ─── DOM helpers ─────────────────────────── */
@@ -75,7 +76,7 @@ export const LAYOUT = {
   chartPaddingTop:    12,
   chartPaddingBottom: 8,
   minTemp:            36.0,
-  maxTemp:            38.0,
+  maxTemp:            37.4,
   tempStep:           0.05,
 };
   const ZOOM_MIN  = 24;
@@ -273,13 +274,66 @@ export function setCycleCoverlineValues(values, cycleIndex = store.currentCycleI
 }
 
 /** Converts a click's y pixel back to the temperature of the cell it landed in — inverse of chartY(). */
+export function chartLineY(temp) {
+  const slots         = tempSlotCount();
+  const rawIndex      = Math.round((temp - LAYOUT.minTemp) / LAYOUT.tempStep);
+  const index         = Math.min(Math.max(rawIndex, 0), slots);
+  const indexFromTop  = slots - index;
+  return chartGridY(indexFromTop);
+}
+
 export function pixelYToTemp(y) {
   const slots       = tempSlotCount();
   const slotHeight  = tempSlotHeight();
   const relativeY   = y - LAYOUT.chartPaddingTop;
-  const indexFromTop = Math.min(Math.max(Math.round(relativeY / slotHeight - 0.5), 0), slots - 1);
-  const index       = slots - 1 - indexFromTop;
-  return LAYOUT.minTemp + index * LAYOUT.tempStep;
+  const lineIndexFromTop = Math.min(Math.max(Math.round(relativeY / slotHeight), 0), slots);
+  const tempIndex = slots - lineIndexFromTop;
+  return LAYOUT.minTemp + tempIndex * LAYOUT.tempStep;
+}
+
+/** Finds the column whose center is closest to a click's x pixel. */
+export function pixelXToColumnKey(x, columns) {
+  if (!columns.length) return null;
+  let closest = columns[0];
+  let minDist = Math.abs(x - closest.centerX);
+  columns.forEach(col => {
+    const dist = Math.abs(x - col.centerX);
+    if (dist < minDist) { minDist = dist; closest = col; }
+  });
+  return closest.key;
+}
+
+export function pixelToPointColumnHit(x, y, columns) {
+  if (!columns.length) return null;
+  const maxDistance = 18;
+  let closest = null;
+  let minDist = maxDistance;
+
+  columns.forEach(col => {
+    if (col.temp != null) {
+      const tempY = chartY(col.temp);
+      const dx = x - col.centerX;
+      const dy = y - tempY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < minDist) {
+        minDist = dist;
+        closest = { key: col.key, type: "temp" };
+      }
+    }
+
+    if (col.adjustedTemp != null) {
+      const adjY = chartY(col.adjustedTemp);
+      const dx = x - col.centerX;
+      const dy = y - adjY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < minDist) {
+        minDist = dist;
+        closest = { key: col.key, type: "adjusted" };
+      }
+    }
+  });
+
+  return closest;
 }
 
 /** Returns the currently active fertile range, or null if none is set. */
@@ -310,8 +364,9 @@ export function isFertileDay(key, entries = store.entries) {
 }
 
 /** Selects a day column, switches to the correct cycle, and triggers a full re-render. */
-export function selectColumn(key) {
+export function selectColumn(key, pointType = "temp") {
   store.selectedKey = key;
+  store.selectedPointType = pointType;
 
   // switch to the cycle containing this key
   const starts = getCycleStartDates();
@@ -325,10 +380,16 @@ export function selectColumn(key) {
   }
 
   render();
+
+  if (store.markerSelectionMode) {
+    store.markerSelectionMode = false;
+    qs("markersActionBtn")?.classList.remove("active");
+    openMarkersModal();
+  }
 }
 
 /** Highlights a column on hover — only redraws the chart layer. */
-export function hoverColumn(key)  { store.hoveredKey = key; renderChart(currentColumns); }
+export function hoverColumn(key)  { store.hoveredKey = key; store.hoveredPointType = null; renderChart(currentColumns); }
 
 /** Clears hover state and redraws the chart layer. */
 export function clearHover()      { store.hoveredKey = null; renderChart(currentColumns); }
@@ -407,11 +468,21 @@ function init() {
   };
 
   // action modal
+  const animatePrimaryButton = button => {
+    if (!button) return;
+    button.addEventListener("click", () => {
+      button.classList.add("pulse-attention");
+      button.addEventListener("animationend", () => button.classList.remove("pulse-attention"), { once: true });
+    });
+  };
+
+  qsa(".btn.primary").forEach(animatePrimaryButton);
+
   qs("editBtn").onclick        = () => openActionModal();
   qs("closeBtn").onclick = () => {
-  closeModal();
-  setTimeout(() => openActionModal(), 200);
-};
+    closeModal();
+  };
+  animatePrimaryButton(qs("saveBtn"));
   qs("saveBtn").onclick        = () => saveModal(render);
   qs("closeActionModalBtn").onclick = closeActionModal;
 
@@ -436,7 +507,9 @@ function init() {
 
   qs("markersActionBtn").onclick = () => {
     closeActionModal();
-    setTimeout(() => openMarkersModal(), 250);
+    store.markerSelectionMode = true;
+    qs("markersActionBtn").classList.add("active");
+    setTimeout(() => showMessage("Click a day on the chart to choose a marker day."), 300);
   };
 
   qs("cervixActionBtn").onclick = () => {
@@ -472,35 +545,76 @@ function init() {
 
   qs("saveOtherModalBtn").onclick    = () => saveOtherModal(render);
 
-  // back buttons — close current modal, reopen the action modal
-  bindBackButton("closeBleedingModalBtn",     closeBleedingModal);
-  bindBackButton("closeMucusModalBtn",        closeMucusModal);
-  bindBackButton("closeFertileRangeModalBtn", closeFertileRangeModal);
-  bindBackButton("closeProfileModalBtn",      closeProfileModal);
-  bindBackButton("closeMarkersModalBtn",      closeMarkersModal);
-  bindBackButton("closeCervixModalBtn",       closeCervixModal);
-  bindBackButton("closeOtherModalBtn",        closeOtherModal);
+  // back buttons — close current modal without reopening the action modal
+  qs("closeBleedingModalBtn").onclick = closeBleedingModal;
+  qs("closeMucusModalBtn").onclick = closeMucusModal;
+  qs("closeFertileRangeModalBtn").onclick = closeFertileRangeModal;
+  qs("closeProfileModalBtn").onclick = closeProfileModal;
+  qs("closeMarkersModalBtn").onclick = closeMarkersModal;
+  qs("closeCervixModalBtn").onclick = closeCervixModal;
+  qs("closeOtherModalBtn").onclick = closeOtherModal;
 
-  // coverline tools
-  qs("horizontalCoverlineBtn").onclick = () => {
-    store.horizontalCoverlineMode = !store.horizontalCoverlineMode;
-    store.verticalCoverlineMode   = false;
-    qs("horizontalCoverlineBtn").classList.toggle("active", store.horizontalCoverlineMode);
-    qs("verticalCoverlineBtn").classList.remove("active");
-    qs("horizontalCoverlineBtn").innerText = store.horizontalCoverlineMode
-      ? "Click chart to set horizontal coverline"
-      : "Horizontal coverline";
+  [
+    ["modal", closeModal],
+    ["actionModal", closeActionModal],
+    ["bleedingModal", closeBleedingModal],
+    ["mucusModal", closeMucusModal],
+    ["markersModal", closeMarkersModal],
+    ["cervixModal", closeCervixModal],
+    ["fertileRangeModal", closeFertileRangeModal],
+    ["profileModal", closeProfileModal],
+    ["otherModal", closeOtherModal],
+    ["dayInfoModal", closeDayInfoModal],
+  ].forEach(([id, fn]) => {
+    const modal = qs(id);
+    if (!modal) return;
+    modal.addEventListener("click", event => {
+      if (event.target === modal) fn();
+    });
+  });
+
+  // coverline tool menu
+  const coverlineBtn = qs("coverlineBtn");
+  const coverlineMenu = qs("coverlineMenu");
+
+  const refreshCoverlineButton = () => {
+    if (!coverlineBtn) return;
+    const menuOpen = coverlineMenu && !coverlineMenu.classList.contains("hidden");
+    const active = menuOpen || store.horizontalCoverlineMode || store.verticalCoverlineMode;
+    coverlineBtn.classList.toggle("active", active);
+    if (store.horizontalCoverlineMode) {
+      coverlineBtn.innerText = "Horizontal coverline";
+    } else if (store.verticalCoverlineMode) {
+      coverlineBtn.innerText = "Vertical coverline";
+    } else {
+      coverlineBtn.innerText = "Coverline";
+    }
   };
 
-  qs("verticalCoverlineBtn").onclick = () => {
-    store.verticalCoverlineMode   = !store.verticalCoverlineMode;
-    store.horizontalCoverlineMode = false;
-    qs("verticalCoverlineBtn").classList.toggle("active", store.verticalCoverlineMode);
-    qs("horizontalCoverlineBtn").classList.remove("active");
-    qs("verticalCoverlineBtn").innerText = store.verticalCoverlineMode
-      ? "Click chart to set vertical coverline"
-      : "Vertical coverline";
-  };
+  if (coverlineBtn && coverlineMenu) {
+    coverlineBtn.onclick = event => {
+      event.stopPropagation();
+      coverlineMenu.classList.toggle("hidden");
+      refreshCoverlineButton();
+    };
+
+    qsa(".coverline-option").forEach(option => {
+      option.onclick = () => {
+        const mode = option.dataset.coverline;
+        store.horizontalCoverlineMode = mode === "horizontal";
+        store.verticalCoverlineMode = mode === "vertical";
+        coverlineMenu.classList.add("hidden");
+        refreshCoverlineButton();
+      };
+    });
+
+    document.addEventListener("click", event => {
+      if (!coverlineMenu.contains(event.target) && event.target !== coverlineBtn) {
+        coverlineMenu.classList.add("hidden");
+        refreshCoverlineButton();
+      }
+    });
+  }
   // zoom controls
   qs("zoomInBtn").onclick = () => {
     LAYOUT.columnWidth = Math.min(ZOOM_MAX, LAYOUT.columnWidth + ZOOM_STEP);
@@ -523,7 +637,50 @@ function init() {
     render();
   };
 
-  qs("tempChart").addEventListener("click", handleCanvasClick);
+  const tempChart = qs("tempChart");
+  tempChart.addEventListener("click", event => {
+    if (store.horizontalCoverlineMode || store.verticalCoverlineMode) {
+      handleCanvasClick(event);
+      return;
+    }
+
+    const rect = tempChart.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const hit = pixelToPointColumnHit(x, y, currentColumns);
+    const key = hit?.key || pixelXToColumnKey(x, currentColumns);
+    if (!key) return;
+
+    selectColumn(key, hit?.type || "temp");
+  });
+
+  tempChart.addEventListener("mousemove", event => {
+    const rect = tempChart.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const hit = pixelToPointColumnHit(x, y, currentColumns);
+
+    if (hit) {
+      store.hoveredKey = hit.key;
+      store.hoveredPointType = hit.type;
+      renderChart(currentColumns);
+      return;
+    }
+
+    if (store.hoveredKey) {
+      store.hoveredKey = null;
+      store.hoveredPointType = null;
+      renderChart(currentColumns);
+    }
+  });
+
+  tempChart.addEventListener("mouseleave", () => {
+    if (store.hoveredKey) {
+      store.hoveredKey = null;
+      store.hoveredPointType = null;
+      renderChart(currentColumns);
+    }
+  });
 
   // segmented buttons — update store and sync active state
   qsa(".segmented button").forEach(btn => {

@@ -179,7 +179,7 @@ const rowIds = [
 };
 
   const SENSATION_LABELS = {
-    "": "",
+    "": "None",
     dry: "D",
     moist: "M",
     wet: "W",
@@ -238,7 +238,7 @@ const rowIds = [
     attach(peakCell, col);
     rows.peakRow.appendChild(peakCell);
 
-    const markerCell = makeCell(col.marker || "", sel);
+    const markerCell = makeCell(col.marker || "", sel, col.marker ? `marker-${col.markerColor}` : "");
     attach(markerCell, col);
     rows.markerRow.appendChild(markerCell);
 
@@ -305,15 +305,21 @@ export function syncModalUI() {
   });
 }
 
+function resetModalState() {
+  store.modal = store._emptyModal();
+}
+
 /** Opens the edit modal for the currently selected day. */
 export function openModal(currentColumns) {
   if (!store.selectedKey) return showMessage("Select a day first");
+
+  resetModalState();
 
   const key    = store.selectedKey;
   const data   = store.entries[key] || {};
   const column = currentColumns.find(c => c.key === key);
 
-store.modal.temp            = data.temp            ?? null;
+  store.modal.temp            = data.temp            ?? null;
   store.modal.tempFactors     = data.tempFactors      ?? "";
   store.modal.measurementTime = data.measurementTime  ?? "";
   store.modal.measurementTimeEnabled = Boolean(data.measurementTime);
@@ -339,7 +345,7 @@ export function closeModal() {
 
 /** Returns true if the temperature input is empty or within valid BBT range. */
 export function validateTempInput() {
-  const raw = qs("tempInput")?.value.trim();
+  const raw = qs("tempInput")?.value.trim().replace(",", ".");
   if (!raw) return true;
   const value = parseFloat(raw);
   return !isNaN(value) && (value == null || (value >= 34 && value <= 42));
@@ -353,7 +359,8 @@ export function saveModal(render) {
   if (!store.selectedKey) return showMessage("Select a day first");
   if (!validateTempInput()) return showMessage("Temperature must be between 34–42 °C");
 
-  const temp = parseFloat(qs("tempInput").value);
+  const tempInput = qs("tempInput").value.trim().replace(",", ".");
+  const temp = parseFloat(tempInput);
 
   store.entries[store.selectedKey] = {
     ...(store.entries[store.selectedKey] || {}),
@@ -432,10 +439,12 @@ export function syncMeasurementTimeUI() {
 export function openMucusModal() {
   if (!store.selectedKey) return showMessage("Select a day first");
 
+  resetModalState();
+
   const data = store.entries[store.selectedKey] || {};
 
   // load saved values into modal state — coerce booleans explicitly
-  store.modal.sensation   = data.sensation   ?? "dry";
+  store.modal.sensation   = data.sensation   ?? "";
   store.modal.stretch     = data.stretch     === true;
   store.modal.visible     = data.visible     === true;
   store.modal.consistency = data.consistency ?? "";
@@ -488,6 +497,8 @@ export function saveMucusModal(render) {
 export function openBleedingModal() {
   if (!store.selectedKey) return showMessage("Select a day first");
 
+  resetModalState();
+
   const data = store.entries[store.selectedKey] || {};
 
   // load saved bleeding value into modal state
@@ -532,10 +543,13 @@ export function saveBleedingModal(render) {
 export function openMarkersModal() {
   if (!store.selectedKey) return showMessage("Select a day first");
 
+  resetModalState();
+
   const data = store.entries[store.selectedKey] || {};
 
   store.modal.isPeak = data.isPeak === true;
   store.modal.marker = data.marker ?? "";
+  store.modal.markerColor = data.markerColor ?? "blue";
 
   qs("markersMarker").value = store.modal.marker;
 
@@ -564,6 +578,7 @@ export function saveMarkersModal(render) {
     ...(store.entries[store.selectedKey] || {}),
     isPeak: store.modal.isPeak === true,
     marker: store.modal.marker,
+    markerColor: store.modal.markerColor || "blue",
   };
 
   store.save();
@@ -573,6 +588,8 @@ export function saveMarkersModal(render) {
 
 export function openCervixModal() {
   if (!store.selectedKey) return showMessage("Select a day first");
+
+  resetModalState();
 
   const data = store.entries[store.selectedKey] || {};
   store.modal.cervixFirmness = data.cervixFirmness ?? "";
@@ -775,6 +792,8 @@ export function saveProfileModal(render) {
 export function openOtherModal() {
   if (!store.selectedKey) return showMessage("Select a day first");
 
+  resetModalState();
+
   const data = store.entries[store.selectedKey] || {};
   qs("otherModalInput").value = data.other ?? "";
 
@@ -806,7 +825,7 @@ export function saveOtherModal(render) {
 
 /* ─── day info modal ───────────────────────── */
 const BLEEDING_LABELS = { none: "None", spotting: "Spotting", menstruation: "Period" };
-const SENSATION_LABELS = { dry: "Dry", moist: "Moist", wet: "Wet" };
+const SENSATION_LABELS = { "": "-", dry: "Dry", moist: "Moist", wet: "Wet" };
 
 // full-word versions of the abbreviated map labels — used only in day-info modal
 const CONSISTENCY_FULL_LABELS = { "": "-", creamy: "Creamy", slightlyStretchy: "Slightly stretchy", stretchy: "Stretchy" };
@@ -830,10 +849,10 @@ export function openDayInfoModal(currentColumns) {
   qs("infoBleeding").innerText    = BLEEDING_LABELS[data.bleeding ?? "none"];
 
   qs("infoMucus").innerHTML = [
-    `Sensation: ${SENSATION_LABELS[data.sensation ?? "dry"]}`,
+    `Sensation: ${SENSATION_LABELS[data.sensation ?? ""]}`,
     `Slippery: ${data.stretch ? "Yes" : "No"}`,
-    `Discharge: ${data.visible ? "Yes" : "No"}`,
-    `Consistency: ${CONSISTENCY_FULL_LABELS[data.consistency ?? "none"]}`,
+    `Discharge: ${data.visible ? "Yes" : "None"}`,
+    `Consistency: ${CONSISTENCY_FULL_LABELS[data.consistency ?? ""]}`,
     `Color: ${COLOR_FULL_LABELS[data.color ?? ""]}${data.colorOther ? ` (${data.colorOther})` : ""}`,
     `Clots: ${data.sediment ? "Yes" : "No"}`,
   ].join("<br>");
@@ -867,10 +886,11 @@ export function openDayInfoModal(currentColumns) {
     `Openness: ${CERVIX_LABELS.openness[data.cervixOpenness ?? ""]}`,
   ].join("<br>");
 
+  const markerText = data.marker ? `${data.marker} (${data.markerColor ?? "blue"})` : "None";
   qs("infoMarkers").innerHTML = [
     `Fertile range: ${fertileRangeText}`,
     `Peak: ${data.isPeak ? "Yes" : "No"}`,
-    `Marker: ${data.marker || "None"}`,
+    `Marker: ${markerText}`,
   ].join("<br>");
 
   qs("infoOther").innerText = data.other?.trim() ? data.other : "-";

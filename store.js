@@ -14,7 +14,9 @@ constructor() {
   this.entries = this._load();
 
   this.selectedKey = null;
+  this.selectedPointType = "temp";
   this.hoveredKey = null;
+  this.hoveredPointType = null;
 
   this.month = new Date().getMonth();
   this.year = new Date().getFullYear();
@@ -55,7 +57,7 @@ _emptyModal() {
     bleeding: "none",
     discharge: "none",
 
-    sensation: "dry",
+    sensation: "",
 
     stretch: false,
     visible: false,
@@ -72,6 +74,7 @@ _emptyModal() {
     cervixHeight: "",
     cervixOpenness: "",
 
+    markerColor: "blue",
     other: "",
   };
 }
@@ -125,6 +128,8 @@ _emptyModal() {
     this.coverlines              = {};
     this.fertileRange            = { start: null, end: null };
     this.profile                 = this._emptyProfile();
+    this.selectedPointType       = "temp";
+    this.hoveredPointType        = null;
     this.currentCycleIndex       = null;
     this.modal = this._emptyModal();
   }

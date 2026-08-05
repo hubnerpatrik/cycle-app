@@ -92,7 +92,7 @@ export function buildColumns() {
       bleeding:        raw.bleeding         ?? "none",
       discharge:       raw.discharge        ?? "none",
 
-      sensation:       raw.sensation        ?? "dry",
+      sensation:       raw.sensation       ?? "",
 
       stretch:         raw.stretch          ?? false,
       visible:         raw.visible          ?? false,
@@ -111,6 +111,7 @@ export function buildColumns() {
       isFertile:       isFertileDay(key, store.entries),
       isPeak:          raw.isPeak           ?? false,
       marker:          raw.marker           ?? "",
+      markerColor:     raw.markerColor      ?? "blue",
 
       manualCoverline: raw.manualCoverline  ?? null,
       coverlineStart:  raw.coverlineStart   ?? false,
@@ -174,7 +175,7 @@ export function buildCycleColumns() {
       adjustedTemp:    getAdjustedTemp(raw.temp, raw.measurementTime, store.profile.usualMeasurementTime),
       bleeding:        raw.bleeding        ?? "none",
       discharge:       raw.discharge       ?? "none",
-      sensation:       raw.sensation       ?? "dry",
+      sensation:       raw.sensation       ?? "",
       stretch:         raw.stretch         ?? false,
       visible:         raw.visible         ?? false,
       consistency:     raw.consistency     ?? "",
@@ -187,6 +188,7 @@ export function buildCycleColumns() {
       isFertile:       isFertileDay(key, store.entries),
       isPeak:          raw.isPeak          ?? false,
       marker:          raw.marker          ?? "",
+      markerColor:     raw.markerColor     ?? "blue",
     };
   });
 }

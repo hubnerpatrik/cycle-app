@@ -8,35 +8,36 @@
 
 :root{
   /* surfaces */
-  --bg:#f2f2f7;
+  --bg:#fbfcfd; /* slightly warm white */
   --card:#ffffff;
-  --hairline:#e5e5ea;
+  --hairline:#eef1f3;
 
   /* text */
-  --text:#1c1c1e;
-  --muted:#8e8e93;
+  --text:#0f1720; /* deep charcoal for readability */
+  --muted:#94a3b8; /* cool muted tone */
 
-  /* system accent colors */
-  --blue:#0a84ff;
-  --green:#34c759e1;
-  --red:#f72f25c5;
-  --purple:#af52de;
-  --orange:#ff9500;
-  --teal:#30b0c7;
-  --gray-chip:#8e8e93;
+  /* system accent colors (neon-inspired light theme) */
+  --accent:#a8ff00; /* neon lime primary accent */
+  --blue:#0a84ff; /* reserved blue for mucus/interactive markers */
+  --green:#22c55e;
+  --red:#ef4444;
+  --purple:#8b5cf6;
+  --orange:#fb923c;
+  --teal:#14b8a6;
+  --gray-chip:#9aa6b2;
 
-  /* radii */
-  --radius-lg:20px;
-  --radius-md:14px;
-  --radius-sm:10px;
+  /* radii (less rounded look) */
+  --radius-lg:8px;
+  --radius-md:6px;
+  --radius-sm:4px;
 
-  /* elevation */
+  /* elevation — softer, brighter shadows for a light UI */
   --shadow-card:
-    0 1px 2px rgba(0,0,0,0.04),
-    0 10px 24px rgba(0,0,0,0.05);
+    0 6px 18px rgba(16,24,40,0.06),
+    0 2px 6px rgba(16,24,40,0.04);
   --shadow-modal:
-    0 20px 60px rgba(0,0,0,0.18),
-    0 2px 8px rgba(0,0,0,0.08);
+    0 12px 40px rgba(16,24,40,0.08),
+    0 4px 12px rgba(16,24,40,0.04);
 
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -59,7 +60,7 @@ body{
   background:var(--bg);
   color:var(--text);
 
-  font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
+  font-family:'Inter', -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   -webkit-font-smoothing:antialiased;
 }
 
@@ -79,13 +80,13 @@ button{
   max-width:1100px;
 
   margin:auto;
-  padding:32px 20px 48px;
+  padding:36px 24px 56px;
 }
 
 .layout{
   display:grid;
-  grid-template-columns:1fr 280px;
-  gap:16px;
+  grid-template-columns:1fr 300px;
+  gap:20px;
 }
 
 .calendar-card,
@@ -107,6 +108,22 @@ h1{
   font-weight:700;
   letter-spacing:-0.02em;
   color:var(--text);
+}
+
+/* subtle accent underline for section headers */
+.modal-card h2, .calendar-card .month-label {
+  position:relative;
+}
+.modal-card h2::after, .calendar-card .month-label::after {
+  content:"";
+  position:absolute;
+  left:0;
+  bottom:-8px;
+  width:36px;
+  height:4px;
+  background:var(--accent);
+  border-radius:4px;
+  opacity:0.9;
 }
 
 /* ─── calendar ───────────────────────────── */
@@ -183,7 +200,7 @@ h1{
   background:var(--bg);
   color:var(--text);
 
-  border-radius:50%;
+  border-radius:14px;
 
   cursor:pointer;
 
@@ -224,18 +241,17 @@ h1{
 
 .day-cycle-num{
   position: absolute;
-  top: 4px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 6px;
+  left: 6px;
   font-size: 10px;
   font-weight: 800;
-  color: var(--muted);
+  color: var(--text);
   line-height: 1;
 }
 
 .day.red .day-cycle-num,
 .day.fertile-day .day-cycle-num{
-  color: rgba(255,255,255,0.85);
+  color: rgba(255,255,255,0.95);
 }
 
 /* ─── legend ─────────────────────────────── */
@@ -400,7 +416,7 @@ h1{
   align-items:center;
   justify-content:center;
 
-  border-radius:8px;
+  border-radius:var(--radius-sm);
 
   color:white;
 }
@@ -473,9 +489,65 @@ h1{
 
 .chart-tools{
   display:flex;
-  gap:8px;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
 
   margin-bottom:12px;
+  padding:10px 12px;
+  border-radius:16px;
+  background:var(--card);
+  position:relative;
+}
+
+.chart-tools-left,
+.chart-tools-right{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.chart-tools-left{
+  flex-wrap:wrap;
+  gap:8px 12px;
+}
+
+.cycle-nav,
+.zoom-controls{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.coverline-menu-wrapper{
+  position:relative;
+}
+
+.coverline-menu{
+  position:absolute;
+  right:0;
+  top:calc(100% + 6px);
+  width:160px;
+  border-radius:14px;
+  background:var(--card);
+  box-shadow:0 14px 32px rgba(0,0,0,0.12);
+  padding:8px 0;
+  z-index:10;
+}
+
+.coverline-option{
+  width:100%;
+  border:none;
+  background:none;
+  color:var(--text);
+  text-align:left;
+  padding:10px 14px;
+  font-size:13px;
+  cursor:pointer;
+}
+
+.coverline-option:hover{
+  background:var(--hairline);
 }
 
 .tool-btn{
@@ -510,8 +582,38 @@ h1{
 }
 
 .tool-btn.active{
-  background:var(--blue);
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02)), var(--accent);
+  color:#07120a;
+  box-shadow: 0 6px 18px rgba(162, 255, 80, 0.12), 0 1px 0 rgba(255,255,255,0.5) inset;
+  border: 1px solid rgba(10,10,10,0.06);
+}
+
+.marker-btn{
+  background:var(--purple);
   color:white;
+}
+
+.marker-btn:hover{
+  background:#7c3aed;
+}
+
+.marker-btn:active{
+  transform:scale(0.96);
+}
+
+.coverline-btn{
+  flex-shrink:0;
+  min-width:112px;
+  background:linear-gradient(135deg, var(--orange), #ff6f61);
+  color:white;
+}
+
+.coverline-btn:hover{
+  background:#ff7c4c;
+}
+
+.coverline-btn:active{
+  transform:scale(0.96);
 }
 
 /* ─── map structure ──────────────────────── */
@@ -731,6 +833,21 @@ h1{
   background:rgba(52,199,89,0.08);
 }
 
+.map-cell.marker-blue {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.map-cell.marker-green {
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.map-cell.marker-orange {
+  color: #ea580c;
+  font-weight: 700;
+}
+
 
 /* ─── modal ──────────────────────────────── */
 
@@ -741,9 +858,9 @@ h1{
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0,0,0,0.35);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  background: rgba(2,6,23,0.06); /* subtle overlay for light UI */
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s var(--ease);
