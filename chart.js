@@ -187,10 +187,13 @@ export function drawTemperaturePoints(ctx, columns) {
     if (col.temp == null) return;
 
     const pointY = chartY(col.temp);
+    const markerY = col.markerPointType === "adjusted" && col.adjustedTemp != null
+      ? chartY(col.adjustedTemp)
+      : pointY;
 
     if (col.isPeak) {
       ctx.beginPath();
-      ctx.arc(col.centerX, pointY, 7, 0, Math.PI * 2);
+      ctx.arc(col.centerX, markerY, 7, 0, Math.PI * 2);
       ctx.strokeStyle = "rgba(37,99,235,0.65)";
       ctx.lineWidth = 2;
       ctx.stroke();
@@ -286,7 +289,7 @@ export function drawMeasurementTimes(ctx, columns) {
     ctx.fillText(col.measurementTime, col.centerX, pointY + 18);
   });
 }
-/** Draws anomaly marker labels above temperature dots. */
+/** Draws anomaly marker labels above (or below, if that would overlap the other dot) the anchor temperature dot. */
 export function drawMarkers(ctx, columns) {
   const MARKER_COLORS = {
     blue: "#2563eb",
@@ -296,11 +299,22 @@ export function drawMarkers(ctx, columns) {
 
   columns.forEach(col => {
     if (col.temp == null || !col.marker) return;
-    const pointY = chartY(col.temp);
+
+    const usingAdjusted = col.markerPointType === "adjusted" && col.adjustedTemp != null;
+    const markerY = usingAdjusted ? chartY(col.adjustedTemp) : chartY(col.temp);
+
+    // flip label below the dot when the anchor sits lower than its counterpart, to avoid overlapping it
+    let labelBelow = false;
+    if (col.adjustedTemp != null) {
+      const tempY = chartY(col.temp);
+      const adjY = chartY(col.adjustedTemp);
+      labelBelow = usingAdjusted ? adjY > tempY : tempY > adjY;
+    }
+
     ctx.font = "bold 14px Inter";
     ctx.fillStyle = MARKER_COLORS[col.markerColor] || "#111";
     ctx.textAlign = "center";
-    ctx.fillText(col.marker, col.centerX, pointY - 14);
+    ctx.fillText(col.marker, col.centerX, labelBelow ? markerY + 20 : markerY - 14);
   });
 }
 

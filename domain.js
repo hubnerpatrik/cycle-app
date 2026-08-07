@@ -89,6 +89,7 @@ function buildColumn(key, index, date, starts) {
     isPeak: raw.isPeak ?? false,
     marker: raw.marker ?? "",
     markerColor: raw.markerColor ?? "blue",
+    markerPointType: raw.markerPointType ?? "temp",
     manualCoverline: raw.manualCoverline ?? null,
     coverlineStart: raw.coverlineStart ?? false,
   };

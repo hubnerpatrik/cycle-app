@@ -540,9 +540,8 @@ export function openBleedingModal() {
   store.modal.bleeding = data.bleeding ?? "none";
   store.modal.sediment = data.sediment === true;
 
-  syncModalUI();
-
   showModal("bleedingModal");
+  syncModalUI();
 }
 
 export function closeBleedingModal() {
@@ -574,6 +573,7 @@ export function openMarkersModal() {
   store.modal.isPeak = data.isPeak === true;
   store.modal.marker = data.marker ?? "";
   store.modal.markerColor = data.markerColor ?? "blue";
+  store.modal.markerPointType = data.markerPointType ?? store.selectedPointType ?? "temp";
 
   qs("markersMarker").value = store.modal.marker;
 
@@ -601,6 +601,7 @@ export function saveMarkersModal(render) {
     isPeak: store.modal.isPeak === true,
     marker: store.modal.marker,
     markerColor: store.modal.markerColor || "blue",
+    markerPointType: store.modal.markerPointType || "temp",
   };
 
   store.save();
