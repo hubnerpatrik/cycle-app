@@ -1,82 +1,200 @@
-/* Confident Warm � Playful overrides */
-:root{
-  --bg:#fff8f3;
-  --card:#fff3ee;
-  --text:#162029;
-  --muted:#6b7178;
-  --accent:#ff8a65;
-  --accent-2:#f7c6ff;
-  --accent-3:#ffd7a8;
-  --blue:#0a84ff;
-  --hairline:rgba(22,32,41,0.06);
-  --card-elev: 0 14px 40px rgba(22,32,41,0.06);
-  --radius-lg:16px;
-  --radius-md:12px;
-  --radius-sm:10px;
+/* playful.css — theme layer
+   ─────────────────────────────────────────────
+   This file contains the warm, playful visual overrides.
+   It intentionally stays focused on presentation so the
+   structural rules remain in styles.css.
+   ───────────────────────────────────────────── */
+
+:root {
+  --bg: #fff8f3;
+  --card: #fff3ee;
+  --text: #162029;
+  --muted: #6b7178;
+  --accent: #ff8a65;
+  --accent-2: #f7c6ff;
+  --accent-3: #ffd7a8;
+  --blue: #0a84ff;
+  --hairline: rgba(22, 32, 41, 0.06);
+  --card-elev: 0 14px 40px rgba(22, 32, 41, 0.06);
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 10px;
 }
-body::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  z-index:0;
+
+/* ─── decorative background ───────────────── */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
   background:
-    radial-gradient(circle at 12% 18%, rgba(255,138,101,0.04), transparent 6%),
-    radial-gradient(circle at 88% 82%, rgba(247,198,255,0.03), transparent 8%);
+    radial-gradient(circle at 12% 18%, rgba(255, 138, 101, 0.04), transparent 6%),
+    radial-gradient(circle at 88% 82%, rgba(247, 198, 255, 0.03), transparent 8%);
 }
-.app{ position:relative; z-index:1; }
-.btn.primary{
-  background:linear-gradient(135deg,var(--accent),var(--accent-3));
-  color:var(--text);
-  border-radius:999px;
-  padding:11px 18px;
-  box-shadow:0 12px 36px rgba(255,138,101,0.10), 0 3px 10px rgba(22,32,41,0.04);
-  transition:transform .18s ease, box-shadow .18s ease;
+
+.app {
+  position: relative;
+  z-index: 1;
 }
-.btn.primary:hover{ transform:translateY(-4px) scale(1.02); box-shadow:0 22px 48px rgba(255,138,101,0.14); }
-.btn.primary:active{ transform:translateY(0) scale(0.995); }
-.segmented button{
+
+/* ─── buttons & controls ─────────────────── */
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-3));
+  color: var(--text);
+  border-radius: 999px;
+  padding: 11px 18px;
+  box-shadow: 0 12px 36px rgba(255, 138, 101, 0.1), 0 3px 10px rgba(22, 32, 41, 0.04);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.btn.primary:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 22px 48px rgba(255, 138, 101, 0.14);
+}
+
+.btn.primary:active {
+  transform: translateY(0) scale(0.995);
+}
+
+.segmented button {
   border-radius: 12px;
-  background: rgba(255,255,255,0.95);
+  background: rgba(255, 255, 255, 0.95);
   color: var(--text);
   transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
 }
-.segmented button:hover{
-  background: rgba(255,255,255,1);
+
+.segmented button:hover {
+  background: rgba(255, 255, 255, 1);
   transform: translateY(-1px);
 }
-.segmented button.active{
-  background: linear-gradient(135deg, rgba(255,138,101,0.45), rgba(255,214,168,0.40));
+
+.segmented button.active {
+  background: linear-gradient(135deg, rgba(255, 138, 101, 0.45), rgba(255, 214, 168, 0.4));
   color: var(--text);
-  font-weight:700;
-  border: 1px solid rgba(255,138,101,0.55);
-  box-shadow: 0 14px 30px rgba(255,138,101,0.22);
+  font-weight: 700;
+  border: 1px solid rgba(255, 138, 101, 0.55);
+  box-shadow: 0 14px 30px rgba(255, 138, 101, 0.22);
 }
-.action-icon{ border-radius:999px; box-shadow:0 8px 20px rgba(22,32,41,0.05); }
-.action-icon.chip-blue{ background:linear-gradient(135deg,#cfe7ff,var(--blue)); color:#052033; }
-.action-btn{
-  background:rgba(255,255,255,0.88);
-  border:1px solid rgba(255,138,101,0.16);
-  box-shadow:0 8px 20px rgba(22,32,41,0.05);
+
+/* ─── cards & surfaces ───────────────────── */
+
+.chart-card,
+.cycle-map,
+.info-card {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--card-elev);
+  border: 1px solid var(--hairline);
 }
-.action-btn:hover{
-  background:rgba(255,255,255,1);
-  transform:translateY(-2px);
+
+.chart-card,
+.cycle-map {
+  position: relative;
+  z-index: 2;
 }
-.chart-card, .cycle-map, .info-card{ background:var(--card); border-radius:var(--radius-lg); box-shadow:var(--card-elev); border:1px solid var(--hairline); }
-.calendar-grid{ gap:8px; }
-.day{ border-radius:12px; background:transparent; transition: transform .14s ease, box-shadow .14s ease, background .14s ease; }
-.day:hover{ transform:translateY(-5px); box-shadow:0 12px 36px rgba(22,32,41,0.06); }
-.day.selected{ background:linear-gradient(180deg, rgba(255,138,101,0.16), rgba(247,198,255,0.08)); border:1px solid rgba(255,138,101,0.30); box-shadow:0 10px 32px rgba(22,32,41,0.10); }
-.day-cycle-num{ color:var(--text); background:rgba(255,255,255,0.88); padding:2px 7px; border-radius:999px; box-shadow:0 5px 16px rgba(22,32,41,0.06); }
-@keyframes warmPulse{ 0%{ transform:scale(1); box-shadow:0 6px 20px rgba(255,138,101,0.06); } 50%{ transform:scale(1.03); box-shadow:0 18px 44px rgba(255,138,101,0.12); } 100%{ transform:scale(1); box-shadow:0 6px 20px rgba(255,138,101,0.06); } }
-.pulse-attention{ animation:warmPulse 4s ease-in-out infinite; }
-.chip{ padding:6px 10px; border-radius:999px; background:rgba(255,255,255,0.7); box-shadow:0 8px 20px rgba(22,32,41,0.04); }
-.legend, .info-title{ color:var(--muted); }
-input:focus, select:focus, .segmented button.active{ outline:none; box-shadow:0 10px 34px rgba(168,180,255,0.07); }
-.chart-card, .cycle-map{ position:relative; z-index:2; }
-.modal{ position:fixed; z-index:1200; }
-.highlight-strong{ box-shadow:0 18px 48px rgba(255,138,101,0.12); }
 
+/* ─── action row & icon styling ──────────── */
 
+.action-icon {
+  border-radius: 999px;
+  box-shadow: 0 8px 20px rgba(22, 32, 41, 0.05);
+}
 
+.action-icon.chip-blue {
+  background: linear-gradient(135deg, #cfe7ff, var(--blue));
+  color: #052033;
+}
+
+.action-btn {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(255, 138, 101, 0.16);
+  box-shadow: 0 8px 20px rgba(22, 32, 41, 0.05);
+}
+
+.action-btn:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-2px);
+}
+
+/* ─── calendar & day cells ───────────────── */
+
+.calendar-grid {
+  gap: 8px;
+}
+
+.day {
+  border-radius: 12px;
+  background: transparent;
+  transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+}
+
+.day:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 36px rgba(22, 32, 41, 0.06);
+}
+
+.day.selected {
+  background: linear-gradient(180deg, rgba(255, 138, 101, 0.16), rgba(247, 198, 255, 0.08));
+  border: 1px solid rgba(255, 138, 101, 0.3);
+  box-shadow: 0 10px 32px rgba(22, 32, 41, 0.1);
+}
+
+.day-cycle-num {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.88);
+  padding: 2px 7px;
+  border-radius: 999px;
+  box-shadow: 0 5px 16px rgba(22, 32, 41, 0.06);
+}
+
+/* ─── motions & feedback ────────────────── */
+
+@keyframes warmPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 6px 20px rgba(255, 138, 101, 0.06);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 18px 44px rgba(255, 138, 101, 0.12);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 6px 20px rgba(255, 138, 101, 0.06);
+  }
+}
+
+.pulse-attention {
+  animation: warmPulse 4s ease-in-out infinite;
+}
+
+.chip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 8px 20px rgba(22, 32, 41, 0.04);
+}
+
+.legend,
+.info-title {
+  color: var(--muted);
+}
+
+input:focus,
+select:focus,
+.segmented button.active {
+  outline: none;
+  box-shadow: 0 10px 34px rgba(168, 180, 255, 0.07);
+}
+
+.modal {
+  position: fixed;
+  z-index: 1200;
+}
+
+.highlight-strong {
+  box-shadow: 0 18px 48px rgba(255, 138, 101, 0.12);
+}

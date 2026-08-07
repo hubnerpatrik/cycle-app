@@ -4,7 +4,7 @@
 // Draw order: bg → overlays → grid → annotations → data
 
 import { store } from "./store.js";
-import { LAYOUT, qs, chartY, chartLineY, chartGridY, tempSlotCount, graphHeight, chartWidth, getCycleCoverlineValues, setCycleCoverlineValues, currentColumns, pixelYToTemp } from "./app.js";
+import { LAYOUT, qs, chartY, chartLineY, chartGridY, tempSlotCount, graphHeight, chartWidth, getCycleCoverlineValues, setCycleCoverlineValues, currentColumns, pixelYToTemp, pixelXToColumnKey } from "./app.js";
 
 /* ─── cycle grouping ──────────────────────── */
 
@@ -351,18 +351,6 @@ export function renderChart(columns) {
  * Snaps the clicked temperature to the nearest 0.05°C step.
  * Deactivates coverline mode after placement.
  */
-
-/** Finds the column whose center is closest to a click's x pixel. */
-function pixelXToColumnKey(x, columns) {
-  if (!columns.length) return null;
-  let closest = columns[0];
-  let minDist = Math.abs(x - closest.centerX);
-  columns.forEach(col => {
-    const dist = Math.abs(x - col.centerX);
-    if (dist < minDist) { minDist = dist; closest = col; }
-  });
-  return closest.key;
-}
 
 export function handleCanvasClick(event) {
   if (!store.horizontalCoverlineMode && !store.verticalCoverlineMode) {

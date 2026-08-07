@@ -32,642 +32,414 @@
 </head>
 
 <body>
+  <main class="app">
+    <header class="app-header">
+      <h1>Marta Zhinochna STM</h1>
+    </header>
 
-<div class="app">
+    <section class="layout" aria-label="Cycle tracker dashboard">
+      <section class="calendar-card" aria-label="Calendar view">
+        <div class="calendar-nav">
+          <button id="prevMonth" type="button">‹</button>
+          <div id="monthLabel" class="month-label"></div>
+          <button id="nextMonth" type="button">›</button>
+        </div>
 
-  <h1>
-    Marta Zhinochna STM
-  </h1>
+        <div id="calendar" class="calendar-grid"></div>
 
-  <div class="layout">
+        <div class="legend">
+          <div class="legend-item">
+            <span class="dot red"></span>
+            Menstruation
+          </div>
+          <div class="legend-item">
+            <span class="dot green"></span>
+            Fertile
+          </div>
+        </div>
+      </section>
 
-    <!-- calendar -->
+      <aside class="info-card" aria-label="Action menu">
+        <h2 class="info-title">Actions</h2>
+        <div id="sidebarActions"></div>
+        <div id="profileInfoCard" class="profile-info-card"></div>
+      </aside>
+    </section>
 
-    <div class="calendar-card">
+    <section class="chart-card" aria-label="Cycle chart">
+      <div class="chart-tools">
+        <div class="chart-tools-left">
+          <div class="cycle-nav">
+            <button id="prevCycleBtn" class="tool-btn" type="button">‹</button>
+            <span id="cycleNavLabel"></span>
+            <button id="nextCycleBtn" class="tool-btn" type="button">›</button>
+          </div>
+          <div class="zoom-controls">
+            <button id="zoomOutBtn" class="tool-btn" type="button">−</button>
+            <span id="zoomLabel">100%</span>
+            <button id="zoomInBtn" class="tool-btn" type="button">+</button>
+          </div>
+        </div>
+        <div class="chart-tools-right">
+          <div class="coverline-menu-wrapper">
+            <button id="coverlineBtn" class="tool-btn coverline-btn" type="button">Coverline</button>
+            <div id="coverlineMenu" class="coverline-menu hidden">
+              <button type="button" data-coverline="horizontal" class="coverline-option">Horizontal</button>
+              <button type="button" data-coverline="vertical" class="coverline-option">Vertical</button>
+            </div>
+          </div>
+          <button id="markersActionBtn" class="tool-btn marker-btn" type="button">Markers</button>
+        </div>
+      </div>
+
+      <div class="cycle-map">
+        <div class="map-scroll">
+          <div class="map-grid">
+            <div class="map-header-row">
+              <div class="map-side-label"></div>
+              <div class="map-temp-spacer"></div>
+              <div id="dayNumbers" class="map-days"></div>
+            </div>
+
+            <div class="map-chart-row">
+              <div class="map-side-label">Temp (°C)</div>
+              <div id="tempScale" class="temp-scale-column"></div>
+              <div class="map-chart-area">
+                <canvas id="tempChart"></canvas>
+              </div>
+            </div>
+
+            <div id="mapRows" class="map-rows"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="dev-panel">
+      <button id="devReset" class="text-btn" type="button">DEV RESET</button>
+    </div>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <h2 id="modalTitle">Edit day</h2>
+
+      <div class="modal-section">
+        <div class="section-title">Temperature</div>
+        <input id="tempInput" type="number" step="0.01" min="35" max="38" placeholder="36.50">
+
+        <label class="input-label">Influence factors</label>
+        <select id="tempFactorsInput"></select>
+
+        <label class="checkbox-row"><input id="measurementTimeCheckbox" type="checkbox"><span>Different measurement time</span></label>
+
+        <div id="measurementTimeWrapper" class="hidden">
+          <label class="input-label">Measurement time</label>
+          <input id="measurementTimeInput" type="time">
+          <div id="timeAdjustmentHint" class="field-hint"></div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="closeBtn" class="btn secondary" type="button">Back</button>
+        <button id="saveBtn" class="btn primary" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="actionModal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Edit Day</h2>
+      <div id="actionModalActions"></div>
+      <button id="closeActionModalBtn" class="btn secondary" type="button">Close</button>
+    </div>
+  </div>
+
+  <div id="bleedingModal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Bleeding</h2>
+
+      <div class="modal-section">
+        <div class="section-title">Bleeding</div>
+        <div class="segmented three">
+          <button type="button" data-group="bleeding" data-value="none">No bleeding</button>
+          <button type="button" data-group="bleeding" data-value="spotting">Spotting</button>
+          <button type="button" data-group="bleeding" data-value="menstruation">Period</button>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="section-title">Clots</div>
+        <div class="segmented two">
+          <button type="button" data-group="sediment" data-value="false">No</button>
+          <button type="button" data-group="sediment" data-value="true">Yes</button>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="closeBleedingModalBtn" class="btn secondary" type="button">Back</button>
+        <button id="saveBleedingModalBtn" class="btn primary" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="mucusModal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Mucus</h2>
+
+      <div class="modal-section">
+        <div class="section-title">Sensation</div>
+        <div class="segmented four">
+          <button type="button" data-group="sensation" data-value="">None</button>
+          <button type="button" data-group="sensation" data-value="dry">Dry</button>
+          <button type="button" data-group="sensation" data-value="moist">Moist</button>
+          <button type="button" data-group="sensation" data-value="wet">Wet</button>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="section-title">Slippery when wiping?</div>
+        <div class="segmented two">
+          <button type="button" data-group="stretch" data-value="false">No</button>
+          <button type="button" data-group="stretch" data-value="true">Yes</button>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="section-title">Presence of discharge?</div>
+        <div class="segmented two">
+          <button type="button" data-group="visible" data-value="false">None</button>
+          <button type="button" data-group="visible" data-value="true">Yes</button>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="section-title">Consistency</div>
+        <div class="segmented four">
+          <button type="button" data-group="consistency" data-value="">None</button>
+          <button type="button" data-group="consistency" data-value="creamy">Creamy</button>
+          <button type="button" data-group="consistency" data-value="slightlyStretchy">Slightly stretchy</button>
+          <button type="button" data-group="consistency" data-value="stretchy">Stretchy</button>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="section-title">Color</div>
+        <div class="segmented four">
+          <button type="button" data-group="color" data-value="">No color</button>
+          <button type="button" data-group="color" data-value="white">White</button>
+          <button type="button" data-group="color" data-value="whiteTranslucent">White-translucent</button>
+          <button type="button" data-group="color" data-value="translucent">Translucent</button>
+        </div>
+        <label class="checkbox-row"><input type="checkbox" id="mucusColorOtherCheckbox"><span>Other</span></label>
+        <input id="mucusColorOtherInput" type="text" placeholder="Describe color" class="hidden" />
+      </div>
+
+      <div class="modal-actions">
+        <button id="closeMucusModalBtn" class="btn secondary" type="button">Back</button>
+        <button id="saveMucusModalBtn" class="btn primary" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="markersModal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Markers</h2>
+
+      <div class="modal-section">
+        <div class="section-title">Peak day</div>
+        <div class="segmented two">
+          <button type="button" data-group="isPeak" data-value="false">No</button>
+          <button type="button" data-group="isPeak" data-value="true">Yes</button>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="section-title">Marker color</div>
+        <div class="segmented three">
+          <button type="button" data-group="markerColor" data-value="blue">Blue</button>
+          <button type="button" data-group="markerColor" data-value="green">Green</button>
+          <button type="button" data-group="markerColor" data-value="orange">Orange</button>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="section-title">Marker number</div>
+        <input id="markersMarker" type="number" min="1" max="6" placeholder="Enter number" />
+      </div>
+
+      <div class="modal-actions">
+        <button id="clearMarkersModalBtn" class="btn secondary" type="button">Clear</button>
+        <button id="closeMarkersModalBtn" class="btn secondary" type="button">Close</button>
+        <button id="saveMarkersModalBtn" class="btn primary" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="cervixModal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Cervix</h2>
+
+      <div class="modal-section">
+        <div class="section-title">Firmness</div>
+        <div class="segmented two">
+          <button type="button" data-group="cervixFirmness" data-value="hard">Hard</button>
+          <button type="button" data-group="cervixFirmness" data-value="soft">Soft</button>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="section-title">Height</div>
+        <div class="segmented three">
+          <button type="button" data-group="cervixHeight" data-value="low">Low</button>
+          <button type="button" data-group="cervixHeight" data-value="medium">Medium</button>
+          <button type="button" data-group="cervixHeight" data-value="high">High</button>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="section-title">Openness</div>
+        <div class="segmented three">
+          <button type="button" data-group="cervixOpenness" data-value="closed">Closed</button>
+          <button type="button" data-group="cervixOpenness" data-value="medium">Medium</button>
+          <button type="button" data-group="cervixOpenness" data-value="open">Open</button>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="closeCervixModalBtn" class="btn secondary" type="button">Back</button>
+        <button id="saveCervixModalBtn" class="btn primary" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="fertileRangeModal" class="modal hidden">
+    <div class="modal-card wide">
+      <h2>Fertile range</h2>
 
       <div class="calendar-nav">
-
-        <button id="prevMonth" type="button">‹</button>
-
-        <div id="monthLabel" class="month-label"></div>
-
-        <button id="nextMonth" type="button">›</button>
-
+        <button id="fertileRangePrevMonth" type="button">‹</button>
+        <div id="fertileRangeMonthLabel" class="month-label"></div>
+        <button id="fertileRangeNextMonth" type="button">›</button>
       </div>
 
-      <div id="calendar" class="calendar-grid"></div>
+      <div id="fertileRangeCalendar" class="calendar-grid"></div>
+      <div id="fertileRangeSummary" class="range-summary"></div>
 
-      <div class="legend">
-
-        <div>
-          <span class="dot red"></span>
-          Menstruation
-        </div>
-
-        <div>
-          <span class="dot green"></span>
-          Fertile
-        </div>
-
+      <div class="text-btn-row">
+        <button id="clearFertileRangeBtn" class="text-btn" type="button">Clear range</button>
       </div>
 
+      <div class="modal-actions">
+        <button id="closeFertileRangeModalBtn" class="btn secondary" type="button">Close</button>
+        <button id="saveFertileRangeModalBtn" class="btn primary" type="button">Save</button>
+      </div>
     </div>
-
-    <!-- info panel -->
-
-    <div class="info-card">
-
-      <h2 class="info-title">Actions</h2>
-
-      <button id="editBtn" class="action-btn" type="button">
-        <span class="action-icon chip-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 11-11-3-3L5 16l-1 4Z"/><path d="M14 6l3 3"/></svg></span>
-        <span class="action-label">Edit Day</span>
-        <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
-
-      <button id="dayInfoBtn" class="action-btn" type="button">
-        <span class="action-icon chip-gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg></span>
-        <span class="action-label">Day Info</span>
-        <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
-
-      <button id="fertileRangeActionBtn" class="action-btn" type="button">
-        <span class="action-icon chip-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2.5 3.5L16 11H5"/></svg></span>
-        <span class="action-label">Fertile range</span>
-        <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
-
-      <button id="profileActionBtn" class="action-btn" type="button">
-        <span class="action-icon chip-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg></span>
-        <span class="action-label">Profile</span>
-        <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
-
-    </div>
-
   </div>
 
-  <!-- chart -->
+  <div id="profileModal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Profile</h2>
 
-  <div class="chart-card">
-
-    <div class="chart-tools">
-      <div class="chart-tools-left">
-        <div class="cycle-nav">
-          <button id="prevCycleBtn" class="tool-btn" type="button">‹</button>
-          <span id="cycleNavLabel"></span>
-          <button id="nextCycleBtn" class="tool-btn" type="button">›</button>
-        </div>
-        <div class="zoom-controls">
-          <button id="zoomOutBtn" class="tool-btn" type="button">−</button>
-          <span id="zoomLabel">100%</span>
-          <button id="zoomInBtn" class="tool-btn" type="button">+</button>
-        </div>
-      </div>
-      <div class="chart-tools-right">
-        <div class="coverline-menu-wrapper">
-          <button id="coverlineBtn" class="tool-btn coverline-btn" type="button">Coverline</button>
-          <div id="coverlineMenu" class="coverline-menu hidden">
-            <button type="button" data-coverline="horizontal" class="coverline-option">Horizontal</button>
-            <button type="button" data-coverline="vertical" class="coverline-option">Vertical</button>
-          </div>
-        </div>
-        <button id="markersActionBtn" class="tool-btn marker-btn" type="button">Markers</button>
-      </div>
-    </div>
-
-    <div class="cycle-map">
-
-      <div class="map-scroll">
-
-        <div class="map-grid">
-
-          <!-- header -->
-
-          <div class="map-header-row">
-            <div class="map-side-label"></div>
-            <div class="map-temp-spacer"></div>
-            <div id="dayNumbers" class="map-days"></div>
-          </div>
-
-          <!-- chart -->
-
-          <div class="map-chart-row">
-            <div class="map-side-label">Temp (°C)</div>
-            <div id="tempScale" class="temp-scale-column"></div>
-            <div class="map-chart-area">
-              <canvas id="tempChart"></canvas>
-            </div>
-          </div>
-
-          <!-- cycle day -->
-
-          <div class="map-row">
-            <div class="map-side-label">CD (days)</div>
-            <div class="map-temp-spacer"></div>
-            <div id="cycleDayRow" class="map-cells"></div>
-          </div>
-
-          <!-- bleeding -->
-
-          <div class="map-row">
-            <div class="map-side-label">Bleeding</div>
-            <div class="map-temp-spacer"></div>
-            <div id="bleedingRow" class="map-cells"></div>
-          </div>
-
-          <!-- spotting -->
-
-          <div class="map-row">
-            <div class="map-side-label">Spotting</div>
-            <div class="map-temp-spacer"></div>
-            <div id="spottingRow" class="map-cells"></div>
-          </div>
-
-          <!-- sediment -->
-
-          <div class="map-row">
-            <div class="map-side-label">Clots</div>
-            <div class="map-temp-spacer"></div>
-            <div id="sedimentRow" class="map-cells"></div>
-          </div>
-
-          <!-- mucus -->
-
-          <div class="map-row">
-            <div class="map-side-label">Sens</div>
-            <div class="map-temp-spacer"></div>
-            <div id="sensationRow" class="map-cells"></div>
-          </div>
-
-          <div class="map-row">
-            <div class="map-side-label">Slip</div>
-            <div class="map-temp-spacer"></div>
-            <div id="stretchRow" class="map-cells"></div>
-          </div>
-
-          <div class="map-row">
-            <div class="map-side-label">Discharge</div>
-            <div class="map-temp-spacer"></div>
-            <div id="visibleRow" class="map-cells"></div>
-          </div>
-
-          <div class="map-row">
-            <div class="map-side-label">Consist...</div>
-            <div class="map-temp-spacer"></div>
-            <div id="consistencyRow" class="map-cells"></div>
-          </div>
-
-          <div class="map-row">
-            <div class="map-side-label">Color</div>
-            <div class="map-temp-spacer"></div>
-            <div id="colorRow" class="map-cells"></div>
-          </div>
-
-          <div class="map-row">
-            <div class="map-side-label">Peak</div>
-            <div class="map-temp-spacer"></div>
-            <div id="peakRow" class="map-cells"></div>
-          </div>
-
-          <div class="map-row">
-            <div class="map-side-label">Marker</div>
-            <div class="map-temp-spacer"></div>
-            <div id="markerRow" class="map-cells"></div>
-          </div>
-
-          <div class="map-row">
-            <div class="map-side-label">Firmness</div>
-            <div class="map-temp-spacer"></div>
-            <div id="cervixFirmnessRow" class="map-cells"></div>
-          </div>
-
-          <div class="map-row">
-            <div class="map-side-label">Height</div>
-            <div class="map-temp-spacer"></div>
-            <div id="cervixHeightRow" class="map-cells"></div>
-          </div>
-
-          <div class="map-row">
-            <div class="map-side-label">Openness</div>
-            <div class="map-temp-spacer"></div>
-            <div id="cervixOpennessRow" class="map-cells"></div>
-          </div>
-
-          <!-- other -->
-
-          <div class="map-row">
-            <div class="map-side-label">Symptoms</div>
-            <div class="map-temp-spacer"></div>
-            <div id="otherRow" class="map-cells"></div>
-          </div>
-
-        </div>
-
-      </div>
-
-    </div>
-
-  </div>
-
-  <!-- dev panel -->
-
-  <div class="dev-panel">
-    
-    <button id="devReset" class="text-btn" type="button">DEV RESET</button>
-  </div>
-
-</div>
-<div id="toast" class="toast hidden"></div>
-<!-- modal -->
-
-<div id="modal" class="modal hidden">
-
-  <div class="modal-card">
-
-    <h2 id="modalTitle">Edit day</h2>
-
-    <div class="modal-section">
-
-      <div class="section-title">Temperature</div>
-
-      <input id="tempInput" type="number" step="0.01" min="35" max="38" placeholder="36.50">
-
-      <label class="input-label">Influence factors</label>
-            
-          <select id="tempFactorsInput"></select>
-
-            <label class="checkbox-row"><input id="measurementTimeCheckbox" type="checkbox"><span>Different measurement time</span></label>
-
-            <div id="measurementTimeWrapper" class="hidden">
-              <label class="input-label">Measurement time</label>
-              <input id="measurementTimeInput" type="time">
-              <div id="timeAdjustmentHint" class="field-hint"></div>
-            </div>
-
-    </div>
-
-    <div class="modal-actions">
-      <button id="closeBtn" class="btn secondary" type="button">Back</button>
-      <button id="saveBtn" class="btn primary" type="button">Save</button>
-    </div>
-
-  </div>
-
-</div>
-
-<div id="actionModal" class="modal hidden">
-
-  <div class="modal-card">
-
-    <h2>Edit Day</h2>
-
-    <button id="temperatureActionBtn" class="action-btn">
-      <span class="action-icon chip-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14.5V5a2 2 0 1 0-4 0v9.5a4 4 0 1 0 4 0Z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></span>
-      <span class="action-label">Temperature</span>
-      <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-    </button>
-
-    <button id="bleedingActionBtn" class="action-btn">
-      <span class="action-icon chip-red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c4 5 7 8.5 7 12a7 7 0 1 1-14 0c0-3.5 3-7 7-12Z"/></svg></span>
-      <span class="action-label">Bleeding</span>
-      <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-    </button>
-
-    <button id="mucusActionBtn" class="action-btn">
-      <span class="action-icon chip-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9c1.5 1.6 3 1.6 4.5 0s3-1.6 4.5 0 3 1.6 4.5 0 3-1.6 4.5 0"/><path d="M3 15c1.5 1.6 3 1.6 4.5 0s3-1.6 4.5 0 3 1.6 4.5 0 3-1.6 4.5 0"/></svg></span>
-      <span class="action-label">Mucus</span>
-      <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-    </button>
-
-    <button id="cervixActionBtn" class="action-btn">
-      <span class="action-icon chip-teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/></svg></span>
-      <span class="action-label">Cervix</span>
-      <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-    </button>
-
-    <button id="otherActionBtn" class="action-btn">
-      <span class="action-icon chip-gray"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></span>
-      <span class="action-label">Additional symptoms</span>
-      <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-    </button>
-
-    <button id="closeActionModalBtn" class="btn secondary" type="button">Close</button>
-
-  </div>
-
-</div>
-
-<div id="bleedingModal" class="modal hidden">
-
-  <div class="modal-card">
-
-    <h2>Bleeding</h2>
-
-    <div class="modal-section">
-
-      <div class="section-title">Bleeding</div>
-
-      <div class="segmented three">
-        <button type="button" data-group="bleeding" data-value="none">No bleeding</button>
-        <button type="button" data-group="bleeding" data-value="spotting">Spotting</button>
-        <button type="button" data-group="bleeding" data-value="menstruation">Period</button>
-      </div>
-
-    </div>
       <div class="modal-section">
-            <div class="section-title">Clots</div>
-            <div class="segmented two">
-              <button type="button" data-group="sediment" data-value="false">No</button>
-              <button type="button" data-group="sediment" data-value="true">Yes</button>
-            </div>
-          </div>
-          
-    <div class="modal-actions">
-      <button id="closeBleedingModalBtn" class="btn secondary" type="button">Back</button>
-      <button id="saveBleedingModalBtn" class="btn primary" type="button">Save</button>
-    </div>
+        <div class="input-label">Age</div>
+        <input id="profileAgeInput" type="number" min="10" max="60" placeholder="e.g. 29">
+      </div>
 
+      <div class="modal-section">
+        <div class="input-label">Usual measurement time</div>
+        <input id="profileUsualTimeInput" type="time">
+      </div>
+
+      <div class="modal-section">
+        <div class="input-label">Goal</div>
+        <select id="profileGoalInput">
+          <option value="">Not set</option>
+          <option value="avoid">Avoid pregnancy</option>
+          <option value="achieve">Achieve pregnancy</option>
+          <option value="observation">Observation only</option>
+        </select>
+      </div>
+
+      <div class="modal-section">
+        <div class="input-label">Map number</div>
+        <input id="profileMapNumberInput" type="number" min="1" placeholder="e.g. 3">
+      </div>
+
+      <div class="modal-section">
+        <div class="input-label">Measurement method</div>
+        <select id="profileMeasurementMethodInput">
+          <option value="">Not set</option>
+          <option value="oral">Oral</option>
+          <option value="vaginal">Vaginal</option>
+          <option value="rectal">Rectal</option>
+        </select>
+      </div>
+
+      <div class="modal-actions">
+        <button id="closeProfileModalBtn" class="btn secondary" type="button">Close</button>
+        <button id="saveProfileModalBtn" class="btn primary" type="button">Save</button>
+      </div>
+    </div>
   </div>
 
-</div>
+  <div id="otherModal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Additional symptoms</h2>
 
-<div id="mucusModal" class="modal hidden">
+      <div class="modal-section">
+        <div class="section-title">Additional symptoms</div>
+        <input id="otherModalInput" type="text" placeholder="Additional symptoms or observations">
+      </div>
 
-  <div class="modal-card">
-
-    <h2>Mucus</h2>
-
-    <div class="modal-section">
-      <div class="section-title">Sensation</div>
-      <div class="segmented four">
-        <button type="button" data-group="sensation" data-value="">None</button>
-        <button type="button" data-group="sensation" data-value="dry">Dry</button>
-        <button type="button" data-group="sensation" data-value="moist">Moist</button>
-        <button type="button" data-group="sensation" data-value="wet">Wet</button>
+      <div class="modal-actions">
+        <button id="closeOtherModalBtn" class="btn secondary" type="button">Back</button>
+        <button id="saveOtherModalBtn" class="btn primary" type="button">Save</button>
       </div>
     </div>
-
-    <div class="modal-section">
-      <div class="section-title">Slippery when wiping?</div>
-      <div class="segmented two">
-        <button type="button" data-group="stretch" data-value="false">No</button>
-        <button type="button" data-group="stretch" data-value="true">Yes</button>
-      </div>
-    </div>
-
-    <div class="modal-section">
-      <div class="section-title">Presence of discharge?</div>
-      <div class="segmented two">
-        <button type="button" data-group="visible" data-value="false">None</button>
-        <button type="button" data-group="visible" data-value="true">Yes</button>
-      </div>
-    </div>
-
-    <div class="modal-section">
-      <div class="section-title">Consistency</div>
-      <div class="segmented four">
-        <button type="button" data-group="consistency" data-value="">None</button>
-        <button type="button" data-group="consistency" data-value="creamy">Creamy</button>
-        <button type="button" data-group="consistency" data-value="slightlyStretchy">Slightly stretchy</button>
-        <button type="button" data-group="consistency" data-value="stretchy">Stretchy</button>
-      </div>
-    </div>
-
-    <div class="modal-section">
-      <div class="section-title">Color</div>
-      <div class="segmented four">
-        <button type="button" data-group="color" data-value="">No color</button>
-        <button type="button" data-group="color" data-value="white">White</button>
-        <button type="button" data-group="color" data-value="clear">Clear</button>
-        <button type="button" data-group="color" data-value="yellow">Yellow</button>
-      </div>
-      <label class="checkbox-row"><input type="checkbox" id="mucusColorOtherCheckbox"><span>Other</span></label>
-      <input id="mucusColorOtherInput" type="text" placeholder="Describe color" class="hidden" />
-    </div>
-
-    <div class="modal-actions">
-      <button id="closeMucusModalBtn" class="btn secondary" type="button">Back</button>
-      <button id="saveMucusModalBtn" class="btn primary" type="button">Save</button>
-    </div>
-
   </div>
 
-</div>
-
-
-<div id="markersModal" class="modal hidden">
-
-
-  <div class="modal-card">
-
-    <h2>Markers</h2>
-
-    <div class="modal-section">
-      <div class="section-title">Peak day</div>
-      <div class="segmented two">
-        <button type="button" data-group="isPeak" data-value="false">No</button>
-        <button type="button" data-group="isPeak" data-value="true">Yes</button>
-      </div>
-    </div>
-
-    <div class="modal-section">
-      <div class="section-title">Marker color</div>
-      <div class="segmented three">
-        <button type="button" data-group="markerColor" data-value="blue">Blue</button>
-        <button type="button" data-group="markerColor" data-value="green">Green</button>
-        <button type="button" data-group="markerColor" data-value="orange">Orange</button>
-      </div>
-    </div>
-
-    <div class="modal-section">
-      <div class="section-title">Marker number</div>
-      <input id="markersMarker" type="number" min="1" max="6" placeholder="Enter number" />
-    </div>
-
-    <div class="modal-actions">
-      <button id="clearMarkersModalBtn" class="btn secondary" type="button">Clear</button>
-      <button id="closeMarkersModalBtn" class="btn secondary" type="button">Close</button>
-      <button id="saveMarkersModalBtn" class="btn primary" type="button">Save</button>
-    </div>
-
-  </div>
-
-</div>
-
-<div id="cervixModal" class="modal hidden">
-  <div class="modal-card">
-    <h2>Cervix</h2>
-
-    <div class="modal-section">
-      <div class="section-title">Firmness</div>
-      <div class="segmented two">
-        <button type="button" data-group="cervixFirmness" data-value="hard">Hard</button>
-        <button type="button" data-group="cervixFirmness" data-value="soft">Soft</button>
-      </div>
-    </div>
-
-    <div class="modal-section">
-      <div class="section-title">Height</div>
-      <div class="segmented three">
-        <button type="button" data-group="cervixHeight" data-value="low">Low</button>
-        <button type="button" data-group="cervixHeight" data-value="medium">Medium</button>
-        <button type="button" data-group="cervixHeight" data-value="high">High</button>
-      </div>
-    </div>
-
-    <div class="modal-section">
-      <div class="section-title">Openness</div>
-      <div class="segmented three">
-        <button type="button" data-group="cervixOpenness" data-value="closed">Closed</button>
-        <button type="button" data-group="cervixOpenness" data-value="medium">Medium</button>
-        <button type="button" data-group="cervixOpenness" data-value="open">Open</button>
-      </div>
-    </div>
-
-    <div class="modal-actions">
-      <button id="closeCervixModalBtn" class="btn secondary" type="button">Back</button>
-      <button id="saveCervixModalBtn" class="btn primary" type="button">Save</button>
-    </div>
-  </div>
-</div>
-
-<div id="fertileRangeModal" class="modal hidden">
-
-  <div class="modal-card wide">
-
-    <h2>Fertile range</h2>
-
-    <div class="calendar-nav">
-      <button id="fertileRangePrevMonth" type="button">‹</button>
-      <div id="fertileRangeMonthLabel" class="month-label"></div>
-      <button id="fertileRangeNextMonth" type="button">›</button>
-    </div>
-
-    <div id="fertileRangeCalendar" class="calendar-grid"></div>
-
-    <div id="fertileRangeSummary" class="range-summary"></div>
-
-    <div class="text-btn-row">
-      <button id="clearFertileRangeBtn" class="text-btn" type="button">Clear range</button>
-    </div>
-
-    <div class="modal-actions">
-      <button id="closeFertileRangeModalBtn" class="btn secondary" type="button">Close</button>
-      <button id="saveFertileRangeModalBtn" class="btn primary" type="button">Save</button>
-    </div>
-
-  </div>
-
-</div>
-
-<div id="profileModal" class="modal hidden">
-
-  <div class="modal-card">
-
-    <h2>Profile</h2>
-
-    <div class="modal-section">
-      <div class="input-label">Age</div>
-      <input id="profileAgeInput" type="number" min="10" max="60" placeholder="e.g. 29">
-    </div>
-
-    <div class="modal-section">
-      <div class="input-label">Usual measurement time</div>
-      <input id="profileUsualTimeInput" type="time">
-    </div>
-
-    <div class="modal-section">
-      <div class="input-label">Goal</div>
-      <select id="profileGoalInput">
-        <option value="">Not set</option>
-        <option value="avoid">Avoid pregnancy</option>
-        <option value="achieve">Achieve pregnancy</option>
-        <option value="observation">Observation only</option>
-      </select>
-    </div>
-
-    <div class="modal-section">
-      <div class="input-label">Map number</div>
-      <input id="profileMapNumberInput" type="number" min="1" placeholder="e.g. 3">
-    </div>
-
-    <div class="modal-section">
-      <div class="input-label">Measurement method</div>
-      <select id="profileMeasurementMethodInput">
-        <option value="">Not set</option>
-        <option value="oral">Oral</option>
-        <option value="vaginal">Vaginal</option>
-        <option value="rectal">Rectal</option>
-      </select>
-    </div>
-
-    <div class="modal-actions">
-      <button id="closeProfileModalBtn" class="btn secondary" type="button">Close</button>
-      <button id="saveProfileModalBtn" class="btn primary" type="button">Save</button>
-    </div>
-
-  </div>
-
-</div>
-
-<div id="otherModal" class="modal hidden">
-
-  <div class="modal-card">
-
-    <h2>Additional symptoms</h2>
-
-    <div class="modal-section">
-      <div class="section-title">Additional symptoms</div>
-      <input id="otherModalInput" type="text" placeholder="Additional symptoms or observations">
-    </div>
-
-    <div class="modal-actions">
-      <button id="closeOtherModalBtn" class="btn secondary" type="button">Back</button>
-      <button id="saveOtherModalBtn" class="btn primary" type="button">Save</button>
-    </div>
-</div>
-  </div>
   <div id="dayInfoModal" class="modal hidden">
-  <div class="modal-card">
-    <h2 id="dayInfoTitle">Day info</h2>
-    <div class="info-panel">
-      <div class="info-group">
-        <div class="info-label">Temperature</div>
-        <div id="infoTemp" class="info-value">-</div>
+    <div class="modal-card">
+      <h2 id="dayInfoTitle">Day info</h2>
+      <div class="info-panel">
+        <div class="info-group">
+          <div class="info-label">Temperature</div>
+          <div id="infoTemp" class="info-value">-</div>
+        </div>
+        <div class="info-group">
+          <div class="info-label">Influence factors</div>
+          <div id="infoTempFactors" class="info-value">-</div>
+        </div>
+        <div class="info-group">
+          <div class="info-label">Bleeding</div>
+          <div id="infoBleeding" class="info-value">-</div>
+        </div>
+        <div class="info-group">
+          <div class="info-label">Mucus</div>
+          <div id="infoMucus" class="info-value">-</div>
+        </div>
+        <div class="info-group">
+          <div class="info-label">Cervix</div>
+          <div id="infoCervix" class="info-value">-</div>
+        </div>
+        <div class="info-group">
+          <div class="info-label">Markers</div>
+          <div id="infoMarkers" class="info-value">-</div>
+        </div>
+        <div class="info-group">
+          <div class="info-label">Additional symptoms</div>
+          <div id="infoOther" class="info-value">-</div>
+        </div>
       </div>
-      <div class="info-group">
-        <div class="info-label">Influence factors</div>
-        <div id="infoTempFactors" class="info-value">-</div>
+      <div class="modal-actions">
+        <button id="closeDayInfoModalBtn" class="btn secondary" type="button">Close</button>
       </div>
-      <div class="info-group">
-        <div class="info-label">Bleeding</div>
-        <div id="infoBleeding" class="info-value">-</div>
-      </div>
-      <div class="info-group">
-        <div class="info-label">Mucus</div>
-        <div id="infoMucus" class="info-value">-</div>
-      </div>
-      <div class="info-group">
-        <div class="info-label">Cervix</div>
-        <div id="infoCervix" class="info-value">-</div>
-      </div>
-      <div class="info-group">
-        <div class="info-label">Markers</div>
-        <div id="infoMarkers" class="info-value">-</div>
-      </div>
-      <div class="info-group">
-        <div class="info-label">Additional symptoms</div>
-        <div id="infoOther" class="info-value">-</div>
-      </div>
-    </div>
-    <div class="modal-actions">
-      <button id="closeDayInfoModalBtn" class="btn secondary" type="button">Close</button>
     </div>
   </div>
-</div>
 
-<script type="module" src="app.js"></script>
-
+  <script type="module" src="app.js"></script>
 </body>
 </html>

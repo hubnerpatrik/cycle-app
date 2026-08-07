@@ -20,7 +20,9 @@ import { renderChart, handleCanvasClick } from "./chart.js";
 import {
   renderMonth,
   renderTempScale,
-  renderTempFactorsOptions, 
+  renderTempFactorsOptions,
+  renderProfileInfo,
+  renderActionButtons,
   renderCalendar,
   renderMapRows,
   openModal,
@@ -29,7 +31,6 @@ import {
   openActionModal,
   closeActionModal,
   saveModal,
-  validateTempInput,
   openMucusModal,
   closeMucusModal,
   saveMucusModal,
@@ -66,6 +67,21 @@ import {
 export const qs  = id       => document.getElementById(id);
 export const qsa = selector => document.querySelectorAll(selector);
 
+function bindButton(id, handler) {
+  const button = qs(id);
+  if (button) button.onclick = handler;
+}
+
+function bindModalOverlayClicks(definitions) {
+  definitions.forEach(([id, closeFn]) => {
+    const modal = qs(id);
+    if (!modal) return;
+    modal.addEventListener("click", event => {
+      if (event.target === modal) closeFn();
+    });
+  });
+}
+
 /* ─── layout constants ────────────────────── */
 
 /** All canvas/grid dimensions in one place. Synced to CSS via syncCSSVariables(). */
@@ -80,11 +96,11 @@ export const LAYOUT = {
   maxTemp:            37.4,
   tempStep:           0.05,
 };
-  const ZOOM_MIN  = 24;
-  const ZOOM_MAX  = 90;
-  const ZOOM_STEP = 8;
-  const ZOOM_BASE = 50;
-    
+const ZOOM_MIN  = 24;
+const ZOOM_MAX  = 90;
+const ZOOM_STEP = 8;
+const ZOOM_BASE = 50;
+
 /** Symptothermal algorithm parameters (unused in UI — reserved for future logic). */
 export const CYCLE = {
   maxDays:       90,    // safety cap for cycle iteration
@@ -406,6 +422,7 @@ export function render() {
   renderMapRows(currentColumns, selectColumn, hoverColumn, clearHover);
   renderChart(currentColumns);
   renderCycleNav();
+  renderProfileInfo();
 }
 
 /** Updates cycle navigation label and button states. */
@@ -425,20 +442,23 @@ function renderZoomLabel() {
   qs("zoomLabel").innerText = `${pct}%`;
 }
 
-/** Binds a modal's "Back" button: closes it, then reopens the action modal after the transition. */
-function bindBackButton(btnId, closeFn) {
-  qs(btnId).onclick = () => {
-    closeFn();
-    setTimeout(() => openActionModal(), 250);
-  };
-}
-
 /* ─── init ────────────────────────────────── */
 
 /** Binds all event listeners. Called once on DOMContentLoaded. */
 function init() {
   syncCSSVariables();
   renderTempFactorsOptions();
+  renderActionButtons();
+
+  const openAfterAction = (openFn, delay = 250) => {
+    closeActionModal();
+    setTimeout(openFn, delay);
+  };
+
+  const reopenActionAfter = (closeFn, delay = 250) => {
+    closeFn();
+    setTimeout(() => openActionModal(), delay);
+  };
 
   // calendar navigation
   qs("prevMonth").onclick = () => {
@@ -479,97 +499,61 @@ function init() {
 
   qsa(".btn.primary").forEach(animatePrimaryButton);
 
-  qs("editBtn").onclick        = () => openActionModal();
-  qs("closeBtn").onclick = () => {
+  bindButton("editBtn", () => openActionModal());
+  bindButton("closeBtn", () => {
     closeModal();
     setTimeout(() => openActionModal(), 250);
-  };
+  });
   animatePrimaryButton(qs("saveBtn"));
-  qs("saveBtn").onclick        = () => saveModal(render);
-  qs("closeActionModalBtn").onclick = closeActionModal;
+  bindButton("saveBtn", () => saveModal(render));
+  bindButton("closeActionModalBtn", closeActionModal);
 
-  qs("temperatureActionBtn").onclick = () => {
-    closeActionModal();
-    setTimeout(() => openModal(currentColumns), 200);
-  };
+  [
+    ["temperatureActionBtn", () => openAfterAction(() => openModal(currentColumns), 200)],
+    ["bleedingActionBtn", () => openAfterAction(() => openBleedingModal())],
+    ["mucusActionBtn", () => openAfterAction(() => openMucusModal())],
+    ["cervixActionBtn", () => openAfterAction(() => openCervixModal())],
+    ["fertileRangeActionBtn", () => openAfterAction(() => openFertileRangeModal())],
+    ["profileActionBtn", () => openAfterAction(() => openProfileModal())],
+    ["otherActionBtn", () => openAfterAction(() => openOtherModal())],
+  ].forEach(([id, handler]) => bindButton(id, handler));
 
-  qs("bleedingActionBtn").onclick = () => {
-    closeActionModal();
-    setTimeout(() => openBleedingModal(), 250);
-  };
+  bindButton("saveBleedingModalBtn", () => saveBleedingModal(render));
+  bindButton("saveMucusModalBtn", () => saveMucusModal(render));
 
-  qs("saveBleedingModalBtn").onclick   = () => saveBleedingModal(render);
-
-  qs("mucusActionBtn").onclick = () => {
-    closeActionModal();
-    setTimeout(() => openMucusModal(), 250);
-  };
-
-  qs("saveMucusModalBtn").onclick  = () => saveMucusModal(render);
-
-  qs("markersActionBtn").onclick = () => {
+  bindButton("markersActionBtn", () => {
     closeActionModal();
     store.markerSelectionMode = true;
     qs("markersActionBtn").classList.add("active");
     setTimeout(() => showMessage("Click a day on the chart to choose a marker day."), 300);
-  };
+  });
 
-  qs("cervixActionBtn").onclick = () => {
-    closeActionModal();
-    setTimeout(() => openCervixModal(), 250);
-  };
+  bindButton("saveFertileRangeModalBtn", () => saveFertileRangeModal(render));
+  bindButton("clearFertileRangeBtn", () => clearFertileRangeModal(render));
+  bindButton("fertileRangePrevMonth", () => changeFertileRangeMonth(-1));
+  bindButton("fertileRangeNextMonth", () => changeFertileRangeMonth(1));
 
-  qs("fertileRangeActionBtn").onclick = () => {
-    closeActionModal();
-    setTimeout(() => openFertileRangeModal(), 250);
-  };
+  bindButton("saveProfileModalBtn", () => saveProfileModal(render));
 
-  qs("saveFertileRangeModalBtn").onclick  = () => saveFertileRangeModal(render);
-  qs("clearFertileRangeBtn").onclick      = () => clearFertileRangeModal(render);
-  qs("fertileRangePrevMonth").onclick     = () => changeFertileRangeMonth(-1);
-  qs("fertileRangeNextMonth").onclick     = () => changeFertileRangeMonth(1);
+  bindButton("clearMarkersModalBtn", () => clearMarkersModalInput());
+  bindButton("saveMarkersModalBtn", () => saveMarkersModal(render));
 
-  qs("profileActionBtn").onclick = () => {
-    closeActionModal();
-    setTimeout(() => openProfileModal(), 250);
-  };
+  bindButton("saveCervixModalBtn", () => saveCervixModal(render));
 
-  qs("saveProfileModalBtn").onclick = () => saveProfileModal(render);
-
-  qs("clearMarkersModalBtn").onclick = () => clearMarkersModalInput();
-  qs("saveMarkersModalBtn").onclick  = () => saveMarkersModal(render);
-
-  qs("saveCervixModalBtn").onclick  = () => saveCervixModal(render);
-
-  qs("otherActionBtn").onclick = () => {
-    closeActionModal();
-    setTimeout(() => openOtherModal(), 250);
-  };
-
-  qs("saveOtherModalBtn").onclick    = () => saveOtherModal(render);
+  bindButton("saveOtherModalBtn", () => saveOtherModal(render));
 
   // back buttons — close current modal and reopen the main action menu
-  qs("closeBleedingModalBtn").onclick = () => {
-    closeBleedingModal();
-    setTimeout(() => openActionModal(), 250);
-  };
-  qs("closeMucusModalBtn").onclick = () => {
-    closeMucusModal();
-    setTimeout(() => openActionModal(), 250);
-  };
-  qs("closeFertileRangeModalBtn").onclick = closeFertileRangeModal;
-  qs("closeProfileModalBtn").onclick = closeProfileModal;
-  qs("closeMarkersModalBtn").onclick = closeMarkersModal;
-  qs("closeCervixModalBtn").onclick = () => {
-    closeCervixModal();
-    setTimeout(() => openActionModal(), 250);
-  };
-  qs("closeOtherModalBtn").onclick = () => {
-    closeOtherModal();
-    setTimeout(() => openActionModal(), 250);
-  };
-
   [
+    ["closeBleedingModalBtn", () => reopenActionAfter(() => closeBleedingModal())],
+    ["closeMucusModalBtn", () => reopenActionAfter(() => closeMucusModal())],
+    ["closeFertileRangeModalBtn", () => closeFertileRangeModal()],
+    ["closeProfileModalBtn", () => closeProfileModal()],
+    ["closeMarkersModalBtn", () => closeMarkersModal()],
+    ["closeCervixModalBtn", () => reopenActionAfter(() => closeCervixModal())],
+    ["closeOtherModalBtn", () => reopenActionAfter(() => closeOtherModal())],
+  ].forEach(([id, handler]) => bindButton(id, handler));
+
+  bindModalOverlayClicks([
     ["modal", closeModal],
     ["actionModal", closeActionModal],
     ["bleedingModal", closeBleedingModal],
@@ -580,13 +564,7 @@ function init() {
     ["profileModal", closeProfileModal],
     ["otherModal", closeOtherModal],
     ["dayInfoModal", closeDayInfoModal],
-  ].forEach(([id, fn]) => {
-    const modal = qs(id);
-    if (!modal) return;
-    modal.addEventListener("click", event => {
-      if (event.target === modal) fn();
-    });
-  });
+  ]);
 
   // coverline tool menu
   const coverlineBtn = qs("coverlineBtn");
@@ -653,7 +631,8 @@ function init() {
   };
 
   const tempChart = qs("tempChart");
-  tempChart.addEventListener("click", event => {
+  if (tempChart) {
+    tempChart.addEventListener("click", event => {
     if (store.horizontalCoverlineMode || store.verticalCoverlineMode) {
       handleCanvasClick(event);
       return;
@@ -669,33 +648,34 @@ function init() {
     selectColumn(key, hit?.type || "temp");
   });
 
-  tempChart.addEventListener("mousemove", event => {
-    const rect = tempChart.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    const hit = pixelToPointColumnHit(x, y, currentColumns);
+    tempChart.addEventListener("mousemove", event => {
+      const rect = tempChart.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      const hit = pixelToPointColumnHit(x, y, currentColumns);
 
-    if (hit) {
-      store.hoveredKey = hit.key;
-      store.hoveredPointType = hit.type;
-      renderChart(currentColumns);
-      return;
-    }
+      if (hit) {
+        store.hoveredKey = hit.key;
+        store.hoveredPointType = hit.type;
+        renderChart(currentColumns);
+        return;
+      }
 
-    if (store.hoveredKey) {
-      store.hoveredKey = null;
-      store.hoveredPointType = null;
-      renderChart(currentColumns);
-    }
-  });
+      if (store.hoveredKey) {
+        store.hoveredKey = null;
+        store.hoveredPointType = null;
+        renderChart(currentColumns);
+      }
+    });
 
-  tempChart.addEventListener("mouseleave", () => {
-    if (store.hoveredKey) {
-      store.hoveredKey = null;
-      store.hoveredPointType = null;
-      renderChart(currentColumns);
-    }
-  });
+    tempChart.addEventListener("mouseleave", () => {
+      if (store.hoveredKey) {
+        store.hoveredKey = null;
+        store.hoveredPointType = null;
+        renderChart(currentColumns);
+      }
+    });
+  }
 
   // segmented buttons — update store and sync active state
   qsa(".segmented button").forEach(btn => {
@@ -751,8 +731,8 @@ function init() {
   }
   
   // day info modal
-  qs("dayInfoBtn").onclick = () => openDayInfoModal(currentColumns);
-  qs("closeDayInfoModalBtn").onclick = closeDayInfoModal;
+  bindButton("dayInfoBtn", () => openDayInfoModal(currentColumns));
+  bindButton("closeDayInfoModalBtn", closeDayInfoModal);
 }
 
 /* ─── boot ────────────────────────────────── */

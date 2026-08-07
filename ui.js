@@ -117,6 +117,77 @@ export function renderTempFactorsOptions() {
       .join("");
 }
 
+/* ─── action buttons ─────────────────────── */
+
+const sidebarActionDefs = [
+  { id: "editBtn", label: "Edit Day", iconClass: "chip-blue", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 11-11-3-3L5 16l-1 4Z"/><path d="M14 6l3 3"/></svg>` },
+  { id: "dayInfoBtn", label: "Day Info", iconClass: "chip-gray", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg>` },
+  { id: "fertileRangeActionBtn", label: "Fertile range", iconClass: "chip-purple", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2.5 3.5L16 11H5"/></svg>` },
+  { id: "profileActionBtn", label: "Profile", iconClass: "chip-green", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg>` },
+];
+
+const modalActionDefs = [
+  { id: "temperatureActionBtn", label: "Temperature", iconClass: "chip-orange", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14.5V5a2 2 0 1 0-4 0v9.5a4 4 0 1 0 4 0Z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>` },
+  { id: "bleedingActionBtn", label: "Bleeding", iconClass: "chip-red", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c4 5 7 8.5 7 12a7 7 0 1 1-14 0c0-3.5 3-7 7-12Z"/></svg>` },
+  { id: "mucusActionBtn", label: "Mucus", iconClass: "chip-blue", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9c1.5 1.6 3 1.6 4.5 0s3-1.6 4.5 0 3 1.6 4.5 0 3-1.6 4.5 0"/><path d="M3 15c1.5 1.6 3 1.6 4.5 0s3-1.6 4.5 0 3 1.6 4.5 0 3-1.6 4.5 0"/></svg>` },
+  { id: "cervixActionBtn", label: "Cervix", iconClass: "chip-teal", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/></svg>` },
+  { id: "otherActionBtn", label: "Additional symptoms", iconClass: "chip-gray", iconSvg: `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg>` },
+];
+
+function createActionButton({ id, label, iconClass, iconSvg }) {
+  const button = document.createElement("button");
+  button.id = id;
+  button.className = "action-btn";
+  button.type = "button";
+  button.innerHTML = `
+    <span class="action-icon ${iconClass}">${iconSvg}</span>
+    <span class="action-label">${label}</span>
+    <svg class="action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+  `;
+  return button;
+}
+
+export function renderActionButtons() {
+  const sidebar = qs("sidebarActions");
+  if (sidebar) {
+    sidebar.className = "action-list";
+    sidebar.innerHTML = "";
+    sidebarActionDefs.forEach(action => sidebar.appendChild(createActionButton(action)));
+  }
+
+  const actionModal = qs("actionModalActions");
+  if (actionModal) {
+    actionModal.className = "action-list";
+    actionModal.innerHTML = "";
+    modalActionDefs.forEach(action => actionModal.appendChild(createActionButton(action)));
+  }
+}
+
+export function renderProfileInfo() {
+  const card = qs("profileInfoCard");
+  if (!card) return;
+
+  const GOAL_LABELS   = { avoid: "Avoid pregnancy", achieve: "Achieve pregnancy", observation: "Observation only" };
+  const METHOD_LABELS = { oral: "Oral", vaginal: "Vaginal", rectal: "Rectal" };
+
+  const p = store.profile;
+  const rows = [
+    ["Age",         p.age],
+    ["Time",        p.usualMeasurementTime],
+    ["Goal",        GOAL_LABELS[p.goal] || ""],
+    ["Map #",       p.mapNumber],
+    ["Method",      METHOD_LABELS[p.measurementMethod] || ""],
+  ].filter(([, v]) => v);
+
+  if (!rows.length) { card.innerHTML = ""; return; }
+
+  card.innerHTML =
+    `<div class="profile-info-title">Profile</div>` +
+    rows.map(([k, v]) =>
+      `<div class="profile-info-row"><span class="profile-info-label">${k}</span><span class="profile-info-value">${v}</span></div>`
+    ).join("");
+}
+
 /* ─── cycle map rows ──────────────────────── */
 
 /** Creates a single map cell div with optional CSS classes. */
@@ -132,30 +203,45 @@ export function makeCell(text = "", ...classes) {
  * Interaction callbacks are passed in to avoid circular imports with app.js.
  */
 export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
-const rowIds = [
-  "dayNumbers",
-  "cycleDayRow",
-
-  "sensationRow",
-  "stretchRow",
-  "visibleRow",
-  "consistencyRow",
-  "colorRow",
-  "peakRow",
-
-  "bleedingRow",
-  "spottingRow",
-  "sedimentRow",
-  "markerRow",
-  "cervixFirmnessRow",
-  "cervixHeightRow",
-  "cervixOpennessRow",
-  "otherRow",
-];
-  const rows  = Object.fromEntries(rowIds.map(id => [id, qs(id)]));
   const width = chartWidth(columns);
+  const dayNumbers = qs("dayNumbers");
+  const mapRows = qs("mapRows");
 
-  Object.values(rows).forEach(row => { row.innerHTML = ""; row.style.width = `${width}px`; });
+  if (!dayNumbers || !mapRows) return;
+
+  dayNumbers.innerHTML = "";
+  dayNumbers.style.width = `${width}px`;
+  mapRows.innerHTML = "";
+
+  const rowDefinitions = [
+    { id: "cycleDayRow", label: "CD (days)", render: (col, sel) => makeCell(col.cycleDay, sel) },
+    { id: "bleedingRow", label: "Bleeding", render: (col, sel) => makeCell(col.bleeding === "menstruation" ? "●" : "", sel, col.bleeding === "menstruation" ? "period" : "") },
+    { id: "spottingRow", label: "Spotting", render: (col, sel) => makeCell(col.bleeding === "spotting" ? "◐" : "", sel, col.bleeding === "spotting" ? "spotting" : "") },
+    { id: "sedimentRow", label: "Clots", render: (col, sel) => makeCell(col.sediment ? "✓" : "", sel) },
+    { id: "sensationRow", label: "Sens", render: (col, sel) => makeCell(SENSATION_LABELS[col.sensation] || "", sel) },
+    { id: "stretchRow", label: "Slip", render: (col, sel) => makeCell(col.stretch ? "✓" : "", sel) },
+    { id: "visibleRow", label: "Discharge", render: (col, sel) => makeCell(col.visible ? "✓" : "", sel) },
+    { id: "consistencyRow", label: "Consist...", render: (col, sel) => makeCell(CONSISTENCY_LABELS[col.consistency] || "", sel) },
+    { id: "colorRow", label: "Color", render: (col, sel) => makeCell(COLOR_LABELS[col.color] || "", sel) },
+    { id: "peakRow", label: "Peak", render: (col, sel) => makeCell(col.isPeak ? "✓" : "", sel) },
+    { id: "markerRow", label: "Marker", render: (col, sel) => makeCell(col.marker || "", sel, col.marker ? `marker-${col.markerColor}` : "") },
+    { id: "cervixFirmnessRow", label: "Firmness", render: (col, sel) => makeCell(CERVIX_FIRMNESS_LABELS[col.cervixFirmness] || "", sel) },
+    { id: "cervixHeightRow", label: "Height", render: (col, sel) => makeCell(CERVIX_HEIGHT_LABELS[col.cervixHeight] || "", sel) },
+    { id: "cervixOpennessRow", label: "Openness", render: (col, sel) => {
+      const cell = document.createElement("div");
+      cell.className = ["map-cell", sel].filter(Boolean).join(" ");
+      if (col.cervixOpenness) {
+        const openness = document.createElement("span");
+        openness.className = ["cervix-indicator", col.cervixOpenness].join(" ");
+        openness.title = `Openness: ${col.cervixOpenness}`;
+        cell.appendChild(openness);
+      }
+      return cell;
+    } },
+    { id: "otherRow", label: "Symptoms", render: (col, sel) => makeCell(col.other ? "✓" : "", sel) },
+  ];
+
+  const rows = Object.fromEntries(rowDefinitions.map(def => [def.id, createMapRow(def.label)]));
 
   // attaches hover and click handlers to a map cell
   const attach = (el, col) => {
@@ -165,38 +251,38 @@ const rowIds = [
   };
 
   const CONSISTENCY_LABELS = {
-  "": "",
-  creamy: "CR",
-  slightlyStretchy: "SS",
-  stretchy: "ST",
-};
+    "": "",
+    creamy: "CR",
+    slightlyStretchy: "SS",
+    stretchy: "ST",
+  };
   const COLOR_LABELS = {
     "": "",
     white: "W",
-    yellow: "Y",
-    clear: "C",
+    whiteTranslucent: "WT",
+    translucent: "T",
     other: "O",
-};
+  };
 
   const SENSATION_LABELS = {
-    "": "None",
+    "": "",
     dry: "D",
     moist: "M",
     wet: "W",
-};
+  };
 
   const CERVIX_FIRMNESS_LABELS = {
     "": "",
     hard: "H",
     soft: "S",
-};
+  };
 
   const CERVIX_HEIGHT_LABELS = {
     "": "",
     low: "L",
     medium: "M",
     high: "H",
-};
+  };
 
   columns.forEach(col => {
     const sel = [
@@ -204,91 +290,67 @@ const rowIds = [
       col.isFertile ? "fertile" : "",
     ].filter(Boolean).join(" ");
 
-    const dayCell       = document.createElement("div");
-    dayCell.className   = ["map-day", sel].filter(Boolean).join(" ");
+    const dayCell = document.createElement("div");
+    dayCell.className = ["map-day", sel].filter(Boolean).join(" ");
     dayCell.textContent = col.date.getDate();
     attach(dayCell, col);
-    rows.dayNumbers.appendChild(dayCell);
+    dayNumbers.appendChild(dayCell);
 
-    const cdCell = makeCell(col.cycleDay, sel);
-    attach(cdCell, col);
-    rows.cycleDayRow.appendChild(cdCell);
-
-    const sensationCell = makeCell(SENSATION_LABELS[col.sensation] || "", sel);
-    attach(sensationCell, col);
-    rows.sensationRow.appendChild(sensationCell);
-
-    const stretchCell = makeCell(col.stretch ? "✓" : "", sel);
-    attach(stretchCell, col);
-    rows.stretchRow.appendChild(stretchCell);
-
-    const visibleCell = makeCell(col.visible ? "✓" : "", sel);
-    attach(visibleCell, col);
-    rows.visibleRow.appendChild(visibleCell);
-
-    const consistencyCell = makeCell(CONSISTENCY_LABELS[col.consistency] || "", sel);
-    attach(consistencyCell, col);
-    rows.consistencyRow.appendChild(consistencyCell);
-
-    const colorCell = makeCell(COLOR_LABELS[col.color] || "", sel);
-    attach(colorCell, col);
-    rows.colorRow.appendChild(colorCell);
-
-    const peakCell = makeCell(col.isPeak ? "✓" : "", sel);
-    attach(peakCell, col);
-    rows.peakRow.appendChild(peakCell);
-
-    const markerCell = makeCell(col.marker || "", sel, col.marker ? `marker-${col.markerColor}` : "");
-    attach(markerCell, col);
-    rows.markerRow.appendChild(markerCell);
-
-    const firmnessCell = makeCell(CERVIX_FIRMNESS_LABELS[col.cervixFirmness] || "", sel);
-    attach(firmnessCell, col);
-    rows.cervixFirmnessRow.appendChild(firmnessCell);
-
-    const heightCell = makeCell(CERVIX_HEIGHT_LABELS[col.cervixHeight] || "", sel);
-    attach(heightCell, col);
-    rows.cervixHeightRow.appendChild(heightCell);
-
-    const opennessCell = document.createElement("div");
-    opennessCell.className = ["map-cell", sel].filter(Boolean).join(" ");
-    if (col.cervixOpenness) {
-      const openness = document.createElement("span");
-      openness.className = ["cervix-indicator", col.cervixOpenness].join(" ");
-      openness.title = `Openness: ${col.cervixOpenness}`;
-      opennessCell.appendChild(openness);
-    }
-    attach(opennessCell, col);
-    rows.cervixOpennessRow.appendChild(opennessCell);
-
-    const bleedCell = makeCell(
-      col.bleeding === "menstruation" ? "●" : "", sel,
-      col.bleeding === "menstruation" ? "period" : ""
-    );
-    attach(bleedCell, col);
-    rows.bleedingRow.appendChild(bleedCell);
-
-    const spottingCell = makeCell(
-      col.bleeding === "spotting" ? "◐" : "", sel,
-      col.bleeding === "spotting" ? "spotting" : ""
-    );
-    attach(spottingCell, col);
-    rows.spottingRow.appendChild(spottingCell);
-
-    const sedimentCell = makeCell(col.sediment ? "✓" : "", sel);
-    attach(sedimentCell, col);
-    rows.sedimentRow.appendChild(sedimentCell);
-
-    const otherCell = makeCell(col.other ? "✓" : "", sel);
-    attach(otherCell, col);
-    rows.otherRow.appendChild(otherCell);
+    rowDefinitions.forEach(def => {
+      const cell = def.render(col, sel);
+      attach(cell, col);
+      rows[def.id].appendChild(cell);
+    });
   });
 }
 
+function createMapRow(label) {
+  const row = document.createElement("div");
+  row.className = "map-row";
+
+  const sideLabel = document.createElement("div");
+  sideLabel.className = "map-side-label";
+  sideLabel.textContent = label;
+
+  const spacer = document.createElement("div");
+  spacer.className = "map-temp-spacer";
+
+  const cells = document.createElement("div");
+  cells.className = "map-cells";
+
+  row.append(sideLabel, spacer, cells);
+  qs("mapRows").appendChild(row);
+  return cells;
+}
+
 /* ─── modal ───────────────────────────────── */
+function showModal(modalId) {
+  const modal = qs(modalId);
+  if (!modal) return;
+
+  modal.classList.remove("hidden");
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => modal.classList.add("show"));
+  });
+}
+
+function hideModal(modalId) {
+  const modal = qs(modalId);
+  if (!modal) return;
+
+  modal.classList.remove("show");
+  modal.addEventListener("transitionend", () => modal.classList.add("hidden"), { once: true });
+}
+
 /** After a modal's close transition: re-render and reopen the action modal. */
 function afterModalSave(modalId, render) {
-  qs(modalId).addEventListener("transitionend", () => {
+  const modal = qs(modalId);
+  if (!modal) {
+    render();
+    return;
+  }
+
+  modal.addEventListener("transitionend", () => {
     render();
     setTimeout(openActionModal, 200);
   }, { once: true });
@@ -331,16 +393,12 @@ export function openModal(currentColumns) {
   qs("measurementTimeInput").value = store.modal.measurementTime;
   syncMeasurementTimeUI();
 
-  const modal = qs("modal");
-  modal.classList.remove("hidden");
-  requestAnimationFrame(() => modal.classList.add("show"));
+  showModal("modal");
 }
 
 /** Closes the modal with a CSS transition. */
 export function closeModal() {
-  const modal = qs("modal");
-  modal.classList.remove("show");
-  modal.addEventListener("transitionend", () => modal.classList.add("hidden"), { once: true });
+  hideModal("modal");
 }
 
 /** Returns true if the temperature input is empty or within valid BBT range. */
@@ -370,26 +428,17 @@ export function saveModal(render) {
   };
 
   store.save();
+  showMessage("Saved ✓");
   closeModal();
   afterModalSave("modal", render);
 }
 
 export function openActionModal() {
-  const modal = qs("actionModal");
-  modal.classList.remove("hidden");
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => modal.classList.add("show"));
-  });
+  showModal("actionModal");
 }
 
 export function closeActionModal() {
-  const modal = qs("actionModal");
-  modal.classList.remove("show");
-  modal.addEventListener(
-    "transitionend",
-    () => modal.classList.add("hidden"),
-    { once: true }
-  );
+  hideModal("actionModal");
 }
 
 export function syncMucusModalUI() {
@@ -452,27 +501,12 @@ export function openMucusModal() {
   store.modal.colorOther  = data.colorOther  ?? "";
   store.modal.isPeak      = data.isPeak      === true;
 
-  const modal = qs("mucusModal");
-  modal.classList.remove("hidden");
-
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      syncMucusModalUI();    // sync after modal is visible
-      modal.classList.add("show");
-    });
-  });
+  showModal("mucusModal");
+  syncMucusModalUI();
 }
 
 export function closeMucusModal() {
-  const modal = qs("mucusModal");
-
-  modal.classList.remove("show");
-
-  modal.addEventListener(
-    "transitionend",
-    () => modal.classList.add("hidden"),
-    { once: true }
-  );
+  hideModal("mucusModal");
 }
 
 export function saveMucusModal(render) {
@@ -490,6 +524,7 @@ export function saveMucusModal(render) {
   };
 
   store.save();
+  showMessage("Saved ✓");
   closeMucusModal();
   afterModalSave("mucusModal", render);
 }
@@ -507,23 +542,11 @@ export function openBleedingModal() {
 
   syncModalUI();
 
-  const modal = qs("bleedingModal");
-  modal.classList.remove("hidden");
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => modal.classList.add("show"));
-  });
+  showModal("bleedingModal");
 }
 
 export function closeBleedingModal() {
-  const modal = qs("bleedingModal");
-
-  modal.classList.remove("show");
-
-  modal.addEventListener(
-    "transitionend",
-    () => modal.classList.add("hidden"),
-    { once: true }
-  );
+  hideModal("bleedingModal");
 }
 
 export function saveBleedingModal(render) {
@@ -536,6 +559,7 @@ export function saveBleedingModal(render) {
   };
 
   store.save();
+  showMessage("Saved ✓");
   closeBleedingModal();
   afterModalSave("bleedingModal", render);
 }
@@ -553,20 +577,12 @@ export function openMarkersModal() {
 
   qs("markersMarker").value = store.modal.marker;
 
-  const modal = qs("markersModal");
-  modal.classList.remove("hidden");
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      syncModalUI();
-      modal.classList.add("show");
-    });
-  });
+  showModal("markersModal");
+  syncModalUI();
 }
 
 export function closeMarkersModal() {
-  const modal = qs("markersModal");
-  modal.classList.remove("show");
-  modal.addEventListener("transitionend", () => modal.classList.add("hidden"), { once: true });
+  hideModal("markersModal");
 }
 
 export function clearMarkersModalInput() {
@@ -588,6 +604,7 @@ export function saveMarkersModal(render) {
   };
 
   store.save();
+  showMessage("Saved ✓");
   closeMarkersModal();
   afterModalSave("markersModal", render);
 }
@@ -602,20 +619,12 @@ export function openCervixModal() {
   store.modal.cervixHeight = data.cervixHeight ?? "";
   store.modal.cervixOpenness = data.cervixOpenness ?? "";
 
-  const modal = qs("cervixModal");
-  modal.classList.remove("hidden");
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      syncModalUI();
-      modal.classList.add("show");
-    });
-  });
+  showModal("cervixModal");
+  syncModalUI();
 }
 
 export function closeCervixModal() {
-  const modal = qs("cervixModal");
-  modal.classList.remove("show");
-  modal.addEventListener("transitionend", () => modal.classList.add("hidden"), { once: true });
+  hideModal("cervixModal");
 }
 
 export function saveCervixModal(render) {
@@ -629,6 +638,7 @@ export function saveCervixModal(render) {
   };
 
   store.save();
+  showMessage("Saved ✓");
   closeCervixModal();
   afterModalSave("cervixModal", render);
 }
@@ -723,17 +733,11 @@ export function openFertileRangeModal() {
 
   renderFertileRangeModal();
 
-  const modal = qs("fertileRangeModal");
-  modal.classList.remove("hidden");
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => modal.classList.add("show"));
-  });
+  showModal("fertileRangeModal");
 }
 
 export function closeFertileRangeModal() {
-  const modal = qs("fertileRangeModal");
-  modal.classList.remove("show");
-  modal.addEventListener("transitionend", () => modal.classList.add("hidden"), { once: true });
+  hideModal("fertileRangeModal");
 }
 
 export function saveFertileRangeModal(render) {
@@ -743,8 +747,9 @@ export function saveFertileRangeModal(render) {
 
   setFertileRange(fertileRangeDraft.start, fertileRangeDraft.end);
   store.save();
+  showMessage("Saved ✓");
   closeFertileRangeModal();
-  afterModalSave("fertileRangeModal", render);
+  render();
 }
 
 /** Clears the active fertile range entirely. */
@@ -752,8 +757,8 @@ export function clearFertileRangeModal(render) {
   clearFertileRange();
   store.save();
   closeFertileRangeModal();
+  render();
   showMessage("Fertile range cleared");
-  afterModalSave("fertileRangeModal", render);
 }
 
 /* ─── profile modal ────────────────────────── */
@@ -768,17 +773,11 @@ export function openProfileModal() {
   qs("profileMapNumberInput").value          = profile.mapNumber;
   qs("profileMeasurementMethodInput").value  = profile.measurementMethod;
 
-  const modal = qs("profileModal");
-  modal.classList.remove("hidden");
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => modal.classList.add("show"));
-  });
+  showModal("profileModal");
 }
 
 export function closeProfileModal() {
-  const modal = qs("profileModal");
-  modal.classList.remove("show");
-  modal.addEventListener("transitionend", () => modal.classList.add("hidden"), { once: true });
+  hideModal("profileModal");
 }
 
 export function saveProfileModal(render) {
@@ -791,8 +790,9 @@ export function saveProfileModal(render) {
   };
 
   store.save();
+  showMessage("Saved ✓");
   closeProfileModal();
-  afterModalSave("profileModal", render);
+  render();
 }
 
 export function openOtherModal() {
@@ -803,17 +803,11 @@ export function openOtherModal() {
   const data = store.entries[store.selectedKey] || {};
   qs("otherModalInput").value = data.other ?? "";
 
-  const modal = qs("otherModal");
-  modal.classList.remove("hidden");
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => modal.classList.add("show"));
-  });
+  showModal("otherModal");
 }
 
 export function closeOtherModal() {
-  const modal = qs("otherModal");
-  modal.classList.remove("show");
-  modal.addEventListener("transitionend", () => modal.classList.add("hidden"), { once: true });
+  hideModal("otherModal");
 }
 
 export function saveOtherModal(render) {
@@ -825,6 +819,7 @@ export function saveOtherModal(render) {
   };
 
   store.save();
+  showMessage("Saved ✓");
   closeOtherModal();
   afterModalSave("otherModal", render);
 }
@@ -835,7 +830,7 @@ const SENSATION_LABELS = { "": "-", dry: "Dry", moist: "Moist", wet: "Wet" };
 
 // full-word versions of the abbreviated map labels — used only in day-info modal
 const CONSISTENCY_FULL_LABELS = { "": "-", creamy: "Creamy", slightlyStretchy: "Slightly stretchy", stretchy: "Stretchy" };
-const COLOR_FULL_LABELS = { "": "-", clear: "Clear", white: "White", yellow: "Yellow", other: "Other" };
+const COLOR_FULL_LABELS = { "": "-", white: "White", whiteTranslucent: "White-translucent", translucent: "Translucent", other: "Other" };
 
 /** Opens the read-only day info modal for the currently selected day. */
 export function openDayInfoModal(currentColumns) {
@@ -901,16 +896,12 @@ export function openDayInfoModal(currentColumns) {
 
   qs("infoOther").innerText = data.other?.trim() ? data.other : "-";
 
-  const modal = qs("dayInfoModal");
-  modal.classList.remove("hidden");
-  requestAnimationFrame(() => modal.classList.add("show"));
+  showModal("dayInfoModal");
 }
 
 /** Closes the day info modal. */
 export function closeDayInfoModal() {
-  const modal = qs("dayInfoModal");
-  modal.classList.remove("show");
-  modal.addEventListener("transitionend", () => modal.classList.add("hidden"), { once: true });
+  hideModal("dayInfoModal");
 }
 
 /* ─── toast ───────────────────────────────── */

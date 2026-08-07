@@ -53,6 +53,47 @@ export function resolveCycleId(date) {
   return `cycle-${cycleIndex || 1}`;
 }
 
+function buildColumn(key, index, date, starts) {
+  const raw = store.entries[key] ?? {};
+
+  return {
+    key,
+    date,
+    index,
+
+    x: columnX(index),
+    centerX: columnCenterX(index),
+
+    cycleId: resolveCycleId(date),
+    cycleDay: resolveCycleDay(date, starts, index),
+
+    temp: raw.temp ?? null,
+    tempFactors: raw.tempFactors ?? "",
+    measurementTime: raw.measurementTime ?? "",
+    timeAdjustment: getTimeAdjustment(raw.measurementTime, store.profile.usualMeasurementTime),
+    adjustedTemp: getAdjustedTemp(raw.temp, raw.measurementTime, store.profile.usualMeasurementTime),
+
+    bleeding: raw.bleeding ?? "none",
+    discharge: raw.discharge ?? "none",
+    sensation: raw.sensation ?? "",
+    stretch: raw.stretch ?? false,
+    visible: raw.visible ?? false,
+    consistency: raw.consistency ?? "",
+    color: raw.color ?? "",
+    sediment: raw.sediment ?? false,
+    cervixFirmness: raw.cervixFirmness ?? "",
+    cervixHeight: raw.cervixHeight ?? "",
+    cervixOpenness: raw.cervixOpenness ?? "",
+    other: raw.other ?? "",
+    isFertile: isFertileDay(key, store.entries),
+    isPeak: raw.isPeak ?? false,
+    marker: raw.marker ?? "",
+    markerColor: raw.markerColor ?? "blue",
+    manualCoverline: raw.manualCoverline ?? null,
+    coverlineStart: raw.coverlineStart ?? false,
+  };
+}
+
 /* ─── column building ─────────────────────── */
 
 /**
@@ -68,61 +109,11 @@ export function buildColumns() {
   const starts = getCycleStartDates();
 
   return keys.map((key, index) => {
-    const raw  = store.entries[key];
     const date = parseDateKey(key);
-
-    return {
-      key, date, index,
-
-      // layout
-      x:       columnX(index),
-      centerX: columnCenterX(index),
-
-      // cycle metadata
-      cycleId:  resolveCycleId(date),
-      cycleDay: resolveCycleDay(date, starts, index),
-
-      // observation data
-      temp:            raw.temp             ?? null,
-      tempFactors:     raw.tempFactors      ?? "",
-      measurementTime: raw.measurementTime  ?? "",
-      timeAdjustment:  getTimeAdjustment(raw.measurementTime, store.profile.usualMeasurementTime),
-      adjustedTemp:    getAdjustedTemp(raw.temp, raw.measurementTime, store.profile.usualMeasurementTime),
-
-      bleeding:        raw.bleeding         ?? "none",
-      discharge:       raw.discharge        ?? "none",
-
-      sensation:       raw.sensation       ?? "",
-
-      stretch:         raw.stretch          ?? false,
-      visible:         raw.visible          ?? false,
-
-      consistency:     raw.consistency      ?? "",
-      color:           raw.color            ?? "",
-
-      sediment:        raw.sediment         ?? false,
-
-      cervixFirmness:  raw.cervixFirmness   ?? "",
-      cervixHeight:    raw.cervixHeight     ?? "",
-      cervixOpenness:  raw.cervixOpenness   ?? "",
-
-      other:           raw.other            ?? "",
-
-      isFertile:       isFertileDay(key, store.entries),
-      isPeak:          raw.isPeak           ?? false,
-      marker:          raw.marker           ?? "",
-      markerColor:     raw.markerColor      ?? "blue",
-
-      manualCoverline: raw.manualCoverline  ?? null,
-      coverlineStart:  raw.coverlineStart   ?? false,
-          };
+    return buildColumn(key, index, date, starts);
   });
 }
-/**
- * Returns all columns for a specific cycle by index (0-based).
- * If cycleIndex is null, returns the latest cycle.
- * Falls back to all columns if no cycles detected.
- */
+
 /**
  * Returns all columns for a specific cycle by index (0-based).
  * If cycleIndex is null, returns the latest cycle.
@@ -134,7 +125,6 @@ export function buildCycleColumns() {
 
   const starts = getCycleStartDates();
 
-  // no cycles detected yet — return all entries
   if (!starts.length) {
     return buildColumns();
   }
@@ -142,13 +132,11 @@ export function buildCycleColumns() {
   const index = store.currentCycleIndex ?? starts.length - 1;
   const clampedIndex = Math.max(0, Math.min(index, starts.length - 1));
 
-  // determine date range for this cycle
   const cycleStart = starts[clampedIndex];
-  const cycleEnd   = starts[clampedIndex + 1]
+  const cycleEnd = starts[clampedIndex + 1]
     ? new Date(starts[clampedIndex + 1].getTime() - 86_400_000)
-    : null; // null means open-ended (current cycle)
+    : null;
 
-  // filter keys belonging to this cycle
   const cycleKeys = allKeys.filter(key => {
     const d = normalize(parseDateKey(key));
     if (d < normalize(cycleStart)) return false;
@@ -156,40 +144,9 @@ export function buildCycleColumns() {
     return true;
   });
 
-  const allStarts = starts;
-
-  // build columns with correct positions (reset index per cycle)
   return cycleKeys.map((key, index) => {
-    const raw  = store.entries[key];
     const date = parseDateKey(key);
-    return {
-      key, date, index,
-      x:       columnX(index),
-      centerX: columnCenterX(index),
-      cycleId:  resolveCycleId(date),
-      cycleDay: resolveCycleDay(date, allStarts, index),
-      temp:            raw.temp            ?? null,
-      tempFactors:     raw.tempFactors     ?? "",
-      measurementTime: raw.measurementTime ?? "",
-      timeAdjustment:  getTimeAdjustment(raw.measurementTime, store.profile.usualMeasurementTime),
-      adjustedTemp:    getAdjustedTemp(raw.temp, raw.measurementTime, store.profile.usualMeasurementTime),
-      bleeding:        raw.bleeding        ?? "none",
-      discharge:       raw.discharge       ?? "none",
-      sensation:       raw.sensation       ?? "",
-      stretch:         raw.stretch         ?? false,
-      visible:         raw.visible         ?? false,
-      consistency:     raw.consistency     ?? "",
-      color:           raw.color           ?? "",
-      sediment:        raw.sediment        ?? false,
-      cervixFirmness:  raw.cervixFirmness  ?? "",
-      cervixHeight:    raw.cervixHeight    ?? "",
-      cervixOpenness:  raw.cervixOpenness  ?? "",
-      other:           raw.other           ?? "",
-      isFertile:       isFertileDay(key, store.entries),
-      isPeak:          raw.isPeak          ?? false,
-      marker:          raw.marker          ?? "",
-      markerColor:     raw.markerColor     ?? "blue",
-    };
+    return buildColumn(key, index, date, starts);
   });
 }
 
