@@ -191,7 +191,7 @@ export function drawTemperaturePoints(ctx, columns) {
     if (col.isPeak) {
       ctx.beginPath();
       ctx.arc(col.centerX, markerY, 7, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(37,99,235,0.65)";
+      ctx.strokeStyle = "rgba(22,163,74,0.75)";
       ctx.lineWidth = 2;
       ctx.stroke();
     }

@@ -238,12 +238,12 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
     { id: "consistencyRow", label: "Consist...", group: "blue", render: (col, sel) => makeAccentCell(CONSISTENCY_LABELS[col.consistency] || "", sel, "blue") },
     { id: "colorRow", label: "Color", group: "blue", render: (col, sel) => makeAccentCell(COLOR_LABELS[col.color] || "", sel, "blue") },
     { id: "peakRow", label: "Peak", group: "purple", render: (col, sel) => makeAccentCell(col.isPeak ? "✓" : "", sel, "purple") },
-    { id: "blueMarkerRow", label: "Blue markers", group: "purple", render: (col, sel) => {
+    { id: "blueMarkerRow", label: "Blue", group: "purple", render: (col, sel) => {
       const markerColor = normalizeMarkerColor(col.markerColor);
       const marker = col.marker && markerColor === "blue" ? col.marker : "";
       return makeAccentCell(marker, sel, "purple", marker ? "marker-blue" : "");
     } },
-    { id: "orangeMarkerRow", label: "Orange markers", group: "purple", render: (col, sel) => {
+    { id: "orangeMarkerRow", label: "Orange", group: "purple", render: (col, sel) => {
       const markerColor = normalizeMarkerColor(col.markerColor);
       const marker = col.marker && markerColor === "orange" ? col.marker : "";
       return makeAccentCell(marker, sel, "purple", marker ? "marker-orange" : "");

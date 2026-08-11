@@ -253,15 +253,28 @@ select:focus,
   border-bottom: 0;
 }
 
+.map-row-group-start {
+  margin-top: 5px;
+}
+
 .map-row-group-start .map-cells {
   border-top-left-radius: 14px;
   border-top-right-radius: 14px;
+}
+
+.map-row-group-end {
+  margin-bottom: 5px;
 }
 
 .map-row-group-end .map-cells {
   border-bottom-left-radius: 14px;
   border-bottom-right-radius: 14px;
   box-shadow: 0 6px 16px rgba(22, 32, 41, 0.04);
+}
+
+.map-row-group-single {
+  margin-top: 5px;
+  margin-bottom: 5px;
 }
 
 .map-row-group-single .map-cells {
