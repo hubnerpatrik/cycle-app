@@ -263,7 +263,25 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
     { id: "otherRow", label: "Symptoms", group: "green", render: (col, sel) => makeAccentCell(col.other ? "✓" : "", sel, "green") },
   ];
 
-  const rows = Object.fromEntries(rowDefinitions.map(def => [def.id, createMapRow(def.label, def.group)]));
+  const rowDefinitionsWithPosition = rowDefinitions.map((def, index, all) => {
+    if (!def.group) return { ...def, groupPosition: "none" };
+
+    const prevGroup = all[index - 1]?.group ?? null;
+    const nextGroup = all[index + 1]?.group ?? null;
+    const isStart = prevGroup !== def.group;
+    const isEnd = nextGroup !== def.group;
+
+    let groupPosition = "middle";
+    if (isStart && isEnd) groupPosition = "single";
+    else if (isStart) groupPosition = "start";
+    else if (isEnd) groupPosition = "end";
+
+    return { ...def, groupPosition };
+  });
+
+  const rows = Object.fromEntries(
+    rowDefinitionsWithPosition.map(def => [def.id, createMapRow(def.label, def.group, def.groupPosition)]),
+  );
 
   // attaches hover and click handlers to a map cell
   const attach = (el, col) => {
@@ -317,7 +335,7 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
     attach(dayCell, col);
     dayNumbers.appendChild(dayCell);
 
-    rowDefinitions.forEach(def => {
+    rowDefinitionsWithPosition.forEach(def => {
       const cell = def.render(col, sel);
       attach(cell, col);
       rows[def.id].appendChild(cell);
@@ -325,9 +343,13 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
   });
 }
 
-function createMapRow(label, group) {
+function createMapRow(label, group, groupPosition = "none") {
   const row = document.createElement("div");
-  row.className = ["map-row", group ? `map-row-group map-row-group-${group}` : ""].filter(Boolean).join(" ");
+  row.className = [
+    "map-row",
+    group ? `map-row-group map-row-group-${group}` : "",
+    group && groupPosition !== "none" ? `map-row-group-${groupPosition}` : "",
+  ].filter(Boolean).join(" ");
 
   const sideLabel = document.createElement("div");
   sideLabel.className = "map-side-label";

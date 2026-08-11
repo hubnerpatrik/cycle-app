@@ -243,10 +243,48 @@ select:focus,
 }
 
 .map-row-group .map-cells {
-  margin: 2px 0;
-  border-radius: 999px;
+  margin: 0;
+  border-radius: 0;
   overflow: hidden;
+  box-shadow: none;
+}
+
+.map-row-group {
+  border-bottom: 0;
+}
+
+.map-row-group-start .map-cells {
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+}
+
+.map-row-group-end .map-cells {
+  border-bottom-left-radius: 14px;
+  border-bottom-right-radius: 14px;
   box-shadow: 0 6px 16px rgba(22, 32, 41, 0.04);
+}
+
+.map-row-group-single .map-cells {
+  border-radius: 14px;
+  box-shadow: 0 6px 16px rgba(22, 32, 41, 0.04);
+}
+
+.map-row-group .map-cell {
+  border-right-color: transparent;
+}
+
+.map-row-group .map-cell:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 3px;
+  bottom: 3px;
+  width: 1px;
+  background: rgba(15, 23, 32, 0.16);
+}
+
+.map-row-group .map-cell:nth-child(5n):not(:last-child)::after {
+  background: rgba(15, 23, 32, 0.28);
 }
 
 .map-cell-accent-red,
