@@ -75,6 +75,7 @@ _emptyModal() {
     cervixOpenness: "",
 
     markerColor: "blue",
+    sex: false,
     other: "",
   };
 }

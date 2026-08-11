@@ -13,7 +13,10 @@
   --accent: #ff8a65;
   --accent-2: #f7c6ff;
   --accent-3: #ffd7a8;
+  --green: #cfe7b4;
   --blue: #0a84ff;
+  --mucus-navy: #001f6b;
+  --cervix-light: #7dd3fc;
   --hairline: rgba(22, 32, 41, 0.06);
   --card-elev: 0 14px 40px rgba(22, 32, 41, 0.06);
   --radius-lg: 16px;
@@ -104,7 +107,47 @@ body::before {
 }
 
 .action-icon.chip-blue {
-  background: linear-gradient(135deg, #cfe7ff, var(--blue));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--blue) 22%, white), var(--blue));
+  color: #052033;
+}
+
+.action-icon.chip-orange {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--orange) 22%, white), var(--orange));
+  color: #052033;
+}
+
+.action-icon.chip-red {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--red) 22%, white), var(--red));
+  color: #052033;
+}
+
+.action-icon.chip-purple {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--purple) 22%, white), var(--purple));
+  color: #052033;
+}
+
+.action-icon.chip-green {
+  background: linear-gradient(135deg, color-mix(in srgb, #22c55e 22%, white), #22c55e);
+  color: #052033;
+}
+
+.action-icon.chip-teal {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--cervix-light) 22%, white), var(--cervix-light));
+  color: #052033;
+}
+
+.action-icon.chip-gray {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--gray-chip) 22%, white), var(--gray-chip));
+  color: #052033;
+}
+
+.action-icon.chip-edit-special {
+  background: linear-gradient(135deg, #67f9ff, #00b3ff);
+  color: #052033;
+}
+
+.action-icon.chip-profile-special {
+  background: linear-gradient(135deg, #ffd86f, #ff8f66);
   color: #052033;
 }
 
@@ -190,6 +233,18 @@ select:focus,
   box-shadow: 0 10px 34px rgba(168, 180, 255, 0.07);
 }
 
+.modal-card input,
+.modal-card select {
+  background: #ffffff;
+}
+
+#dayInfoModal .info-group {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 2px 10px rgba(22, 32, 41, 0.05);
+}
+
 .modal {
   position: fixed;
   z-index: 1200;
@@ -213,16 +268,16 @@ select:focus,
   background: rgba(239, 68, 68, 0.4);
 }
 
-.map-row-group-blue::before {
-  background: rgba(10, 132, 255, 0.4);
+.map-row-group-mucus::before {
+  background: color-mix(in srgb, var(--mucus-navy) 62%, white);
 }
 
-.map-row-group-purple::before {
-  background: rgba(139, 92, 246, 0.4);
+.map-row-group-cervix::before {
+  background: color-mix(in srgb, var(--cervix-light) 62%, white);
 }
 
-.map-row-group-green::before {
-  background: rgba(34, 197, 94, 0.4);
+.map-row-group-symptoms::before {
+  background: rgba(139, 92, 246, 0.56);
 }
 
 .map-row-group .map-side-label {
@@ -301,33 +356,66 @@ select:focus,
 }
 
 .map-cell-accent-red,
-.map-cell-accent-blue,
-.map-cell-accent-purple,
-.map-cell-accent-green {
+.map-cell-accent-mucus,
+.map-cell-accent-cervix,
+.map-cell-accent-symptoms {
   color: var(--text);
+}
+
+.map-cell.marker-blue {
+  color: var(--mucus-navy);
+  font-weight: 700;
+}
+
+.map-cell.marker-orange {
+  color: var(--cervix-light);
+  font-weight: 700;
 }
 
 .map-cells-group-red {
-  background: rgba(239, 68, 68, 0.12);
+  background: rgba(239, 68, 68, 0.06);
 }
 
-.map-cells-group-blue {
-  background: rgba(10, 132, 255, 0.12);
+.map-cells-group-mucus {
+  background: color-mix(in srgb, var(--mucus-navy) 8%, white);
 }
 
-.map-cells-group-purple {
-  background: rgba(139, 92, 246, 0.12);
+.map-cells-group-cervix {
+  background: color-mix(in srgb, var(--cervix-light) 10%, white);
 }
 
-.map-cells-group-green {
-  background: rgba(34, 197, 94, 0.12);
+.map-cells-group-symptoms {
+  background: rgba(139, 92, 246, 0.08);
 }
 
-.peak-day-toggle button.active {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.36), rgba(134, 239, 172, 0.32));
+.map-cell.fertility-cell,
+.map-day.fertility-cell {
+  background: color-mix(in srgb, var(--green) 22%, transparent);
+}
+
+#markersModal .peak-day-toggle button.active {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--orange) 44%, white), color-mix(in srgb, var(--orange) 24%, white));
   color: var(--text);
-  border-color: rgba(34, 197, 94, 0.45);
-  box-shadow: 0 12px 24px rgba(34, 197, 94, 0.16);
+  border-color: color-mix(in srgb, var(--orange) 62%, white);
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--orange) 28%, transparent);
+}
+
+#markersModal button[data-group="markerColor"][data-value="green"].active {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--green) 52%, white), color-mix(in srgb, var(--green) 34%, white));
+  border-color: color-mix(in srgb, var(--green) 66%, white);
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--green) 30%, transparent);
+}
+
+#markersModal button[data-group="markerColor"][data-value="blue"].active {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--mucus-navy) 30%, white), color-mix(in srgb, var(--mucus-navy) 14%, white));
+  border-color: color-mix(in srgb, var(--mucus-navy) 45%, white);
+  box-shadow: 0 10px 20px color-mix(in srgb, var(--mucus-navy) 20%, transparent);
+}
+
+#markersModal button[data-group="markerColor"][data-value="orange"].active {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--cervix-light) 40%, white), color-mix(in srgb, var(--cervix-light) 24%, white));
+  border-color: color-mix(in srgb, var(--cervix-light) 58%, white);
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--cervix-light) 26%, transparent);
 }
 
 .highlight-strong {

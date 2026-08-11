@@ -19,7 +19,7 @@
   /* system accent colors (neon-inspired light theme) */
   --accent:#a8ff00; /* neon lime primary accent */
   --blue:#0a84ff; /* reserved blue for mucus/interactive markers */
-  --green:#22c55e;
+  --green:var(--calendar-green);
   --red:#ef4444;
   --calendar-green:#cfe7b4;
   --calendar-red:#f3b9c2;
@@ -47,7 +47,7 @@
 
   /* synced from LAYOUT in app.js — do not hardcode usage elsewhere */
   --column-width:36px;
-  --label-width:68px;
+  --label-width:96px;
   --temp-scale-width:52px;
   --chart-height:260px;
 }
@@ -482,7 +482,8 @@ h1{
 .action-icon.chip-purple{ background:var(--purple); }
 .action-icon.chip-gray{   background:var(--gray-chip); }
 .action-icon.chip-teal{   background:var(--teal); }
-.action-icon.chip-green{  background:var(--green); }
+.action-icon.chip-green{  background:#22c55e; }
+.action-icon.chip-green{  color:#ffffff; }
 
 .action-label{
   flex:1;
@@ -746,6 +747,7 @@ h1{
 
   font-size:11px;
   font-weight:600;
+  white-space:nowrap;
 
   color:var(--muted);
 }
@@ -858,8 +860,8 @@ h1{
 }
 
 .cervix-indicator.closed{
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border: 1px solid #111;
   background: #111;
 }
@@ -1012,11 +1014,6 @@ input{
 }
 
 @media (min-width: 560px) {
-  .date-range{
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 .date-range-item{
   display:grid;
   gap:8px;
@@ -1170,15 +1167,6 @@ input:focus{
 .btn.secondary{
   background:var(--bg);
   color:var(--text);
-}
-
-.range-summary{
-  text-align:center;
-
-  font-size:13px;
-  font-weight:600;
-
-  color:var(--muted);
 }
 
 .field-hint{

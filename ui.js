@@ -8,7 +8,7 @@ import {
   LAYOUT, TEMP_FACTORS, qs, qsa,
   chartY, chartWidth,
   getDaysInMonth, getMonthOffset, formatDateKey, parseDateKey, formatTemp,
-  isFertileDay, getFertileRange, setFertileRange, clearFertileRange,
+  isFertileDay, getFertileRange, clearFertileRange,
   getTimeAdjustment, getAdjustedTemp,
 } from "./app.js";
 
@@ -120,10 +120,10 @@ export function renderTempFactorsOptions() {
 /* ─── action buttons ─────────────────────── */
 
 const sidebarActionDefs = [
-  { id: "editBtn", label: "Edit Day", iconClass: "chip-blue", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 11-11-3-3L5 16l-1 4Z"/><path d="M14 6l3 3"/></svg>` },
+  { id: "editBtn", label: "Edit Day", iconClass: "chip-edit-special", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 11-11-3-3L5 16l-1 4Z"/><path d="M14 6l3 3"/></svg>` },
   { id: "dayInfoBtn", label: "Day Info", iconClass: "chip-gray", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg>` },
-  { id: "fertileRangeActionBtn", label: "Fertile range", iconClass: "chip-purple", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2.5 3.5L16 11H5"/></svg>` },
-  { id: "profileActionBtn", label: "Profile", iconClass: "chip-green", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg>` },
+  { id: "fertileRangeActionBtn", label: "Fertile range", iconClass: "chip-green", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2.5 3.5L16 11H5"/></svg>` },
+  { id: "profileActionBtn", label: "Profile", iconClass: "chip-profile-special", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg>` },
 ];
 
 const modalActionDefs = [
@@ -131,7 +131,7 @@ const modalActionDefs = [
   { id: "bleedingActionBtn", label: "Bleeding", iconClass: "chip-red", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c4 5 7 8.5 7 12a7 7 0 1 1-14 0c0-3.5 3-7 7-12Z"/></svg>` },
   { id: "mucusActionBtn", label: "Mucus", iconClass: "chip-blue", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9c1.5 1.6 3 1.6 4.5 0s3-1.6 4.5 0 3 1.6 4.5 0 3-1.6 4.5 0"/><path d="M3 15c1.5 1.6 3 1.6 4.5 0s3-1.6 4.5 0 3 1.6 4.5 0 3-1.6 4.5 0"/></svg>` },
   { id: "cervixActionBtn", label: "Cervix", iconClass: "chip-teal", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/></svg>` },
-  { id: "otherActionBtn", label: "Additional symptoms", iconClass: "chip-gray", iconSvg: `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg>` },
+  { id: "otherActionBtn", label: "Other", iconClass: "chip-purple", iconSvg: `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg>` },
 ];
 
 function createActionButton({ id, label, iconClass, iconSvg }) {
@@ -228,30 +228,24 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
   mapRows.innerHTML = "";
 
   const rowDefinitions = [
-    { id: "cycleDayRow", label: "CD (days)", render: (col, sel) => makeCell(col.cycleDay, sel) },
+    { id: "cycleDayRow", label: "Cycle days", render: (col, sel) => makeCell(col.cycleDay, sel) },
     { id: "bleedingRow", label: "Bleeding", group: "red", render: (col, sel) => makeAccentCell(col.bleeding === "menstruation" ? "●" : "", sel, "red", col.bleeding === "menstruation" ? "period" : "") },
     { id: "spottingRow", label: "Spotting", group: "red", render: (col, sel) => makeAccentCell(col.bleeding === "spotting" ? "◐" : "", sel, "red", col.bleeding === "spotting" ? "spotting" : "") },
     { id: "sedimentRow", label: "Clots", group: "red", render: (col, sel) => makeAccentCell(col.sediment ? "✓" : "", sel, "red") },
-    { id: "sensationRow", label: "Sens", group: "blue", render: (col, sel) => makeAccentCell(SENSATION_LABELS[col.sensation] || "", sel, "blue") },
-    { id: "stretchRow", label: "Slip", group: "blue", render: (col, sel) => makeAccentCell(col.stretch ? "✓" : "", sel, "blue") },
-    { id: "visibleRow", label: "Discharge", group: "blue", render: (col, sel) => makeAccentCell(col.visible ? "✓" : "", sel, "blue") },
-    { id: "consistencyRow", label: "Consist...", group: "blue", render: (col, sel) => makeAccentCell(CONSISTENCY_LABELS[col.consistency] || "", sel, "blue") },
-    { id: "colorRow", label: "Color", group: "blue", render: (col, sel) => makeAccentCell(COLOR_LABELS[col.color] || "", sel, "blue") },
-    { id: "peakRow", label: "Peak", group: "purple", render: (col, sel) => makeAccentCell(col.isPeak ? "✓" : "", sel, "purple") },
-    { id: "blueMarkerRow", label: "Blue", group: "purple", render: (col, sel) => {
+    { id: "sensationRow", label: "Sensation", group: "mucus", render: (col, sel) => makeAccentCell(SENSATION_LABELS[col.sensation] || "", sel, "mucus") },
+    { id: "stretchRow", label: "Slippery ", group: "mucus", render: (col, sel) => makeAccentCell(col.stretch ? "✓" : "", sel, "mucus") },
+    { id: "visibleRow", label: "Discharge", group: "mucus", render: (col, sel) => makeAccentCell(col.visible ? "✓" : "", sel, "mucus") },
+    { id: "consistencyRow", label: "Consistency", group: "mucus", render: (col, sel) => makeAccentCell(CONSISTENCY_LABELS[col.consistency] || "", sel, "mucus") },
+    { id: "colorRow", label: "Color", group: "mucus", render: (col, sel) => makeAccentCell(COLOR_LABELS[col.color] || "", sel, "mucus") },
+    { id: "blueMarkerRow", label: "Peak Mucus", group: "mucus", render: (col, sel) => {
       const markerColor = normalizeMarkerColor(col.markerColor);
       const marker = col.marker && markerColor === "blue" ? col.marker : "";
-      return makeAccentCell(marker, sel, "purple", marker ? "marker-blue" : "");
+      return makeAccentCell(marker, sel, "mucus", marker ? "marker-blue" : "");
     } },
-    { id: "orangeMarkerRow", label: "Orange", group: "purple", render: (col, sel) => {
-      const markerColor = normalizeMarkerColor(col.markerColor);
-      const marker = col.marker && markerColor === "orange" ? col.marker : "";
-      return makeAccentCell(marker, sel, "purple", marker ? "marker-orange" : "");
-    } },
-    { id: "cervixFirmnessRow", label: "Firmness", group: "green", render: (col, sel) => makeAccentCell(CERVIX_FIRMNESS_LABELS[col.cervixFirmness] || "", sel, "green") },
-    { id: "cervixHeightRow", label: "Height", group: "green", render: (col, sel) => makeAccentCell(CERVIX_HEIGHT_LABELS[col.cervixHeight] || "", sel, "green") },
-    { id: "cervixOpennessRow", label: "Openness", group: "green", render: (col, sel) => {
-      const cell = makeAccentCell("", sel, "green");
+    { id: "cervixFirmnessRow", label: "Firmness", group: "cervix", render: (col, sel) => makeAccentCell(CERVIX_FIRMNESS_LABELS[col.cervixFirmness] || "", sel, "cervix") },
+    { id: "cervixHeightRow", label: "Height", group: "cervix", render: (col, sel) => makeAccentCell(CERVIX_HEIGHT_LABELS[col.cervixHeight] || "", sel, "cervix") },
+    { id: "cervixOpennessRow", label: "Openness", group: "cervix", render: (col, sel) => {
+      const cell = makeAccentCell("", sel, "cervix");
       if (col.cervixOpenness) {
         const openness = document.createElement("span");
         openness.className = ["cervix-indicator", col.cervixOpenness].join(" ");
@@ -260,7 +254,13 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
       }
       return cell;
     } },
-    { id: "otherRow", label: "Symptoms", group: "green", render: (col, sel) => makeAccentCell(col.other ? "✓" : "", sel, "green") },
+    { id: "orangeMarkerRow", label: "Peak Cervix", group: "cervix", render: (col, sel) => {
+      const markerColor = normalizeMarkerColor(col.markerColor);
+      const marker = col.marker && markerColor === "orange" ? col.marker : "";
+      return makeAccentCell(marker, sel, "cervix", marker ? "marker-orange" : "");
+    } },
+    { id: "otherRow", label: "Additional symptoms", group: "symptoms", render: (col, sel) => makeAccentCell(col.other ? "✓" : "", sel, "symptoms") },
+    { id: "sexRow", label: "Sex", group: "symptoms", render: (col, sel) => makeAccentCell(col.sex === true ? "✓" : "", sel, "symptoms") },
   ];
 
   const rowDefinitionsWithPosition = rowDefinitions.map((def, index, all) => {
@@ -330,13 +330,14 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
     ].filter(Boolean).join(" ");
 
     const dayCell = document.createElement("div");
-    dayCell.className = ["map-day", sel].filter(Boolean).join(" ");
+    dayCell.className = ["map-day", sel, col.isFertile ? "fertility-cell" : ""].filter(Boolean).join(" ");
     dayCell.textContent = col.date.getDate();
     attach(dayCell, col);
     dayNumbers.appendChild(dayCell);
 
     rowDefinitionsWithPosition.forEach(def => {
       const cell = def.render(col, sel);
+      if (col.isFertile) cell.classList.add("fertility-cell");
       attach(cell, col);
       rows[def.id].appendChild(cell);
     });
@@ -694,6 +695,24 @@ export function saveCervixModal(render) {
 // draft state for the in-modal calendar — discarded on close without saving
 let fertileRangeDraft = null;
 
+function collectDraftFertileDays() {
+  const selected = new Set(
+    Object.keys(store.entries).filter(key => store.entries[key]?.isFertile === true)
+  );
+
+  const range = getFertileRange();
+  if (!range) return selected;
+
+  const cursor = parseDateKey(range.start);
+  const end = parseDateKey(range.end);
+  while (cursor <= end) {
+    selected.add(formatDateKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return selected;
+}
+
 /** Renders the mini calendar inside the fertile range modal from the current draft. */
 function renderFertileRangeModal() {
   qs("fertileRangeMonthLabel").innerText = new Date(fertileRangeDraft.year, fertileRangeDraft.month)
@@ -721,39 +740,23 @@ function renderFertileRangeModal() {
     div.className   = "day";
     div.textContent = d;
 
-    // full range picked — paint every day in it the same green used everywhere else
-    if (fertileRangeDraft.start && fertileRangeDraft.end && key >= fertileRangeDraft.start && key <= fertileRangeDraft.end) {
+    if (fertileRangeDraft.selectedKeys.has(key)) {
       div.classList.add("fertile-day");
-    } else if (key === fertileRangeDraft.start) {
-      // only a start day picked so far — mark it, waiting for the end day
-      div.classList.add("selected");
     }
 
     div.onclick = () => pickFertileRangeDay(key);
     el.appendChild(div);
   }
-
-  const summary = qs("fertileRangeSummary");
-  if (fertileRangeDraft.start && fertileRangeDraft.end) {
-    summary.innerText = `${fertileRangeDraft.start} → ${fertileRangeDraft.end}`;
-  } else if (fertileRangeDraft.start) {
-    summary.innerText = "Pick an end day";
-  } else {
-    summary.innerText = "Pick a start day";
-  }
 }
 
-/** Handles a day tap inside the fertile range picker. */
+/** Handles day toggling inside the fertile range picker. */
 function pickFertileRangeDay(key) {
-  if (fertileRangeDraft.start && !fertileRangeDraft.end) {
-    // second tap completes the range — swap if the end was picked before the start
-    fertileRangeDraft.end   = key < fertileRangeDraft.start ? fertileRangeDraft.start : key;
-    fertileRangeDraft.start = key < fertileRangeDraft.start ? key : fertileRangeDraft.start;
+  if (fertileRangeDraft.selectedKeys.has(key)) {
+    fertileRangeDraft.selectedKeys.delete(key);
   } else {
-    // first tap, or restarting after a full range was already picked
-    fertileRangeDraft.start = key;
-    fertileRangeDraft.end   = null;
+    fertileRangeDraft.selectedKeys.add(key);
   }
+
   renderFertileRangeModal();
 }
 
@@ -767,14 +770,14 @@ export function changeFertileRangeMonth(delta) {
 
 /** Opens the fertile range modal, preloading the currently active range if any. */
 export function openFertileRangeModal() {
-  const existing = getFertileRange();
-  const base     = existing ? parseDateKey(existing.start) : new Date();
+  const selectedKeys = collectDraftFertileDays();
+  const firstSelected = [...selectedKeys].sort()[0] ?? null;
+  const base = firstSelected ? parseDateKey(firstSelected) : new Date();
 
   fertileRangeDraft = {
     month: base.getMonth(),
     year:  base.getFullYear(),
-    start: existing?.start ?? null,
-    end:   existing?.end   ?? null,
+    selectedKeys,
   };
 
   renderFertileRangeModal();
@@ -787,24 +790,53 @@ export function closeFertileRangeModal() {
 }
 
 export function saveFertileRangeModal(render) {
-  if (!fertileRangeDraft?.start || !fertileRangeDraft?.end) {
-    return showMessage("Pick a start and an end day");
+  if (!fertileRangeDraft?.selectedKeys) {
+    return;
   }
 
-  setFertileRange(fertileRangeDraft.start, fertileRangeDraft.end);
+  Object.keys(store.entries).forEach((key) => {
+    if (store.entries[key]?.isFertile === true) {
+      delete store.entries[key].isFertile;
+    }
+  });
+
+  fertileRangeDraft.selectedKeys.forEach((key) => {
+    store.entries[key] = {
+      ...(store.entries[key] || {}),
+      isFertile: true,
+    };
+  });
+
+  // Keep a single source of truth in per-day flags after this migration.
+  clearFertileRange();
+
   store.save();
   showMessage("Saved ✓");
   closeFertileRangeModal();
   render();
 }
 
-/** Clears the active fertile range entirely. */
-export function clearFertileRangeModal(render) {
-  clearFertileRange();
-  store.save();
-  closeFertileRangeModal();
-  render();
-  showMessage("Fertile range cleared");
+/** Clears fertile-day picks for the currently visible month in the modal draft. */
+export function clearFertileRangeModal() {
+  if (!fertileRangeDraft?.selectedKeys) return;
+
+  const monthPrefix = `${fertileRangeDraft.year}-${String(fertileRangeDraft.month + 1).padStart(2, "0")}-`;
+  let removed = 0;
+
+  [...fertileRangeDraft.selectedKeys].forEach((key) => {
+    if (key.startsWith(monthPrefix)) {
+      fertileRangeDraft.selectedKeys.delete(key);
+      removed++;
+    }
+  });
+
+  if (!removed) {
+    showMessage("No fertile days in this month");
+    return;
+  }
+
+  renderFertileRangeModal();
+  showMessage(`Cleared ${removed} day${removed === 1 ? "" : "s"} in this month`);
 }
 
 /* ─── profile modal ────────────────────────── */
@@ -847,9 +879,10 @@ export function openOtherModal() {
   resetModalState();
 
   const data = store.entries[store.selectedKey] || {};
+  store.modal.sex = data.sex === true ? true : false;
   qs("otherModalInput").value = data.other ?? "";
-
   showModal("otherModal");
+  syncModalUI();
 }
 
 export function closeOtherModal() {
@@ -859,10 +892,14 @@ export function closeOtherModal() {
 export function saveOtherModal(render) {
   if (!store.selectedKey) return;
 
+  const sexValue = store.modal.sex === true;
+
   store.entries[store.selectedKey] = {
     ...(store.entries[store.selectedKey] || {}),
     other: qs("otherModalInput").value.trim(),
   };
+
+  store.entries[store.selectedKey].sex = sexValue;
 
   store.save();
   showMessage("Saved ✓");
@@ -904,9 +941,6 @@ export function openDayInfoModal(currentColumns) {
     `Clots: ${data.sediment ? "Yes" : "No"}`,
   ].join("<br>");
 
-  const range = getFertileRange();
-  const fertileRangeText = range ? `${range.start} to ${range.end}` : "-";
-
   const CERVIX_LABELS = {
     firmness: {
       "": "-",
@@ -933,14 +967,9 @@ export function openDayInfoModal(currentColumns) {
     `Openness: ${CERVIX_LABELS.openness[data.cervixOpenness ?? ""]}`,
   ].join("<br>");
 
-  const markerText = data.marker ? `${data.marker}` : "None";
-  qs("infoMarkers").innerHTML = [
-    `Fertile range: ${fertileRangeText}`,
-    `Peak: ${data.isPeak ? "Yes" : "No"}`,
-    `Marker: ${markerText}`,
-  ].join("<br>");
-
-  qs("infoOther").innerText = data.other?.trim() ? data.other : "-";
+  const sexText = data.sex === true ? "Yes" : data.sex === false ? "No" : "-";
+  const otherText = data.other?.trim() ? data.other : "-";
+  qs("infoOther").innerHTML = `Sex: ${sexText}<br>Notes: ${otherText}`;
 
   showModal("dayInfoModal");
 }

@@ -106,8 +106,15 @@ export function drawHorizontalCoverline(ctx, columns) {
 
 /** Fills day columns with optional color overlays. */
 export function drawOverlayBands(ctx, columns) {
-  columns.forEach(() => {
-    // Fertile-day chart tint is intentionally disabled.
+  columns.forEach(col => {
+    if (!col.isFertile) return;
+    ctx.fillStyle = "rgba(207,231,180,0.28)";
+    ctx.fillRect(
+      col.x,
+      LAYOUT.chartPaddingTop,
+      LAYOUT.columnWidth,
+      LAYOUT.chartHeight - LAYOUT.chartPaddingTop - LAYOUT.chartPaddingBottom,
+    );
   });
 }
 

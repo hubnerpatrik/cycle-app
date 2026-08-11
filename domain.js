@@ -84,6 +84,7 @@ function buildColumn(key, index, date, starts) {
     cervixFirmness: raw.cervixFirmness ?? "",
     cervixHeight: raw.cervixHeight ?? "",
     cervixOpenness: raw.cervixOpenness ?? "",
+    sex: raw.sex === true,
     other: raw.other ?? "",
     isFertile: isFertileDay(key, store.entries),
     isPeak: raw.isPeak ?? false,

@@ -249,25 +249,34 @@
       <h2>Markers</h2>
 
       <div class="modal-section">
-        <div class="section-title">Peak day</div>
+        <div class="section-title">Jump control of STM</div>
         <div class="segmented two peak-day-toggle">
-          <button type="button" data-group="isPeak" data-value="false">No</button>
-          <button type="button" data-group="isPeak" data-value="true">Yes</button>
+          <button type="button" data-group="isPeak" data-value="false">Don't apply</button>
+          <button type="button" data-group="isPeak" data-value="true">Apply</button>
         </div>
       </div>
 
       <div class="modal-section">
         <div class="section-title">Peak type</div>
         <div class="segmented three">
-          <button type="button" data-group="markerColor" data-value="green">Green</button>
-          <button type="button" data-group="markerColor" data-value="blue">Blue</button>
-          <button type="button" data-group="markerColor" data-value="orange">Orange</button>
+          <button type="button" data-group="markerColor" data-value="green">Fertility</button>
+          <button type="button" data-group="markerColor" data-value="blue">Mucus</button>
+          <button type="button" data-group="markerColor" data-value="orange">Cervix</button>
         </div>
       </div>
 
       <div class="modal-section">
-        <div class="section-title">Marker number</div>
-        <input id="markersMarker" type="number" min="1" max="6" placeholder="Enter number" />
+        <div class="section-title">Marker</div>
+        <select id="markersMarker">
+          <option value="">None</option>
+          <option value="P">P</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+        </select>
       </div>
 
       <div class="modal-actions">
@@ -326,7 +335,6 @@
       </div>
 
       <div id="fertileRangeCalendar" class="calendar-grid"></div>
-      <div id="fertileRangeSummary" class="range-summary"></div>
 
       <div class="text-btn-row">
         <button id="clearFertileRangeBtn" class="text-btn" type="button">Clear range</button>
@@ -387,7 +395,15 @@
 
   <div id="otherModal" class="modal hidden">
     <div class="modal-card">
-      <h2>Additional symptoms</h2>
+      <h2>Other</h2>
+
+      <div class="modal-section">
+        <div class="section-title">Sex</div>
+        <div class="segmented two">
+          <button type="button" data-group="sex" data-value="false">No</button>
+          <button type="button" data-group="sex" data-value="true">Yes</button>
+        </div>
+      </div>
 
       <div class="modal-section">
         <div class="section-title">Additional symptoms</div>
@@ -426,11 +442,7 @@
           <div id="infoCervix" class="info-value">-</div>
         </div>
         <div class="info-group">
-          <div class="info-label">Markers</div>
-          <div id="infoMarkers" class="info-value">-</div>
-        </div>
-        <div class="info-group">
-          <div class="info-label">Additional symptoms</div>
+          <div class="info-label">Other</div>
           <div id="infoOther" class="info-value">-</div>
         </div>
       </div>

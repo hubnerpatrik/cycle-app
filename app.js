@@ -87,7 +87,7 @@ function bindModalOverlayClicks(definitions) {
 /** All canvas/grid dimensions in one place. Synced to CSS via syncCSSVariables(). */
 export const LAYOUT = {
   columnWidth:        50,
-  sideLabelWidth:     68,
+  sideLabelWidth:     96,
   tempScaleWidth:     72,
   chartHeight:        840,
   chartPaddingTop:    12,
