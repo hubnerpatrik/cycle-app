@@ -88,7 +88,9 @@ function buildColumn(key, index, date, starts) {
     isFertile: isFertileDay(key, store.entries),
     isPeak: raw.isPeak ?? false,
     marker: raw.marker ?? "",
-    markerColor: raw.markerColor ?? "blue",
+    markerColor: raw.markerColor === "green" || raw.markerColor === "blue" || raw.markerColor === "orange"
+      ? raw.markerColor
+      : "blue",
     markerPointType: raw.markerPointType ?? "temp",
     manualCoverline: raw.manualCoverline ?? null,
     coverlineStart: raw.coverlineStart ?? false,

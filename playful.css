@@ -195,6 +195,90 @@ select:focus,
   z-index: 1200;
 }
 
+.map-row-group {
+  position: relative;
+  overflow: hidden;
+}
+
+.map-row-group::before {
+  content: "";
+  position: absolute;
+  inset: 6px 0 6px auto;
+  width: 3px;
+  border-radius: 999px;
+  opacity: 0.85;
+}
+
+.map-row-group-red::before {
+  background: rgba(239, 68, 68, 0.4);
+}
+
+.map-row-group-blue::before {
+  background: rgba(10, 132, 255, 0.4);
+}
+
+.map-row-group-purple::before {
+  background: rgba(139, 92, 246, 0.4);
+}
+
+.map-row-group-green::before {
+  background: rgba(34, 197, 94, 0.4);
+}
+
+.map-row-group .map-side-label {
+  border-right-color: transparent;
+}
+
+.map-row-group .map-temp-spacer {
+  border-right-color: transparent;
+}
+
+.map-cell-pill {
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.map-row-group .map-cells {
+  margin: 2px 0;
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: 0 6px 16px rgba(22, 32, 41, 0.04);
+}
+
+.map-cell-accent-red,
+.map-cell-accent-blue,
+.map-cell-accent-purple,
+.map-cell-accent-green {
+  color: var(--text);
+}
+
+.map-cells-group-red {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.map-cells-group-blue {
+  background: rgba(10, 132, 255, 0.12);
+}
+
+.map-cells-group-purple {
+  background: rgba(139, 92, 246, 0.12);
+}
+
+.map-cells-group-green {
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.peak-day-toggle button.active {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.36), rgba(134, 239, 172, 0.32));
+  color: var(--text);
+  border-color: rgba(34, 197, 94, 0.45);
+  box-shadow: 0 12px 24px rgba(34, 197, 94, 0.16);
+}
+
 .highlight-strong {
   box-shadow: 0 18px 48px rgba(255, 138, 101, 0.12);
 }

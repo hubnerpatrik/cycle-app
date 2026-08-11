@@ -878,11 +878,6 @@ h1{
   background: transparent;
 }
 
-.map-cell.fertile,
-.map-day.fertile{
-  background:rgba(52,199,89,0.08);
-}
-
 .map-cell.marker-blue {
   color: #2563eb;
   font-weight: 700;

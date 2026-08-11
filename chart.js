@@ -104,13 +104,10 @@ export function drawHorizontalCoverline(ctx, columns) {
 
 /* ─── overlays ────────────────────────────── */
 
-/** Fills fertile and peak day columns with a color band. */
+/** Fills day columns with optional color overlays. */
 export function drawOverlayBands(ctx, columns) {
-  columns.forEach(col => {
-    if (col.isFertile) {
-      ctx.fillStyle = "rgba(34,197,94,0.12)";
-      ctx.fillRect(col.x, LAYOUT.chartPaddingTop, LAYOUT.columnWidth, graphHeight());
-    }
+  columns.forEach(() => {
+    // Fertile-day chart tint is intentionally disabled.
   });
 }
 
@@ -299,6 +296,7 @@ export function drawMarkers(ctx, columns) {
 
   columns.forEach(col => {
     if (col.temp == null || !col.marker) return;
+    if (col.markerColor !== "green") return;
 
     const usingAdjusted = col.markerPointType === "adjusted" && col.adjustedTemp != null;
     const markerY = usingAdjusted ? chartY(col.adjustedTemp) : chartY(col.temp);

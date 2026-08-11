@@ -198,6 +198,20 @@ export function makeCell(text = "", ...classes) {
   return cell;
 }
 
+function normalizeMarkerColor(value) {
+  return value === "green" || value === "blue" || value === "orange" ? value : "blue";
+}
+
+function makeAccentCell(text = "", selected = "", group, ...classes) {
+  return makeCell(
+    text,
+    selected,
+    group ? `map-cell-accent map-cell-accent-${group}` : "",
+    "map-cell-pill",
+    ...classes,
+  );
+}
+
 /**
  * Renders all cycle map rows (day numbers, cycle day, mucus, bleeding, etc.).
  * Interaction callbacks are passed in to avoid circular imports with app.js.
@@ -215,21 +229,29 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
 
   const rowDefinitions = [
     { id: "cycleDayRow", label: "CD (days)", render: (col, sel) => makeCell(col.cycleDay, sel) },
-    { id: "bleedingRow", label: "Bleeding", render: (col, sel) => makeCell(col.bleeding === "menstruation" ? "●" : "", sel, col.bleeding === "menstruation" ? "period" : "") },
-    { id: "spottingRow", label: "Spotting", render: (col, sel) => makeCell(col.bleeding === "spotting" ? "◐" : "", sel, col.bleeding === "spotting" ? "spotting" : "") },
-    { id: "sedimentRow", label: "Clots", render: (col, sel) => makeCell(col.sediment ? "✓" : "", sel) },
-    { id: "sensationRow", label: "Sens", render: (col, sel) => makeCell(SENSATION_LABELS[col.sensation] || "", sel) },
-    { id: "stretchRow", label: "Slip", render: (col, sel) => makeCell(col.stretch ? "✓" : "", sel) },
-    { id: "visibleRow", label: "Discharge", render: (col, sel) => makeCell(col.visible ? "✓" : "", sel) },
-    { id: "consistencyRow", label: "Consist...", render: (col, sel) => makeCell(CONSISTENCY_LABELS[col.consistency] || "", sel) },
-    { id: "colorRow", label: "Color", render: (col, sel) => makeCell(COLOR_LABELS[col.color] || "", sel) },
-    { id: "peakRow", label: "Peak", render: (col, sel) => makeCell(col.isPeak ? "✓" : "", sel) },
-    { id: "markerRow", label: "Marker", render: (col, sel) => makeCell(col.marker || "", sel, col.marker ? `marker-${col.markerColor}` : "") },
-    { id: "cervixFirmnessRow", label: "Firmness", render: (col, sel) => makeCell(CERVIX_FIRMNESS_LABELS[col.cervixFirmness] || "", sel) },
-    { id: "cervixHeightRow", label: "Height", render: (col, sel) => makeCell(CERVIX_HEIGHT_LABELS[col.cervixHeight] || "", sel) },
-    { id: "cervixOpennessRow", label: "Openness", render: (col, sel) => {
-      const cell = document.createElement("div");
-      cell.className = ["map-cell", sel].filter(Boolean).join(" ");
+    { id: "bleedingRow", label: "Bleeding", group: "red", render: (col, sel) => makeAccentCell(col.bleeding === "menstruation" ? "●" : "", sel, "red", col.bleeding === "menstruation" ? "period" : "") },
+    { id: "spottingRow", label: "Spotting", group: "red", render: (col, sel) => makeAccentCell(col.bleeding === "spotting" ? "◐" : "", sel, "red", col.bleeding === "spotting" ? "spotting" : "") },
+    { id: "sedimentRow", label: "Clots", group: "red", render: (col, sel) => makeAccentCell(col.sediment ? "✓" : "", sel, "red") },
+    { id: "sensationRow", label: "Sens", group: "blue", render: (col, sel) => makeAccentCell(SENSATION_LABELS[col.sensation] || "", sel, "blue") },
+    { id: "stretchRow", label: "Slip", group: "blue", render: (col, sel) => makeAccentCell(col.stretch ? "✓" : "", sel, "blue") },
+    { id: "visibleRow", label: "Discharge", group: "blue", render: (col, sel) => makeAccentCell(col.visible ? "✓" : "", sel, "blue") },
+    { id: "consistencyRow", label: "Consist...", group: "blue", render: (col, sel) => makeAccentCell(CONSISTENCY_LABELS[col.consistency] || "", sel, "blue") },
+    { id: "colorRow", label: "Color", group: "blue", render: (col, sel) => makeAccentCell(COLOR_LABELS[col.color] || "", sel, "blue") },
+    { id: "peakRow", label: "Peak", group: "purple", render: (col, sel) => makeAccentCell(col.isPeak ? "✓" : "", sel, "purple") },
+    { id: "blueMarkerRow", label: "Blue markers", group: "purple", render: (col, sel) => {
+      const markerColor = normalizeMarkerColor(col.markerColor);
+      const marker = col.marker && markerColor === "blue" ? col.marker : "";
+      return makeAccentCell(marker, sel, "purple", marker ? "marker-blue" : "");
+    } },
+    { id: "orangeMarkerRow", label: "Orange markers", group: "purple", render: (col, sel) => {
+      const markerColor = normalizeMarkerColor(col.markerColor);
+      const marker = col.marker && markerColor === "orange" ? col.marker : "";
+      return makeAccentCell(marker, sel, "purple", marker ? "marker-orange" : "");
+    } },
+    { id: "cervixFirmnessRow", label: "Firmness", group: "green", render: (col, sel) => makeAccentCell(CERVIX_FIRMNESS_LABELS[col.cervixFirmness] || "", sel, "green") },
+    { id: "cervixHeightRow", label: "Height", group: "green", render: (col, sel) => makeAccentCell(CERVIX_HEIGHT_LABELS[col.cervixHeight] || "", sel, "green") },
+    { id: "cervixOpennessRow", label: "Openness", group: "green", render: (col, sel) => {
+      const cell = makeAccentCell("", sel, "green");
       if (col.cervixOpenness) {
         const openness = document.createElement("span");
         openness.className = ["cervix-indicator", col.cervixOpenness].join(" ");
@@ -238,10 +260,10 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
       }
       return cell;
     } },
-    { id: "otherRow", label: "Symptoms", render: (col, sel) => makeCell(col.other ? "✓" : "", sel) },
+    { id: "otherRow", label: "Symptoms", group: "green", render: (col, sel) => makeAccentCell(col.other ? "✓" : "", sel, "green") },
   ];
 
-  const rows = Object.fromEntries(rowDefinitions.map(def => [def.id, createMapRow(def.label)]));
+  const rows = Object.fromEntries(rowDefinitions.map(def => [def.id, createMapRow(def.label, def.group)]));
 
   // attaches hover and click handlers to a map cell
   const attach = (el, col) => {
@@ -287,7 +309,6 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
   columns.forEach(col => {
     const sel = [
       store.selectedKey === col.key ? "selected-column" : "",
-      col.isFertile ? "fertile" : "",
     ].filter(Boolean).join(" ");
 
     const dayCell = document.createElement("div");
@@ -304,9 +325,9 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
   });
 }
 
-function createMapRow(label) {
+function createMapRow(label, group) {
   const row = document.createElement("div");
-  row.className = "map-row";
+  row.className = ["map-row", group ? `map-row-group map-row-group-${group}` : ""].filter(Boolean).join(" ");
 
   const sideLabel = document.createElement("div");
   sideLabel.className = "map-side-label";
@@ -316,7 +337,7 @@ function createMapRow(label) {
   spacer.className = "map-temp-spacer";
 
   const cells = document.createElement("div");
-  cells.className = "map-cells";
+  cells.className = ["map-cells", group ? `map-cells-group-${group}` : ""].filter(Boolean).join(" ");
 
   row.append(sideLabel, spacer, cells);
   qs("mapRows").appendChild(row);
@@ -572,7 +593,7 @@ export function openMarkersModal() {
 
   store.modal.isPeak = data.isPeak === true;
   store.modal.marker = data.marker ?? "";
-  store.modal.markerColor = data.markerColor ?? "blue";
+  store.modal.markerColor = normalizeMarkerColor(data.markerColor ?? "blue");
   store.modal.markerPointType = data.markerPointType ?? store.selectedPointType ?? "temp";
 
   qs("markersMarker").value = store.modal.marker;
@@ -596,11 +617,13 @@ export function saveMarkersModal(render) {
 
   store.modal.marker = qs("markersMarker").value || "";
 
+  const markerColor = normalizeMarkerColor(store.modal.markerColor || "blue");
+
   store.entries[store.selectedKey] = {
     ...(store.entries[store.selectedKey] || {}),
     isPeak: store.modal.isPeak === true,
     marker: store.modal.marker,
-    markerColor: store.modal.markerColor || "blue",
+    markerColor,
     markerPointType: store.modal.markerPointType || "temp",
   };
 
@@ -888,7 +911,7 @@ export function openDayInfoModal(currentColumns) {
     `Openness: ${CERVIX_LABELS.openness[data.cervixOpenness ?? ""]}`,
   ].join("<br>");
 
-  const markerText = data.marker ? `${data.marker} (${data.markerColor ?? "blue"})` : "None";
+  const markerText = data.marker ? `${data.marker}` : "None";
   qs("infoMarkers").innerHTML = [
     `Fertile range: ${fertileRangeText}`,
     `Peak: ${data.isPeak ? "Yes" : "No"}`,
