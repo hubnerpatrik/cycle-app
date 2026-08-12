@@ -5,8 +5,16 @@ Educational symptothermal cycle tracking application focused on interpretation, 
 Demo:
 https://cycle-6mf61zw3o-hubnerpatriks-projects.vercel.app/
 
-<img width="1920" height="1200" alt="obrazek" src="https://github.com/user-attachments/assets/d8bda5e4-e699-4fb2-a53d-721e7bb4ace7" />
-<img width="340" height="775" alt="obrazek" src="https://github.com/user-attachments/assets/a78a2937-806b-428c-b051-cc6b09bddac8" />
+<img width="1504" height="844" alt="Main Menu" src="https://github.com/user-attachments/assets/ca410237-4a9e-45c0-84f2-d9bc358695ab" />
+
+<img width="1402" height="818" alt="My Profile" src="https://github.com/user-attachments/assets/7ccc229f-2ff8-4b2a-af93-c659553a1b73" />
+
+<img width="1683" height="878" alt="My Maps" src="https://github.com/user-attachments/assets/399f340b-c69f-4965-9963-ea1a21bdd24a" />
+
+<img width="1794" height="2303" alt="Map edit page" src="https://github.com/user-attachments/assets/676afca3-a4c2-4348-8bb2-49e75e440428" />
+
+
+
 
 ---
 
@@ -61,7 +69,7 @@ Cycles are detected automatically from logged menstruation and can be browsed wi
 
 ## Data Model
 
-Observations are stored locally via `localStorage`, keyed by date string. Coverlines, the fertile range, and profile info are stored alongside entries in the same object.
+Observations are stored locally via `localStorage`, keyed by date string. Coverlines, the fertile range, and profile info are stored alongside entries in the same object. This is still in WIP. In future updates i want use database as a solution.
 
 ```json
 {
