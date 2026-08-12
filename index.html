@@ -34,90 +34,109 @@
 <body>
   <main class="app">
     <header class="app-header">
-      <h1>Marta Zhinochna STM</h1>
+      <div class="header-brand">
+        <p class="app-kicker">Cycle tracking</p>
+        <h1>Marta Zhinochna STM</h1>
+      </div>
+      <nav id="headerNav" class="header-nav hidden" aria-label="Main navigation">
+        <button id="navMenuBtn" class="header-nav-btn" type="button">Main Menu</button>
+        <button id="navProfileBtn" class="header-nav-btn" type="button">My Profile</button>
+        <button id="navMapsBtn" class="header-nav-btn" type="button">My Maps</button>
+        <button id="navCreateMapBtn" class="header-nav-btn" type="button">Create Map</button>
+        <button id="navActiveMapBtn" class="header-nav-btn" type="button">Active Map</button>
+      </nav>
     </header>
 
-    <section class="layout" aria-label="Cycle tracker dashboard">
-      <section class="calendar-card" aria-label="Calendar view">
-        <div class="calendar-nav">
-          <button id="prevMonth" type="button">‹</button>
-          <div id="monthLabel" class="month-label"></div>
-          <button id="nextMonth" type="button">›</button>
+    <div id="screenRoot"></div>
+
+    <section id="activeMapScreen" class="hidden" aria-label="Active map">
+      <section class="layout" aria-label="Cycle tracker dashboard">
+        <section class="calendar-card" aria-label="Calendar view">
+          <div class="calendar-nav">
+            <button id="prevMonth" type="button">‹</button>
+            <div id="monthLabel" class="month-label"></div>
+            <button id="nextMonth" type="button">›</button>
+          </div>
+
+          <div id="calendar" class="calendar-grid"></div>
+
+          <div class="legend">
+            <div class="legend-item">
+              <span class="dot red"></span>
+              Menstruation
+            </div>
+            <div class="legend-item">
+              <span class="dot green"></span>
+              Fertile
+            </div>
+          </div>
+        </section>
+
+        <aside class="info-card" aria-label="Action menu">
+          <h2 class="info-title">Actions</h2>
+          <div id="sidebarActions"></div>
+          <div id="profileInfoCard" class="profile-info-card"></div>
+        </aside>
+      </section>
+
+      <section class="chart-card" aria-label="Cycle chart">
+        <div class="chart-tools">
+          <div class="chart-tools-left">
+            <div class="active-map-meta">
+              <span id="activeMapName" class="active-map-name">Active map</span>
+              <span id="activeMapStatusPill" class="map-pill hidden">Open</span>
+            </div>
+            <div class="cycle-nav">
+              <button id="prevCycleBtn" class="tool-btn" type="button">‹</button>
+              <span id="cycleNavLabel"></span>
+              <button id="nextCycleBtn" class="tool-btn" type="button">›</button>
+            </div>
+            <div class="zoom-controls">
+              <button id="zoomOutBtn" class="tool-btn" type="button">−</button>
+              <span id="zoomLabel">100%</span>
+              <button id="zoomInBtn" class="tool-btn" type="button">+</button>
+            </div>
+          </div>
+          <div class="chart-tools-right">
+            <div class="coverline-menu-wrapper">
+              <button id="coverlineBtn" class="tool-btn coverline-btn" type="button">Coverline</button>
+              <div id="coverlineMenu" class="coverline-menu hidden">
+                <button type="button" data-coverline="horizontal" class="coverline-option">Horizontal</button>
+                <button type="button" data-coverline="vertical" class="coverline-option">Vertical</button>
+              </div>
+            </div>
+            <button id="markersActionBtn" class="tool-btn marker-btn" type="button">Markers</button>
+            <button id="saveActiveMapBtn" class="btn primary chart-save-btn" type="button">Save Map</button>
+          </div>
         </div>
 
-        <div id="calendar" class="calendar-grid"></div>
+        <div class="cycle-map">
+          <div class="map-scroll">
+            <div class="map-grid">
+              <div class="map-header-row">
+                <div class="map-side-label"></div>
+                <div class="map-temp-spacer"></div>
+                <div id="dayNumbers" class="map-days"></div>
+              </div>
 
-        <div class="legend">
-          <div class="legend-item">
-            <span class="dot red"></span>
-            Menstruation
-          </div>
-          <div class="legend-item">
-            <span class="dot green"></span>
-            Fertile
+              <div class="map-chart-row">
+                <div class="map-side-label">Temp (°C)</div>
+                <div id="tempScale" class="temp-scale-column"></div>
+                <div class="map-chart-area">
+                  <canvas id="tempChart"></canvas>
+                </div>
+              </div>
+
+              <div id="mapRows" class="map-rows"></div>
+            </div>
           </div>
         </div>
       </section>
 
-      <aside class="info-card" aria-label="Action menu">
-        <h2 class="info-title">Actions</h2>
-        <div id="sidebarActions"></div>
-        <div id="profileInfoCard" class="profile-info-card"></div>
-      </aside>
-    </section>
-
-    <section class="chart-card" aria-label="Cycle chart">
-      <div class="chart-tools">
-        <div class="chart-tools-left">
-          <div class="cycle-nav">
-            <button id="prevCycleBtn" class="tool-btn" type="button">‹</button>
-            <span id="cycleNavLabel"></span>
-            <button id="nextCycleBtn" class="tool-btn" type="button">›</button>
-          </div>
-          <div class="zoom-controls">
-            <button id="zoomOutBtn" class="tool-btn" type="button">−</button>
-            <span id="zoomLabel">100%</span>
-            <button id="zoomInBtn" class="tool-btn" type="button">+</button>
-          </div>
-        </div>
-        <div class="chart-tools-right">
-          <div class="coverline-menu-wrapper">
-            <button id="coverlineBtn" class="tool-btn coverline-btn" type="button">Coverline</button>
-            <div id="coverlineMenu" class="coverline-menu hidden">
-              <button type="button" data-coverline="horizontal" class="coverline-option">Horizontal</button>
-              <button type="button" data-coverline="vertical" class="coverline-option">Vertical</button>
-            </div>
-          </div>
-          <button id="markersActionBtn" class="tool-btn marker-btn" type="button">Markers</button>
-        </div>
-      </div>
-
-      <div class="cycle-map">
-        <div class="map-scroll">
-          <div class="map-grid">
-            <div class="map-header-row">
-              <div class="map-side-label"></div>
-              <div class="map-temp-spacer"></div>
-              <div id="dayNumbers" class="map-days"></div>
-            </div>
-
-            <div class="map-chart-row">
-              <div class="map-side-label">Temp (°C)</div>
-              <div id="tempScale" class="temp-scale-column"></div>
-              <div class="map-chart-area">
-                <canvas id="tempChart"></canvas>
-              </div>
-            </div>
-
-            <div id="mapRows" class="map-rows"></div>
-          </div>
-        </div>
+      <div class="dev-panel">
+        <button id="devReset" class="text-btn" type="button">DEV RESET</button>
       </div>
     </section>
-
-    <div class="dev-panel">
-      <button id="devReset" class="text-btn" type="button">DEV RESET</button>
-    </div>
   </main>
 
   <div id="toast" class="toast hidden"></div>
@@ -343,52 +362,6 @@
       <div class="modal-actions">
         <button id="closeFertileRangeModalBtn" class="btn secondary" type="button">Close</button>
         <button id="saveFertileRangeModalBtn" class="btn primary" type="button">Save</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="profileModal" class="modal hidden">
-    <div class="modal-card">
-      <h2>Profile</h2>
-
-      <div class="modal-section">
-        <div class="input-label">Age</div>
-        <input id="profileAgeInput" type="number" min="10" max="60" placeholder="e.g. 29">
-      </div>
-
-      <div class="modal-section">
-        <div class="input-label">Usual measurement time</div>
-        <input id="profileUsualTimeInput" type="time">
-      </div>
-
-      <div class="modal-section">
-        <div class="input-label">Goal</div>
-        <select id="profileGoalInput">
-          <option value="">Not set</option>
-          <option value="avoid">Avoid pregnancy</option>
-          <option value="achieve">Achieve pregnancy</option>
-          <option value="observation">Observation only</option>
-        </select>
-      </div>
-
-      <div class="modal-section">
-        <div class="input-label">Map number</div>
-        <input id="profileMapNumberInput" type="number" min="1" placeholder="e.g. 3">
-      </div>
-
-      <div class="modal-section">
-        <div class="input-label">Measurement method</div>
-        <select id="profileMeasurementMethodInput">
-          <option value="">Not set</option>
-          <option value="oral">Oral</option>
-          <option value="vaginal">Vaginal</option>
-          <option value="rectal">Rectal</option>
-        </select>
-      </div>
-
-      <div class="modal-actions">
-        <button id="closeProfileModalBtn" class="btn secondary" type="button">Close</button>
-        <button id="saveProfileModalBtn" class="btn primary" type="button">Save</button>
       </div>
     </div>
   </div>

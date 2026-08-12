@@ -1,11 +1,14 @@
 // store.js — Application state and localStorage persistence
 // ─────────────────────────────────────────────
 // Owns the Store class and the singleton store instance.
-// All observation data lives in store.entries keyed by "YYYY-MM-DD".
+// Active-map data is exposed through store.entries for compatibility.
 
-/* ─── storage key ─────────────────────────── */
+/* ─── storage keys ────────────────────────── */
 
-export const STORAGE_KEY = "cycleData";
+export const LEGACY_STORAGE_KEY = "cycleData";
+export const PROFILE_STORAGE_KEY = "profile";
+export const MAPS_STORAGE_KEY = "maps";
+export const ACTIVE_MAP_ID_STORAGE_KEY = "activeMapId";
 
 /* ─── store ───────────────────────────────── */
 
@@ -33,16 +36,21 @@ constructor() {
   // person-level info, not tied to any single day
   this.profile = this._emptyProfile();
 
-  this.entries = this._load();
+  this.activeMapId = null;
+  this.maps = {};
+  this.entries = {};
+
+  this._load();
 }
 
   /** Returns a blank profile state object. */
   _emptyProfile() {
     return {
+      name: "",
+      consultantName: "",
       age: "",
       usualMeasurementTime: "",
       goal: "",
-      mapNumber: "",
       measurementMethod: "",
     };
   }
@@ -80,43 +88,266 @@ _emptyModal() {
   };
 }
 
-  /** Loads entries from localStorage. Returns empty object on parse failure. */
-  _load() {
+  _emptyMap(id, name = "") {
+    return {
+      id,
+      name,
+      createdAt: new Date().toISOString(),
+      status: "open",
+      closedAt: null,
+      entries: {},
+      coverlines: {},
+      fertileRange: { start: null, end: null },
+    };
+  }
+
+  _safeParse(raw, fallback) {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      const parsed = raw ? JSON.parse(raw) : {};
-
-      if (typeof parsed !== "object" || parsed === null) {
-        return {};
-      }
-
-      if (parsed.entries) {
-        this.coverlines = parsed.coverlines ?? {};
-        this.fertileRange = parsed.fertileRange ?? { start: null, end: null };
-        this.profile = parsed.profile ?? this._emptyProfile();
-        return parsed.entries;
-      }
-
-      return parsed;
+      const parsed = raw ? JSON.parse(raw) : fallback;
+      return typeof parsed === "object" && parsed !== null ? parsed : fallback;
     } catch {
-      console.warn("cycleData corrupted — resetting.");
-      return {};
+      return fallback;
     }
+  }
+
+  _normalizeProfile(profile) {
+    return {
+      ...this._emptyProfile(),
+      ...(profile && typeof profile === "object" ? profile : {}),
+    };
+  }
+
+  _normalizeMap(map, fallbackId, fallbackName = "") {
+    const normalized = map && typeof map === "object" ? map : {};
+    return {
+      id: normalized.id || fallbackId,
+      name: typeof normalized.name === "string" ? normalized.name : fallbackName,
+      createdAt: normalized.createdAt || new Date().toISOString(),
+      status: normalized.status === "closed" ? "closed" : "open",
+      closedAt: normalized.closedAt ?? null,
+      entries: normalized.entries && typeof normalized.entries === "object" ? normalized.entries : {},
+      coverlines: normalized.coverlines && typeof normalized.coverlines === "object" ? normalized.coverlines : {},
+      fertileRange: normalized.fertileRange && typeof normalized.fertileRange === "object"
+        ? {
+            start: normalized.fertileRange.start ?? null,
+            end: normalized.fertileRange.end ?? null,
+          }
+        : { start: null, end: null },
+    };
+  }
+
+  _generateMapId() {
+    return `map-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  _persistAll() {
+    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(this.profile));
+    localStorage.setItem(MAPS_STORAGE_KEY, JSON.stringify(this.maps));
+
+    if (this.activeMapId) {
+      localStorage.setItem(ACTIVE_MAP_ID_STORAGE_KEY, this.activeMapId);
+    } else {
+      localStorage.removeItem(ACTIVE_MAP_ID_STORAGE_KEY);
+    }
+  }
+
+  _clearTransientSelection() {
+    this.selectedKey = null;
+    this.hoveredKey = null;
+    this.hoveredPointType = null;
+    this.currentCycleIndex = null;
+  }
+
+  _syncActiveMapState() {
+    const activeMap = this.activeMapId ? this.maps[this.activeMapId] : null;
+    this.entries = activeMap?.entries ?? {};
+    this.coverlines = activeMap?.coverlines ?? {};
+    this.fertileRange = activeMap?.fertileRange ?? { start: null, end: null };
+  }
+
+  _ensureActiveMap() {
+    if (this.activeMapId && this.maps[this.activeMapId]) {
+      this._syncActiveMapState();
+      return;
+    }
+
+    const firstMapId = Object.keys(this.maps)[0] ?? null;
+    this.activeMapId = firstMapId;
+    this._syncActiveMapState();
+  }
+
+  _migrateLegacyData() {
+    const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (!raw || localStorage.getItem(MAPS_STORAGE_KEY)) return false;
+
+    const parsed = this._safeParse(raw, null);
+    if (!parsed) return false;
+
+    const legacyEntries = parsed.entries && typeof parsed.entries === "object"
+      ? parsed.entries
+      : parsed;
+
+    const mapId = this._generateMapId();
+    this.maps = {
+      [mapId]: this._normalizeMap({
+        id: mapId,
+        name: "My cycle",
+        createdAt: new Date().toISOString(),
+        entries: legacyEntries,
+        coverlines: parsed.coverlines,
+        fertileRange: parsed.fertileRange,
+      }, mapId, "My cycle"),
+    };
+    this.activeMapId = mapId;
+    this.profile = this._normalizeProfile(parsed.profile);
+    this._persistAll();
+    return true;
+  }
+
+  /** Loads profile + maps from localStorage and migrates legacy single-map data if needed. */
+  _load() {
+    const migrated = this._migrateLegacyData();
+
+    const storedProfile = this._safeParse(localStorage.getItem(PROFILE_STORAGE_KEY), this._emptyProfile());
+    const storedMaps = this._safeParse(localStorage.getItem(MAPS_STORAGE_KEY), {});
+    const storedActiveMapId = localStorage.getItem(ACTIVE_MAP_ID_STORAGE_KEY);
+
+    this.profile = this._normalizeProfile(storedProfile);
+    this.maps = Object.fromEntries(
+      Object.entries(storedMaps).map(([id, map]) => [id, this._normalizeMap(map, id, map?.name || "")]),
+    );
+    this.activeMapId = storedActiveMapId;
+
+    this._ensureActiveMap();
+
+    if (migrated) {
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+    }
+  }
+
+  hasProfile() {
+    return localStorage.getItem(PROFILE_STORAGE_KEY) != null;
+  }
+
+  getProfile() {
+    return this.profile;
+  }
+
+  saveProfile(profile) {
+    this.profile = this._normalizeProfile(profile);
+    this._persistAll();
+  }
+
+  listMaps() {
+    return Object.values(this.maps)
+      .map(map => this._normalizeMap(map, map.id, map.name))
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  }
+
+  getMap(mapId) {
+    return this.maps[mapId] ? this._normalizeMap(this.maps[mapId], mapId, this.maps[mapId].name) : null;
+  }
+
+  createMap(name) {
+    const mapId = this._generateMapId();
+    const map = this._emptyMap(mapId, name.trim());
+    this.maps[mapId] = map;
+    this.activeMapId = mapId;
+    this._clearTransientSelection();
+    this._syncActiveMapState();
+    this._persistAll();
+    return map;
+  }
+
+  saveMapEntries(mapId, entries) {
+    if (!this.maps[mapId]) return;
+    this.maps[mapId].entries = entries;
+    if (this.activeMapId === mapId) {
+      this.entries = this.maps[mapId].entries;
+    }
+    this._persistAll();
+  }
+
+  renameMap(mapId, name) {
+    if (!this.maps[mapId]) return false;
+    const nextName = String(name ?? "").trim();
+    if (!nextName) return false;
+
+    this.maps[mapId] = {
+      ...this.maps[mapId],
+      name: nextName,
+    };
+
+    this._persistAll();
+    return true;
+  }
+
+  getActiveMapId() {
+    return this.activeMapId;
+  }
+
+  setActiveMapId(mapId) {
+    if (!this.maps[mapId]) return false;
+    this.maps[mapId] = {
+      ...this.maps[mapId],
+      status: "open",
+      closedAt: null,
+    };
+    this.activeMapId = mapId;
+    this._clearTransientSelection();
+    this._syncActiveMapState();
+    this._persistAll();
+    return true;
+  }
+
+  getActiveMap() {
+    return this.activeMapId ? this.getMap(this.activeMapId) : null;
+  }
+
+  hasOpenActiveMap() {
+    const map = this.getActiveMap();
+    return Boolean(map && map.status !== "closed");
+  }
+
+  closeActiveMap() {
+    if (!this.activeMapId || !this.maps[this.activeMapId]) return null;
+
+    this.save();
+    const closedMap = {
+      ...this.maps[this.activeMapId],
+      status: "closed",
+      closedAt: new Date().toISOString(),
+    };
+    this.maps[this.activeMapId] = closedMap;
+    this.activeMapId = null;
+    this._clearTransientSelection();
+    this._syncActiveMapState();
+    this._persistAll();
+    return closedMap;
   }
 
   /** Persists current entries to localStorage. */
   save() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      entries: this.entries,
-      coverlines: this.coverlines,
-      fertileRange: this.fertileRange,
-      profile: this.profile,
-    }));
+    if (this.activeMapId && this.maps[this.activeMapId]) {
+      this.maps[this.activeMapId] = {
+        ...this.maps[this.activeMapId],
+        entries: this.entries,
+        coverlines: this.coverlines,
+        fertileRange: this.fertileRange,
+      };
+    }
+
+    this._persistAll();
   }
 
   /** Clears all data and resets state to defaults. */
   reset() {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+    localStorage.removeItem(PROFILE_STORAGE_KEY);
+    localStorage.removeItem(MAPS_STORAGE_KEY);
+    localStorage.removeItem(ACTIVE_MAP_ID_STORAGE_KEY);
+    this.maps        = {};
+    this.activeMapId = null;
     this.entries     = {};
     this.selectedKey = null;
     this.hoveredKey  = null;

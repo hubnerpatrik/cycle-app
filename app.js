@@ -16,6 +16,7 @@
 import { store } from "./store.js";
 import { buildCycleColumns, getCycleCount, getCycleStartDates } from "./domain.js";
 import { renderChart, handleCanvasClick } from "./chart.js";
+import { createRouter } from "./router.js";
 
 import {
   renderMonth,
@@ -49,9 +50,6 @@ import {
   saveFertileRangeModal,
   clearFertileRangeModal,
   changeFertileRangeMonth,
-  openProfileModal,
-  closeProfileModal,
-  saveProfileModal,
   openOtherModal,
   closeOtherModal,
   saveOtherModal,
@@ -259,6 +257,8 @@ export function syncCSSVariables() {
 
 /** Columns built from store.entries each render cycle. Shared across modules. */
 export let currentColumns = [];
+let activeMapInitialized = false;
+let router = null;
 
 export function getCycleCoverlineKey(cycleIndex = store.currentCycleIndex) {
   return cycleIndex == null ? "default" : `cycle-${cycleIndex}`;
@@ -423,6 +423,7 @@ export function render() {
   renderChart(currentColumns);
   renderCycleNav();
   renderProfileInfo();
+  renderActiveMapMeta();
 }
 
 /** Updates cycle navigation label and button states. */
@@ -442,10 +443,33 @@ function renderZoomLabel() {
   qs("zoomLabel").innerText = `${pct}%`;
 }
 
+function renderActiveMapMeta() {
+  const activeMap = store.getActiveMap();
+  const name = qs("activeMapName");
+  const pill = qs("activeMapStatusPill");
+  const saveButton = qs("saveActiveMapBtn");
+  if (!name || !pill || !saveButton) return;
+
+  if (!activeMap) {
+    name.innerText = "No active map";
+    pill.classList.add("hidden");
+    saveButton.disabled = true;
+    return;
+  }
+
+  name.innerText = activeMap.name || "Untitled map";
+  pill.innerText = activeMap.status === "closed" ? "Closed" : "Open";
+  pill.classList.remove("hidden", "map-pill-closed");
+  if (activeMap.status === "closed") pill.classList.add("map-pill-closed");
+  saveButton.disabled = activeMap.status === "closed";
+}
+
 /* ─── init ────────────────────────────────── */
 
 /** Binds all event listeners. Called once on DOMContentLoaded. */
-function init() {
+function initActiveMap() {
+  if (activeMapInitialized) return;
+
   syncCSSVariables();
   renderTempFactorsOptions();
   renderActionButtons();
@@ -514,7 +538,6 @@ function init() {
     ["mucusActionBtn", () => openAfterAction(() => openMucusModal())],
     ["cervixActionBtn", () => openAfterAction(() => openCervixModal())],
     ["fertileRangeActionBtn", () => openAfterAction(() => openFertileRangeModal())],
-    ["profileActionBtn", () => openAfterAction(() => openProfileModal())],
     ["otherActionBtn", () => openAfterAction(() => openOtherModal())],
   ].forEach(([id, handler]) => bindButton(id, handler));
 
@@ -533,8 +556,6 @@ function init() {
   bindButton("fertileRangePrevMonth", () => changeFertileRangeMonth(-1));
   bindButton("fertileRangeNextMonth", () => changeFertileRangeMonth(1));
 
-  bindButton("saveProfileModalBtn", () => saveProfileModal(render));
-
   bindButton("clearMarkersModalBtn", () => clearMarkersModalInput());
   bindButton("saveMarkersModalBtn", () => saveMarkersModal(render));
 
@@ -547,7 +568,6 @@ function init() {
     ["closeBleedingModalBtn", () => reopenActionAfter(() => closeBleedingModal())],
     ["closeMucusModalBtn", () => reopenActionAfter(() => closeMucusModal())],
     ["closeFertileRangeModalBtn", () => closeFertileRangeModal()],
-    ["closeProfileModalBtn", () => closeProfileModal()],
     ["closeMarkersModalBtn", () => closeMarkersModal()],
     ["closeCervixModalBtn", () => reopenActionAfter(() => closeCervixModal())],
     ["closeOtherModalBtn", () => reopenActionAfter(() => closeOtherModal())],
@@ -561,7 +581,6 @@ function init() {
     ["markersModal", closeMarkersModal],
     ["cervixModal", closeCervixModal],
     ["fertileRangeModal", closeFertileRangeModal],
-    ["profileModal", closeProfileModal],
     ["otherModal", closeOtherModal],
     ["dayInfoModal", closeDayInfoModal],
   ]);
@@ -627,8 +646,20 @@ function init() {
   qs("devReset").onclick = () => {
     if (!confirm("Reset all data? This cannot be undone.")) return;
     store.reset();
-    render();
+    router?.start();
   };
+
+  bindButton("saveActiveMapBtn", () => {
+    const activeMap = store.getActiveMap();
+    if (!activeMap) return;
+    if (!confirm(`Save and close \"${activeMap.name || "Untitled map"}\"?`)) return;
+
+    const closedMap = store.closeActiveMap();
+    if (!closedMap) return;
+    hideAllModals();
+    showMessage("Map saved and closed ✓");
+    router?.navigate("my-maps");
+  });
 
   const tempChart = qs("tempChart");
   if (tempChart) {
@@ -733,12 +764,81 @@ function init() {
   // day info modal
   bindButton("dayInfoBtn", () => openDayInfoModal(currentColumns));
   bindButton("closeDayInfoModalBtn", closeDayInfoModal);
+
+  activeMapInitialized = true;
+}
+
+function hideAllModals() {
+  [
+    "modal",
+    "actionModal",
+    "bleedingModal",
+    "mucusModal",
+    "markersModal",
+    "cervixModal",
+    "fertileRangeModal",
+    "otherModal",
+    "dayInfoModal",
+  ].forEach(id => {
+    const modal = qs(id);
+    if (!modal) return;
+    modal.classList.remove("show");
+    modal.classList.add("hidden");
+  });
+}
+
+function focusActiveMap() {
+  const keys = Object.keys(store.entries).sort();
+  if (!keys.length) {
+    const now = new Date();
+    store.month = now.getMonth();
+    store.year = now.getFullYear();
+    store.currentCycleIndex = null;
+    return;
+  }
+
+  const latest = parseDateKey(keys[keys.length - 1]);
+  store.month = latest.getMonth();
+  store.year = latest.getFullYear();
+
+  const starts = getCycleStartDates();
+  store.currentCycleIndex = starts.length ? starts.length - 1 : null;
+}
+
+function showStandaloneScreen() {
+  hideAllModals();
+  qs("screenRoot")?.classList.remove("hidden");
+  qs("activeMapScreen")?.classList.add("hidden");
+}
+
+function openActiveMapScreen(mapId = store.getActiveMapId()) {
+  if (mapId) {
+    store.setActiveMapId(mapId);
+  }
+
+  initActiveMap();
+  hideAllModals();
+  focusActiveMap();
+  qs("screenRoot")?.classList.add("hidden");
+  qs("activeMapScreen")?.classList.remove("hidden");
+  render();
+  renderZoomLabel();
 }
 
 /* ─── boot ────────────────────────────────── */
 
 document.addEventListener("DOMContentLoaded", () => {
-  init();
-  render();
-  renderZoomLabel();
+  router = createRouter({
+    root: qs("screenRoot"),
+    showStandaloneScreen,
+    openActiveMap: openActiveMapScreen,
+    showMessage,
+  });
+
+  bindButton("navMenuBtn", () => router?.navigate("menu"));
+  bindButton("navProfileBtn", () => router?.navigate("my-profile"));
+  bindButton("navMapsBtn", () => router?.navigate("my-maps"));
+  bindButton("navCreateMapBtn", () => router?.navigate("create-map"));
+  bindButton("navActiveMapBtn", () => router?.navigate("active-map"));
+  router.start();
 });

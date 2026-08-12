@@ -123,7 +123,6 @@ const sidebarActionDefs = [
   { id: "editBtn", label: "Edit Day", iconClass: "chip-edit-special", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 11-11-3-3L5 16l-1 4Z"/><path d="M14 6l3 3"/></svg>` },
   { id: "dayInfoBtn", label: "Day Info", iconClass: "chip-gray", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg>` },
   { id: "fertileRangeActionBtn", label: "Fertile range", iconClass: "chip-green", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2.5 3.5L16 11H5"/></svg>` },
-  { id: "profileActionBtn", label: "Profile", iconClass: "chip-profile-special", iconSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg>` },
 ];
 
 const modalActionDefs = [
@@ -172,10 +171,11 @@ export function renderProfileInfo() {
 
   const p = store.profile;
   const rows = [
+    ["Name",        p.name],
+    ["Consultant",  p.consultantName],
     ["Age",         p.age],
     ["Time",        p.usualMeasurementTime],
     ["Goal",        GOAL_LABELS[p.goal] || ""],
-    ["Map #",       p.mapNumber],
     ["Method",      METHOD_LABELS[p.measurementMethod] || ""],
   ].filter(([, v]) => v);
 
@@ -837,40 +837,6 @@ export function clearFertileRangeModal() {
 
   renderFertileRangeModal();
   showMessage(`Cleared ${removed} day${removed === 1 ? "" : "s"} in this month`);
-}
-
-/* ─── profile modal ────────────────────────── */
-
-/** Opens the profile modal, preloading the currently saved values. */
-export function openProfileModal() {
-  const profile = store.profile;
-
-  qs("profileAgeInput").value               = profile.age;
-  qs("profileUsualTimeInput").value          = profile.usualMeasurementTime;
-  qs("profileGoalInput").value               = profile.goal;
-  qs("profileMapNumberInput").value          = profile.mapNumber;
-  qs("profileMeasurementMethodInput").value  = profile.measurementMethod;
-
-  showModal("profileModal");
-}
-
-export function closeProfileModal() {
-  hideModal("profileModal");
-}
-
-export function saveProfileModal(render) {
-  store.profile = {
-    age:                  qs("profileAgeInput").value,
-    usualMeasurementTime: qs("profileUsualTimeInput").value,
-    goal:                 qs("profileGoalInput").value,
-    mapNumber:            qs("profileMapNumberInput").value,
-    measurementMethod:    qs("profileMeasurementMethodInput").value,
-  };
-
-  store.save();
-  showMessage("Saved ✓");
-  closeProfileModal();
-  render();
 }
 
 export function openOtherModal() {
