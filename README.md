@@ -73,31 +73,45 @@ Observations are stored locally via `localStorage`, keyed by date string. Coverl
 
 ```json
 {
-  "entries": {
-    "2026-05-01": {
-      "temp": 36.50,
-      "tempFactors": "illness",
-      "measurementTime": "07:15",
-      "bleeding": "menstruation",
-      "discharge": false,
-      "sensation": "dry",
-      "stretch": false,
-      "visible": false,
-      "consistency": "",
-      "color": "",
-      "colorOther": "",
-      "sediment": false,
-      "cervixFirmness": "",
-      "cervixHeight": "",
-      "cervixOpenness": "",
-      "isPeak": false,
-      "marker": "",
-      "other": ""
-    }
-  },
-  "coverlines": {},
-  "fertileRange": { "start": null, "end": null },
-  "profile": {}
+  "map-1735689000000-a1b2c3": {
+    "id": "map-1735689000000-a1b2c3",
+    "name": "My cycle",
+    "createdAt": "2026-05-01T07:00:00.000Z",
+    "status": "open",
+    "closedAt": null,
+    "entries": {
+      "2026-05-01": {
+        "temp": 36.5,
+        "tempFactors": "illness",
+        "measurementTime": "07:15",
+        "bleeding": "menstruation",
+        "sediment": false,
+        "sensation": "dry",
+        "stretch": false,
+        "visible": false,
+        "consistency": "",
+        "color": "",
+        "colorOther": "",
+        "isPeak": false,
+        "marker": "",
+        "markerColor": "blue",
+        "markerPointType": "temp",
+        "cervixFirmness": "",
+        "cervixHeight": "",
+        "cervixOpenness": "",
+        "other": "",
+        "sex": false,
+        "isFertile": true
+      }
+    },
+    "coverlines": {
+      "cycle-0": {
+        "horizontalTemp": 36.6,
+        "verticalKey": "2026-05-14"
+      }
+    },
+    "fertileRange": { "start": null, "end": null }
+  }
 }
 ```
 
