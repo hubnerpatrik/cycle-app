@@ -118,33 +118,41 @@ Observations are stored locally via `localStorage`, keyed by date string. Coverl
 ---
 
 ## Architecture
-Vite + vanilla JS, no framework. The app is split into a core (src) and screens (public/views).
-
-Core
-File	Responsibility
-app.js	Entry point — constants, utilities, layout geometry, render(), event listener initialization
-store.js	Store class — app state and localStorage persistence
-domain.js	Cycle detection, cycle-day calculation, building chart columns (buildColumns, buildCycleColumns)
-chart.js	Canvas rendering (temperature chart, coverlines, markers)
-ui.js	Calendar, info panel, cycle map rows, temperature scale, day-edit modals
-router.js	Routing between screens (menu, my-profile, my-maps, create-map, active-map, profile-setup)
-Screens (public/views/)
-
-Each file exports a single render function that draws content into a passed-in container and wires up its own event handlers. They don't touch state directly — they talk to store and the router through callbacks (onSave, onCreate, onNavigate, onOpen, ...).
-
-File	Export	Screen
-menu.js	renderMenuView	Main menu with tiles and an active-map preview
-profile.js	renderProfileScreen	Shared profile form — used for both profile-setup and my-profile
-my-maps.js	renderMyMapsView	List of saved maps with a year/month filter
-create-map.js	renderCreateMapView	Form for starting a new empty map
-Control flow
-On DOMContentLoaded, app.js creates the router (createRouter) and wires the main nav buttons (navMenuBtn, navProfileBtn, ...) to router.navigate(screen).
-router.js calls the matching render* function from views/ based on screen, passing it data from store plus callbacks.
-The active-map screen is the exception — it isn't rendered through views/, but through openActiveMapScreen() in app.js, which reveals #activeMapScreen and runs initActiveMap() + render() (calendar, chart, cycle map).
-Callbacks from the screens call store methods (store.saveProfile(), store.createMap(), store.renameMap(), store.setActiveMapId()), and the router then navigates onward or opens the active map.
-Persistence
-
-Unchanged — store.js saves to localStorage under the keys profile, maps, activeMapId (see the Data Format section above). The router only reads/writes through store's public methods, never localStorage directly.
+ 
+Vite + vanilla JS, no framework. The app is split into a core (`src`) and screens (`public/views`).
+ 
+### Core
+ 
+| File | Responsibility |
+|---|---|
+| `app.js` | Entry point — constants, utilities, layout geometry, `render()`, event listener initialization |
+| `store.js` | `Store` class — app state and `localStorage` persistence |
+| `domain.js` | Cycle detection, cycle-day calculation, building chart columns (`buildColumns`, `buildCycleColumns`) |
+| `chart.js` | Canvas rendering (temperature chart, coverlines, markers) |
+| `ui.js` | Calendar, info panel, cycle map rows, temperature scale, day-edit modals |
+| `router.js` | Routing between screens (`menu`, `my-profile`, `my-maps`, `create-map`, `active-map`, `profile-setup`) |
+ 
+### Screens (`public/views/`)
+ 
+Each file exports a single render function that draws content into a passed-in container and wires up its own event handlers. They don't touch state directly — they talk to `store` and the router through callbacks (`onSave`, `onCreate`, `onNavigate`, `onOpen`, ...).
+ 
+| File | Export | Screen |
+|---|---|---|
+| `menu.js` | `renderMenuView` | Main menu with tiles and an active-map preview |
+| `profile.js` | `renderProfileScreen` | Shared profile form — used for both `profile-setup` and `my-profile` |
+| `my-maps.js` | `renderMyMapsView` | List of saved maps with a year/month filter |
+| `create-map.js` | `renderCreateMapView` | Form for starting a new empty map |
+ 
+### Control flow
+ 
+1. On `DOMContentLoaded`, `app.js` creates the `router` (`createRouter`) and wires the main nav buttons (`navMenuBtn`, `navProfileBtn`, ...) to `router.navigate(screen)`.
+2. `router.js` calls the matching `render*` function from `views/` based on `screen`, passing it data from `store` plus callbacks.
+3. The `active-map` screen is the exception — it isn't rendered through `views/`, but through `openActiveMapScreen()` in `app.js`, which reveals `#activeMapScreen` and runs `initActiveMap()` + `render()` (calendar, chart, cycle map).
+4. Callbacks from the screens call `store` methods (`store.saveProfile()`, `store.createMap()`, `store.renameMap()`, `store.setActiveMapId()`), and the router then navigates onward or opens the active map.
+### Persistence
+ 
+Unchanged — `store.js` saves to `localStorage` under the keys `profile`, `maps`, `activeMapId` (see the Data Format section above). The router only reads/writes through `store`'s public methods, never `localStorage` directly.
+ 
 
 ---
 
