@@ -88,6 +88,7 @@ A read-only summary view collects everything logged for a single day — tempera
 ## Cycle navigation and zoom
  
 Cycles are detected automatically from logged menstruation and can be browsed with previous/next controls, each shown independently on the chart and map. The chart can be zoomed in and out; column width, grid, and coverlines all stay correctly aligned at every zoom level.
+
 ---
 
 ## Data Model
