@@ -16,7 +16,7 @@
 
 import { store } from "./store.js";
 import { buildCycleColumns, getCycleCount, getCycleStartDates } from "./domain.js";
-import { renderChart, handleCanvasClick } from "./chart.js";
+import { renderChart, handleCanvasClick, chartCellFromPoint } from "./chart.js";
 import { createRouter } from "./router.js";
 
 import {
@@ -159,6 +159,60 @@ export function hoverColumn(key)  { store.hoveredKey = key; store.hoveredPointTy
 /** Clears hover state and redraws the chart layer. */
 export function clearHover()      { store.hoveredKey = null; renderChart(currentColumns); }
 
+function setCrossCellsModal(confirming = false) {
+  qs("crossCellsModal").classList.remove("hidden");
+  requestAnimationFrame(() => qs("crossCellsModal").classList.add("show"));
+  qs("crossCellsModal").querySelector("h2").innerText = confirming ? "Confirm crossed cells" : "Cross out cells";
+  qs("crossCellsModal").querySelector("p").innerText = confirming
+    ? "Save the selected cells, or cancel to discard your changes."
+    : "Select the cells in the temperature chart that you want to cross out, then confirm your selection.";
+  qs("startCrossCellsBtn").innerText = confirming ? "Save selection" : "Select cells";
+}
+
+function openCrossCellsModal() {
+  setCrossCellsModal(store.crossCellSelectionMode === true);
+}
+
+function hideCrossCellsModal() {
+  qs("crossCellsModal")?.classList.remove("show");
+  qs("crossCellsModal")?.classList.add("hidden");
+}
+
+function startOrSaveCrossCellSelection() {
+  if (store.crossCellSelectionMode) {
+    store.commitCrossCellSelection();
+    qs("crossCellsActionBtn").classList.remove("active");
+    qs("crossCellsActionBtn").innerText = "Cross cells";
+    qs("tempChart")?.closest(".map-chart-area")?.classList.remove("cross-cell-selectable");
+    hideCrossCellsModal();
+    render();
+    showMessage("Crossed cells saved.");
+    return;
+  }
+
+  store.beginCrossCellSelection();
+  qs("crossCellsActionBtn").classList.add("active");
+  qs("crossCellsActionBtn").innerText = "Confirm crosses";
+  qs("tempChart")?.closest(".map-chart-area")?.classList.add("cross-cell-selectable");
+  hideCrossCellsModal();
+  showMessage("Select cells in the temperature chart, then click Confirm crosses.");
+  render();
+}
+
+function cancelCrossCellSelection() {
+  store.cancelCrossCellSelection();
+  qs("crossCellsActionBtn")?.classList.remove("active");
+  if (qs("crossCellsActionBtn")) qs("crossCellsActionBtn").innerText = "Cross cells";
+  qs("tempChart")?.closest(".map-chart-area")?.classList.remove("cross-cell-selectable");
+  hideCrossCellsModal();
+  render();
+}
+
+function toggleCrossedCell(key, rowIndex) {
+  store.toggleCrossedCell(key, rowIndex);
+  render();
+}
+
 /* ─── render ──────────────────────────────── */
 
 /** Full re-render — rebuilds columns from store and updates all UI layers. */
@@ -299,6 +353,10 @@ function initActiveMap() {
     setTimeout(() => showMessage("Click a day on the chart to choose a marker day."), 300);
   });
 
+  bindButton("crossCellsActionBtn", openCrossCellsModal);
+  bindButton("cancelCrossCellsBtn", cancelCrossCellSelection);
+  bindButton("startCrossCellsBtn", startOrSaveCrossCellSelection);
+
   bindButton("saveFertileRangeModalBtn", () => saveFertileRangeModal(render));
   bindButton("clearFertileRangeBtn", () => clearFertileRangeModal(render));
   bindButton("fertileRangePrevMonth", () => changeFertileRangeMonth(-1));
@@ -327,6 +385,7 @@ function initActiveMap() {
     ["bleedingModal", closeBleedingModal],
     ["mucusModal", closeMucusModal],
     ["markersModal", closeMarkersModal],
+    ["crossCellsModal", cancelCrossCellSelection],
     ["cervixModal", closeCervixModal],
     ["fertileRangeModal", closeFertileRangeModal],
     ["otherModal", closeOtherModal],
@@ -420,6 +479,11 @@ function initActiveMap() {
     const rect = tempChart.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
+    if (store.crossCellSelectionMode) {
+      const cell = chartCellFromPoint(x, y, currentColumns);
+      if (cell) toggleCrossedCell(cell.key, cell.rowIndex);
+      return;
+    }
     const hit = pixelToPointColumnHit(x, y, currentColumns);
     const key = hit?.key || pixelXToColumnKey(x, currentColumns);
     if (!key) return;
@@ -523,6 +587,7 @@ function hideAllModals() {
     "bleedingModal",
     "mucusModal",
     "markersModal",
+    "crossCellsModal",
     "cervixModal",
     "fertileRangeModal",
     "otherModal",

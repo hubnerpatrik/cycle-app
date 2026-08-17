@@ -106,6 +106,7 @@
               </div>
             </div>
             <button id="markersActionBtn" class="tool-btn marker-btn" type="button">Markers</button>
+            <button id="crossCellsActionBtn" class="tool-btn" type="button">Cross cells</button>
             <button id="saveActiveMapBtn" class="btn primary chart-save-btn" type="button">Save Map</button>
           </div>
         </div>
@@ -278,7 +279,7 @@
       <div class="modal-section">
         <div class="section-title">Peak type</div>
         <div class="segmented three">
-          <button type="button" data-group="markerColor" data-value="green">Fertility</button>
+          <button type="button" data-group="markerColor" data-value="green">BBT</button>
           <button type="button" data-group="markerColor" data-value="blue">Mucus</button>
           <button type="button" data-group="markerColor" data-value="orange">Cervix</button>
         </div>
@@ -302,6 +303,17 @@
         <button id="clearMarkersModalBtn" class="btn secondary" type="button">Clear</button>
         <button id="closeMarkersModalBtn" class="btn secondary" type="button">Close</button>
         <button id="saveMarkersModalBtn" class="btn primary" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="crossCellsModal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Cross out cells</h2>
+      <p>Select the cells in the temperature chart that you want to cross out, then confirm your selection.</p>
+      <div class="modal-actions">
+        <button id="cancelCrossCellsBtn" class="btn secondary" type="button">Cancel</button>
+        <button id="startCrossCellsBtn" class="btn primary" type="button">Select cells</button>
       </div>
     </div>
   </div>

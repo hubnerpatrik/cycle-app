@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { MemoryStorage } from "./setup.js";
 
 globalThis.localStorage = new MemoryStorage();
-const { Store, PROFILE_STORAGE_KEY, MAPS_STORAGE_KEY } = await import("../store.js");
+const { Store, PROFILE_STORAGE_KEY, MAPS_STORAGE_KEY, normalizeCrossedChartCells } = await import("../store.js");
 
 test("a corrupt stored profile does not bypass setup", () => {
   globalThis.localStorage = new MemoryStorage({ [PROFILE_STORAGE_KEY]: "{broken" });
@@ -56,4 +56,39 @@ test("an array maps payload is rejected", () => {
     [MAPS_STORAGE_KEY]: JSON.stringify([{ id: "unexpected" }]),
   });
   assert.deepEqual(new Store().listMaps(), []);
+});
+
+test("crossed chart cells are limited to valid dates and grid rows", () => {
+  assert.deepEqual(
+    normalizeCrossedChartCells({ "2026-08-17": [3, 29, 3, "4"], invalid: [2] }),
+    { "2026-08-17": [3] },
+  );
+});
+
+test("cross-cell selection can be cancelled without changing entries", () => {
+  globalThis.localStorage = new MemoryStorage();
+  const store = new Store();
+  store.createMap("Test map");
+  store.crossedChartCells = { "2026-08-17": [3] };
+
+  store.beginCrossCellSelection();
+  store.toggleCrossedCell("2026-08-17", 4);
+  store.cancelCrossCellSelection();
+
+  assert.deepEqual(store.crossedChartCells, { "2026-08-17": [3] });
+});
+
+test("confirmed cross-cell selection is persisted", () => {
+  globalThis.localStorage = new MemoryStorage();
+  const store = new Store();
+  const map = store.createMap("Test map");
+
+  store.beginCrossCellSelection();
+  store.toggleCrossedCell("2026-08-17", 29);
+  store.toggleCrossedCell("2026-08-17", 3);
+  store.commitCrossCellSelection();
+
+  assert.deepEqual(store.crossedChartCells, { "2026-08-17": [3] });
+  const savedMaps = JSON.parse(localStorage.getItem(MAPS_STORAGE_KEY));
+  assert.deepEqual(savedMaps[map.id].crossedChartCells, { "2026-08-17": [3] });
 });

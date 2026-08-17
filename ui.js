@@ -286,7 +286,7 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
   const attach = (el, col) => {
     el.onmouseenter = () => hoverColumn(col.key);
     el.onmouseleave = () => clearHover();
-    el.onclick      = () => selectColumn(col.key);
+    el.onclick = () => selectColumn(col.key);
   };
 
   const CONSISTENCY_LABELS = {
@@ -903,7 +903,10 @@ export function openDayInfoModal(currentColumns) {
     ? `${formatTemp(data.temp)} °C${data.measurementTime ? ` at ${data.measurementTime}` : ""}${adjustedTemp != null ? ` (adjusted ${formatTemp(adjustedTemp)} °C)` : ""}`
     : "-";
   qs("infoTempFactors").innerText = data.tempFactors ? TEMP_FACTORS[data.tempFactors] : "-";
-  qs("infoBleeding").innerText    = BLEEDING_LABELS[data.bleeding ?? "none"];
+  renderInfoLines(qs("infoBleeding"), [
+    `Bleeding: ${BLEEDING_LABELS[data.bleeding ?? "none"]}`,
+    `Clots: ${data.sediment ? "Yes" : "No"}`,
+  ]);
 
   renderInfoLines(qs("infoMucus"), [
     `Sensation: ${SENSATION_LABELS[data.sensation ?? ""]}`,
@@ -911,7 +914,6 @@ export function openDayInfoModal(currentColumns) {
     `Discharge: ${data.visible ? "Yes" : "None"}`,
     `Consistency: ${CONSISTENCY_FULL_LABELS[data.consistency ?? ""]}`,
     `Color: ${COLOR_FULL_LABELS[data.color ?? ""]}${data.colorOther ? ` (${data.colorOther})` : ""}`,
-    `Clots: ${data.sediment ? "Yes" : "No"}`,
   ]);
 
   const CERVIX_LABELS = {

@@ -573,6 +573,19 @@ h1::before{
     0 1px 3px rgba(77, 98, 70, 0.12);
 }
 
+.day.fertile-day.selected{
+  background:#245c3a;
+  color:#fff;
+  border-color:#183e27;
+}
+
+.day.red.selected,
+.day.red.fertile-day.selected{
+  background:#7a1f2b;
+  color:#fff;
+  border-color:#53151d;
+}
+
 /* ─── cycle day number in calendar cell ──── */
 
 .day{
@@ -1185,6 +1198,10 @@ h1::before{
 
 .selected-column{
   background:rgba(10,132,255,0.08);
+}
+
+.map-chart-area.cross-cell-selectable canvas{
+  cursor:crosshair;
 }
 
 /* ─── cell states ────────────────────────── */

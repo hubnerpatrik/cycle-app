@@ -10,6 +10,17 @@ export const PROFILE_STORAGE_KEY = "profile";
 export const MAPS_STORAGE_KEY = "maps";
 export const ACTIVE_MAP_ID_STORAGE_KEY = "activeMapId";
 
+const MAX_CHART_CELL_ROW = 28;
+
+export function normalizeCrossedChartCells(cells) {
+  if (!isPlainObject(cells)) return {};
+  return Object.fromEntries(Object.entries(cells).flatMap(([key, rows]) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key) || !Array.isArray(rows)) return [];
+    const normalizedRows = [...new Set(rows.filter(row => Number.isInteger(row) && row >= 0 && row <= MAX_CHART_CELL_ROW))];
+    return normalizedRows.length ? [[key, normalizedRows]] : [];
+  }));
+}
+
 export function isPlainObject(value) {
   if (value === null || typeof value !== "object") return false;
   const prototype = Object.getPrototypeOf(value);
@@ -32,12 +43,15 @@ constructor() {
 
   this.horizontalCoverlineMode = false;
   this.verticalCoverlineMode = false;
+  this.crossCellSelectionMode = false;
+  this.crossCellDraft = null;
 
   // visual guides only
   this.coverlines = {};
 
   // manually picked fertile window — one active range at a time
   this.fertileRange = { start: null, end: null };
+  this.crossedChartCells = {};
 
   // person-level info, not tied to any single day
   this.profile = this._emptyProfile();
@@ -104,6 +118,7 @@ _emptyModal() {
       entries: {},
       coverlines: {},
       fertileRange: { start: null, end: null },
+      crossedChartCells: {},
     };
   }
 
@@ -143,6 +158,7 @@ _emptyModal() {
             end: normalized.fertileRange.end ?? null,
           }
         : { start: null, end: null },
+      crossedChartCells: normalizeCrossedChartCells(normalized.crossedChartCells),
     };
   }
 
@@ -173,6 +189,7 @@ _emptyModal() {
     this.entries = activeMap?.entries ?? {};
     this.coverlines = activeMap?.coverlines ?? {};
     this.fertileRange = activeMap?.fertileRange ?? { start: null, end: null };
+    this.crossedChartCells = activeMap?.crossedChartCells ?? {};
   }
 
   _ensureActiveMap() {
@@ -206,6 +223,7 @@ _emptyModal() {
         entries: legacyEntries,
         coverlines: parsed.coverlines,
         fertileRange: parsed.fertileRange,
+        crossedChartCells: {},
       }, mapId, "My cycle"),
     };
     this.activeMapId = mapId;
@@ -351,10 +369,37 @@ _emptyModal() {
         entries: this.entries,
         coverlines: this.coverlines,
         fertileRange: this.fertileRange,
+        crossedChartCells: this.crossedChartCells,
       };
     }
 
     this._persistAll();
+  }
+
+  beginCrossCellSelection() {
+    this.crossCellDraft = structuredClone(this.crossedChartCells);
+    this.crossCellSelectionMode = true;
+  }
+
+  toggleCrossedCell(key, rowIndex) {
+    if (!this.crossCellSelectionMode || !Number.isInteger(rowIndex) || rowIndex < 0 || rowIndex > MAX_CHART_CELL_ROW) return;
+    const rows = new Set(this.crossCellDraft?.[key] || []);
+    if (rows.has(rowIndex)) rows.delete(rowIndex);
+    else rows.add(rowIndex);
+    if (rows.size) this.crossCellDraft[key] = [...rows];
+    else delete this.crossCellDraft[key];
+  }
+
+  commitCrossCellSelection() {
+    if (!this.crossCellSelectionMode) return;
+    this.crossedChartCells = normalizeCrossedChartCells(this.crossCellDraft);
+    this.cancelCrossCellSelection();
+    this.save();
+  }
+
+  cancelCrossCellSelection() {
+    this.crossCellSelectionMode = false;
+    this.crossCellDraft = null;
   }
 
   /** Clears all data and resets state to defaults. */
@@ -376,6 +421,7 @@ _emptyModal() {
     this.verticalCoverlineMode   = false;
     this.coverlines              = {};
     this.fertileRange            = { start: null, end: null };
+    this.crossedChartCells       = {};
     this.profile                 = this._emptyProfile();
     this.selectedPointType       = "temp";
     this.hoveredPointType        = null;

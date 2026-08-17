@@ -140,6 +140,34 @@ export function drawHoverLine(ctx, columns) {
   ctx.stroke();
 }
 
+/** Draws diagonal strokes through chart grid cells selected by the user. */
+export function drawCrossedChartCells(ctx, columns) {
+  const crossedCells = store.crossCellSelectionMode ? store.crossCellDraft : store.crossedChartCells;
+  if (!crossedCells) return;
+  columns.forEach(col => {
+    (crossedCells[col.key] || []).forEach(rowIndex => {
+      const top = chartGridY(rowIndex);
+      const bottom = chartGridY(rowIndex + 1);
+      ctx.beginPath();
+      ctx.moveTo(col.x + 5, bottom - 3);
+      ctx.lineTo(col.x + LAYOUT.columnWidth - 5, top + 3);
+      ctx.strokeStyle = "#1c1c1e";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
+  });
+  ctx.lineWidth = 1;
+}
+
+export function chartCellFromPoint(x, y, columns) {
+  if (y < LAYOUT.chartPaddingTop || y >= LAYOUT.chartHeight - LAYOUT.chartPaddingBottom) return null;
+  const key = pixelXToColumnKey(x, columns);
+  if (!key) return null;
+  const rowHeight = graphHeight() / tempSlotCount();
+  const rowIndex = Math.floor((y - LAYOUT.chartPaddingTop) / rowHeight);
+  return rowIndex >= 0 && rowIndex < tempSlotCount() ? { key, rowIndex } : null;
+}
+
 /** Draws vertical separators between cycle groups. */
 export function drawCycleSeparators(ctx, cycleGroups) {
   cycleGroups.slice(1).forEach(group => {
@@ -216,7 +244,7 @@ export function drawTemperaturePoints(ctx, columns) {
 
     ctx.beginPath();
     ctx.arc(col.centerX, pointY, 4, 0, Math.PI * 2);
-    ctx.fillStyle = store.selectedKey === col.key ? "#2563eb" : "#111";
+    ctx.fillStyle = "#111";
     ctx.fill();
   });
 
@@ -350,14 +378,13 @@ export function renderChart(columns) {
   drawOverlayBands(ctx, columns);
   drawVerticalGrid(ctx, columns);
   drawHorizontalGrid(ctx, width);
+  drawCrossedChartCells(ctx, columns);
   drawCycleSeparators(ctx, cycleGroups);
   drawHoverLine(ctx, columns);
   drawHorizontalCoverline(ctx, columns);
   drawVerticalCoverline(ctx, columns);
   drawTemperatureLine(ctx, cycleGroups);
   drawTemperaturePoints(ctx, columns);
-  drawHoveredPointHighlight(ctx, columns);
-  drawSelectedPointHighlight(ctx, columns);
   drawAdjustedTemperaturePoints(ctx, columns);
 
   drawMeasurementTimes(ctx, columns);
