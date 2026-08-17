@@ -10,6 +10,12 @@ export const PROFILE_STORAGE_KEY = "profile";
 export const MAPS_STORAGE_KEY = "maps";
 export const ACTIVE_MAP_ID_STORAGE_KEY = "activeMapId";
 
+export function isPlainObject(value) {
+  if (value === null || typeof value !== "object") return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
 /* ─── store ───────────────────────────────── */
 
 export class Store {
@@ -104,7 +110,7 @@ _emptyModal() {
   _safeParse(raw, fallback) {
     try {
       const parsed = raw ? JSON.parse(raw) : fallback;
-      return typeof parsed === "object" && parsed !== null ? parsed : fallback;
+      return isPlainObject(parsed) ? parsed : fallback;
     } catch {
       return fallback;
     }
@@ -113,21 +119,25 @@ _emptyModal() {
   _normalizeProfile(profile) {
     return {
       ...this._emptyProfile(),
-      ...(profile && typeof profile === "object" ? profile : {}),
+      ...(isPlainObject(profile) ? profile : {}),
     };
   }
 
+  _isProfileComplete(profile = this.profile) {
+    return profile?.setupCompleted === true;
+  }
+
   _normalizeMap(map, fallbackId, fallbackName = "") {
-    const normalized = map && typeof map === "object" ? map : {};
+    const normalized = isPlainObject(map) ? map : {};
     return {
-      id: normalized.id || fallbackId,
+      id: fallbackId,
       name: typeof normalized.name === "string" ? normalized.name : fallbackName,
       createdAt: normalized.createdAt || new Date().toISOString(),
       status: normalized.status === "closed" ? "closed" : "open",
       closedAt: normalized.closedAt ?? null,
-      entries: normalized.entries && typeof normalized.entries === "object" ? normalized.entries : {},
-      coverlines: normalized.coverlines && typeof normalized.coverlines === "object" ? normalized.coverlines : {},
-      fertileRange: normalized.fertileRange && typeof normalized.fertileRange === "object"
+      entries: isPlainObject(normalized.entries) ? normalized.entries : {},
+      coverlines: isPlainObject(normalized.coverlines) ? normalized.coverlines : {},
+      fertileRange: isPlainObject(normalized.fertileRange)
         ? {
             start: normalized.fertileRange.start ?? null,
             end: normalized.fertileRange.end ?? null,
@@ -183,8 +193,8 @@ _emptyModal() {
     const parsed = this._safeParse(raw, null);
     if (!parsed) return false;
 
-    const legacyEntries = parsed.entries && typeof parsed.entries === "object"
-      ? parsed.entries
+    const legacyEntries = "entries" in parsed
+      ? (isPlainObject(parsed.entries) ? parsed.entries : {})
       : parsed;
 
     const mapId = this._generateMapId();
@@ -208,11 +218,15 @@ _emptyModal() {
   _load() {
     const migrated = this._migrateLegacyData();
 
-    const storedProfile = this._safeParse(localStorage.getItem(PROFILE_STORAGE_KEY), this._emptyProfile());
+    const rawProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
+    const storedProfile = this._safeParse(rawProfile, null);
     const storedMaps = this._safeParse(localStorage.getItem(MAPS_STORAGE_KEY), {});
     const storedActiveMapId = localStorage.getItem(ACTIVE_MAP_ID_STORAGE_KEY);
 
     this.profile = this._normalizeProfile(storedProfile);
+    if (isPlainObject(storedProfile) && storedProfile.setupCompleted !== false) {
+      this.profile.setupCompleted = true;
+    }
     this.maps = Object.fromEntries(
       Object.entries(storedMaps).map(([id, map]) => [id, this._normalizeMap(map, id, map?.name || "")]),
     );
@@ -226,7 +240,7 @@ _emptyModal() {
   }
 
   hasProfile() {
-    return localStorage.getItem(PROFILE_STORAGE_KEY) != null;
+    return this._isProfileComplete();
   }
 
   getProfile() {
@@ -234,7 +248,10 @@ _emptyModal() {
   }
 
   saveProfile(profile) {
-    this.profile = this._normalizeProfile(profile);
+    this.profile = {
+      ...this._normalizeProfile(profile),
+      setupCompleted: true,
+    };
     this._persistAll();
   }
 

@@ -5,7 +5,7 @@
 // and building the column array consumed by render.
 
 import { store } from "./store.js";
-import { normalize, parseDateKey, columnX, columnCenterX, isFertileDay, getTimeAdjustment, getAdjustedTemp } from "./app.js";
+import { normalize, parseDateKey, columnX, columnCenterX, getTimeAdjustment, getAdjustedTemp } from "./core.js";
 
 /* ─── cycle detection ─────────────────────── */
 
@@ -19,7 +19,13 @@ export function getCycleStartDates() {
 
   keys.forEach((key, i) => {
     if (store.entries[key]?.bleeding !== "menstruation") return;
-    const prevIsPeriod = store.entries[keys[i - 1]]?.bleeding === "menstruation";
+    const previousKey = keys[i - 1];
+    const previousDate = previousKey ? parseDateKey(previousKey) : null;
+    const isPreviousCalendarDay = previousDate
+      ? (parseDateKey(key) - previousDate) / 86_400_000 === 1
+      : false;
+    const prevIsPeriod = isPreviousCalendarDay
+      && store.entries[previousKey]?.bleeding === "menstruation";
     if (!prevIsPeriod) starts.push(normalize(parseDateKey(key)));
   });
 
@@ -157,4 +163,42 @@ export function buildCycleColumns() {
 /** Returns total number of detected cycles. */
 export function getCycleCount() {
   return Math.max(getCycleStartDates().length, 1);
+}
+
+export function getFertileRange() {
+  const { start, end } = store.fertileRange;
+  return start && end ? { start, end } : null;
+}
+
+export function clearFertileRange() {
+  store.fertileRange = { start: null, end: null };
+}
+
+export function isFertileDay(key, entries = store.entries) {
+  if (entries[key]?.isFertile === true) return true;
+  const range = getFertileRange();
+  if (!range) return false;
+  const day = normalize(parseDateKey(key));
+  return day >= normalize(parseDateKey(range.start)) && day <= normalize(parseDateKey(range.end));
+}
+
+export function getCycleCoverlineValues(cycleIndex = store.currentCycleIndex) {
+  const key = cycleIndex == null ? "default" : `cycle-${cycleIndex}`;
+  return store.coverlines?.[key] ?? {};
+}
+
+export function setCycleCoverlineValues(values, cycleIndex = store.currentCycleIndex) {
+  const key = cycleIndex == null ? "default" : `cycle-${cycleIndex}`;
+  if (!store.coverlines[key]) store.coverlines[key] = {};
+  const data = store.coverlines[key];
+
+  if ("horizontalTemp" in values) {
+    if (values.horizontalTemp != null) data.horizontalTemp = values.horizontalTemp;
+    else delete data.horizontalTemp;
+  }
+  if ("verticalKey" in values) {
+    if (values.verticalKey != null) data.verticalKey = values.verticalKey;
+    else delete data.verticalKey;
+  }
+  if (!Object.keys(data).length) delete store.coverlines[key];
 }

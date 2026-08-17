@@ -2,6 +2,23 @@
 
 Educational symptothermal cycle tracking application focused on interpretation, visualization, and information clarity. Designed as a visual observation tool, not an automated fertility evaluator. Its purpose is to support manual interpretation while preserving ambiguity, context, and user judgment.
 
+## Local development
+
+Requirements: Node.js 20.19 or newer and npm.
+
+```bash
+npm ci
+npm run dev
+```
+
+Before committing, run the same checks used by CI:
+
+```bash
+npm run check
+```
+
+Development uses exactly two branches: stable releases live on `main`, while all ongoing work is committed to `develop`. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow.
+
 Demo:
 https://cycle-6mf61zw3o-hubnerpatriks-projects.vercel.app/
 
@@ -143,20 +160,21 @@ Observations are stored locally via `localStorage`, keyed by date string. Coverl
 
 ## Architecture
  
-Vite + vanilla JS, no framework. The app is split into a core (`src`) and screens (`public/views`).
+Vite + vanilla JS, no framework. Core modules live in the repository root and screen renderers live in `views/`.
  
 ### Core
  
 | File | Responsibility |
 |---|---|
-| `app.js` | Entry point — constants, utilities, layout geometry, `render()`, event listener initialization |
+| `app.js` | Entry point — top-level rendering, interaction state, and event listener initialization |
+| `core.js` | Shared side-effect-free date, temperature, DOM, and chart geometry utilities |
 | `store.js` | `Store` class — app state and `localStorage` persistence |
 | `domain.js` | Cycle detection, cycle-day calculation, building chart columns (`buildColumns`, `buildCycleColumns`) |
 | `chart.js` | Canvas rendering (temperature chart, coverlines, markers) |
 | `ui.js` | Calendar, info panel, cycle map rows, temperature scale, day-edit modals |
 | `router.js` | Routing between screens (`menu`, `my-profile`, `my-maps`, `create-map`, `active-map`, `profile-setup`) |
  
-### Screens (`public/views/`)
+### Screens (`views/`)
  
 Each file exports a single render function that draws content into a passed-in container and wires up its own event handlers. They don't touch state directly — they talk to `store` and the router through callbacks (`onSave`, `onCreate`, `onNavigate`, `onOpen`, ...).
  
@@ -188,4 +206,4 @@ JavaScript (ES modules) · HTML5 Canvas · CSS · Vite
 
 ## Status
 
-Active prototype — v0.6.0
+Active prototype — v0.9.0. See [CHANGELOG.md](CHANGELOG.md) for release history and [CONTRIBUTING.md](CONTRIBUTING.md) for the Git workflow.

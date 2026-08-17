@@ -1,4 +1,4 @@
-function escapeHtml(value) {
+export function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -70,8 +70,8 @@ function renderMapList(container, maps, activeMapId, year, month, onOpen, onRena
           <p class="map-list-meta">Last activity: ${escapeHtml(String(map.lastActivity).slice(0, 10))}</p>
         </div>
         <div class="map-list-actions">
-          <button type="button" class="btn secondary map-edit-btn" data-map-rename-id="${map.id}">Edit name</button>
-          <button type="button" class="btn primary map-open-btn" data-map-id="${map.id}">${map.status === "closed" ? "Reopen" : "Open"}</button>
+          <button type="button" class="btn secondary map-edit-btn" data-map-rename-id="${escapeHtml(map.id)}">Edit name</button>
+          <button type="button" class="btn primary map-open-btn" data-map-id="${escapeHtml(map.id)}">${map.status === "closed" ? "Reopen" : "Open"}</button>
         </div>
       </div>
     </article>

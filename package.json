@@ -1,12 +1,18 @@
 {
   "name": "cycle-app",
-  "version": "0.0.0",
+  "version": "0.9.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test test/*.test.js",
+    "lint": "node scripts/check-js.js",
+    "check": "npm run lint && npm test && npm run build"
   },
   "devDependencies": {
     "vite": "^8.0.12"
