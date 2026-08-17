@@ -11,7 +11,7 @@ export function renderCreateMapView(container, { onBack, onCreate }) {
         <form class="screen-card screen-form-card" id="createMapForm">
           <div class="modal-section">
             <div class="input-label">Map name</div>
-            <input id="createMapNameInput" type="text" placeholder="e.g. Summer cycle" required maxlength="80">
+            <input id="createMapNameInput" type="text" placeholder="e.g. September 2XXX" required maxlength="80">
           </div>
 
           <div class="modal-actions screen-actions">

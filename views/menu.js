@@ -40,7 +40,7 @@ export function renderMenuView(container, { activeMap, onNavigate }) {
         <div class="screen-hero">
           <p class="screen-kicker">Main Menu</p>
           <h2>Start making maps</h2>
-          <p>To start go to create map menu and make a new map.</p>
+          <p>To create a map, go to the create map menu.</p>
         </div>
 
         <div class="screen-card menu-summary-card">
