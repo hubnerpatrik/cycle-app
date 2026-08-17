@@ -9,6 +9,7 @@ The project follows [Semantic Versioning](https://semver.org/) while it is in ac
 ### Added
 
 - Git contribution, release, and CI conventions.
+- Two-branch workflow with stable `main` and working `develop`.
 
 ## [0.9.0] - 2026-08-17
 

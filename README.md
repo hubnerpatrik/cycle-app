@@ -17,6 +17,8 @@ Before committing, run the same checks used by CI:
 npm run check
 ```
 
+Development uses exactly two branches: stable releases live on `main`, while all ongoing work is committed to `develop`. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow.
+
 Demo:
 https://cycle-6mf61zw3o-hubnerpatriks-projects.vercel.app/
 
