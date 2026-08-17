@@ -180,11 +180,31 @@ export function renderProfileInfo() {
 
   if (!rows.length) { card.innerHTML = ""; return; }
 
-  card.innerHTML =
-    `<div class="profile-info-title">Profile</div>` +
-    rows.map(([k, v]) =>
-      `<div class="profile-info-row"><span class="profile-info-label">${k}</span><span class="profile-info-value">${v}</span></div>`
-    ).join("");
+  card.innerHTML = `
+    <div class="profile-info-title">Profile</div>
+    <div class="sidebar-profile-photo" role="img" aria-label="Empty profile photo placeholder">
+      <svg viewBox="0 0 96 96" aria-hidden="true">
+        <circle cx="48" cy="35" r="17"></circle>
+        <path d="M18 84c2-19 14-30 30-30s28 11 30 30"></path>
+      </svg>
+    </div>
+    <div class="profile-info-rows"></div>
+  `;
+
+  const rowsContainer = card.querySelector(".profile-info-rows");
+  rows.forEach(([label, value]) => {
+    const row = document.createElement("div");
+    const labelElement = document.createElement("span");
+    const valueElement = document.createElement("span");
+
+    row.className = "profile-info-row";
+    labelElement.className = "profile-info-label";
+    valueElement.className = "profile-info-value";
+    labelElement.textContent = label;
+    valueElement.textContent = value;
+    row.append(labelElement, valueElement);
+    rowsContainer?.appendChild(row);
+  });
 }
 
 /* ─── cycle map rows ──────────────────────── */

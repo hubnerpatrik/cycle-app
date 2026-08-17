@@ -740,6 +740,46 @@ h1::before{
   margin-bottom:8px;
 }
 
+.sidebar-profile-photo{
+  position:relative;
+  display:grid;
+  place-items:center;
+  width:92px;
+  height:92px;
+  margin:14px auto 17px;
+  border:2px dashed rgba(111, 73, 62, 0.18);
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 68% 22%, rgba(255, 255, 255, 0.88), transparent 30%),
+    linear-gradient(145deg, rgba(238, 227, 255, 0.68), rgba(255, 225, 214, 0.64) 58%, rgba(226, 242, 228, 0.68));
+  color:rgba(92, 72, 68, 0.34);
+  box-shadow:
+    0 10px 24px rgba(92, 61, 52, 0.08),
+    inset 0 0 0 6px rgba(255, 255, 255, 0.36);
+}
+
+.sidebar-profile-photo::after{
+  content:"";
+  position:absolute;
+  inset:7px;
+  border:1px solid rgba(255, 255, 255, 0.76);
+  border-radius:inherit;
+  pointer-events:none;
+}
+
+.sidebar-profile-photo svg{
+  width:48px;
+  height:48px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:4;
+  stroke-linecap:round;
+}
+
+.profile-info-rows{
+  width:100%;
+}
+
 .profile-info-row{
   display:flex;
   justify-content:space-between;
