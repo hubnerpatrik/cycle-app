@@ -117,6 +117,10 @@ _emptyModal() {
     };
   }
 
+  _isProfileComplete(profile = this.profile) {
+    return profile?.setupCompleted === true;
+  }
+
   _normalizeMap(map, fallbackId, fallbackName = "") {
     const normalized = map && typeof map === "object" ? map : {};
     return {
@@ -208,11 +212,15 @@ _emptyModal() {
   _load() {
     const migrated = this._migrateLegacyData();
 
-    const storedProfile = this._safeParse(localStorage.getItem(PROFILE_STORAGE_KEY), this._emptyProfile());
+    const rawProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
+    const storedProfile = this._safeParse(rawProfile, null);
     const storedMaps = this._safeParse(localStorage.getItem(MAPS_STORAGE_KEY), {});
     const storedActiveMapId = localStorage.getItem(ACTIVE_MAP_ID_STORAGE_KEY);
 
     this.profile = this._normalizeProfile(storedProfile);
+    if (storedProfile && storedProfile.setupCompleted !== false) {
+      this.profile.setupCompleted = true;
+    }
     this.maps = Object.fromEntries(
       Object.entries(storedMaps).map(([id, map]) => [id, this._normalizeMap(map, id, map?.name || "")]),
     );
@@ -226,7 +234,7 @@ _emptyModal() {
   }
 
   hasProfile() {
-    return localStorage.getItem(PROFILE_STORAGE_KEY) != null;
+    return this._isProfileComplete();
   }
 
   getProfile() {
@@ -234,7 +242,10 @@ _emptyModal() {
   }
 
   saveProfile(profile) {
-    this.profile = this._normalizeProfile(profile);
+    this.profile = {
+      ...this._normalizeProfile(profile),
+      setupCompleted: true,
+    };
     this._persistAll();
   }
 
