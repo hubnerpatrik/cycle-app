@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import { MemoryStorage } from "./setup.js";
 
 globalThis.localStorage = new MemoryStorage();
-const { Store, PROFILE_STORAGE_KEY, MAPS_STORAGE_KEY, normalizeCrossedRows } = await import("../store.js");
+const {
+  Store, PROFILE_STORAGE_KEY, MAPS_STORAGE_KEY, normalizeCrossedChartTemps, normalizeCrossedRows,
+  normalizeDayMarkers,
+} = await import("../store.js");
 
 test("a corrupt stored profile does not bypass setup", () => {
   globalThis.localStorage = new MemoryStorage({ [PROFILE_STORAGE_KEY]: "{broken" });
@@ -65,17 +68,48 @@ test("crossed rows are limited to known chart rows", () => {
   );
 });
 
+test("crossed chart temperatures are normalized and limited to the visible grid", () => {
+  assert.deepEqual(
+    normalizeCrossedChartTemps([36, 36.0001, 37.4, 37.45, "36.5", null]),
+    [36, 37.4],
+  );
+});
+
+test("legacy marker data migrates to its matching independent marker type", () => {
+  assert.deepEqual(normalizeDayMarkers(null, {
+    marker: "P",
+    markerColor: "green",
+    markerPointType: "adjusted",
+  }), {
+    bbt: { value: "P", pointType: "adjusted" },
+    mucus: { value: "", pointType: "temp" },
+    cervix: { value: "", pointType: "temp" },
+  });
+});
+
+test("BBT, mucus, and cervix markers remain independent", () => {
+  assert.deepEqual(normalizeDayMarkers({
+    bbt: { value: "P", pointType: "temp" },
+    mucus: { value: "2" },
+    cervix: { value: "4" },
+  }), {
+    bbt: { value: "P", pointType: "temp" },
+    mucus: { value: "2", pointType: "temp" },
+    cervix: { value: "4", pointType: "temp" },
+  });
+});
+
 test("cross-cell selection can be cancelled without changing entries", () => {
   globalThis.localStorage = new MemoryStorage();
   const store = new Store();
   store.createMap("Test map");
-  store.entries["2026-08-17"] = { crossedRows: ["bleedingRow"] };
+  store.entries["2026-08-17"] = { crossedChartTemps: [36.5] };
 
   store.beginCrossCellSelection();
-  store.toggleCrossedCell("2026-08-17", "spottingRow");
+  store.toggleCrossedCell("2026-08-17", 36.75);
   store.cancelCrossCellSelection();
 
-  assert.deepEqual(store.entries["2026-08-17"].crossedRows, ["bleedingRow"]);
+  assert.deepEqual(store.entries["2026-08-17"].crossedChartTemps, [36.5]);
 });
 
 test("confirmed cross-cell selection is persisted", () => {
@@ -84,11 +118,24 @@ test("confirmed cross-cell selection is persisted", () => {
   const map = store.createMap("Test map");
 
   store.beginCrossCellSelection();
-  store.toggleCrossedCell("2026-08-17", "mucusModal");
-  store.toggleCrossedCell("2026-08-17", "bleedingRow");
+  store.toggleCrossedCell("2026-08-17", 99);
+  store.toggleCrossedCell("2026-08-17", 36.65);
   store.commitCrossCellSelection();
 
-  assert.deepEqual(store.entries["2026-08-17"].crossedRows, ["bleedingRow"]);
+  assert.deepEqual(store.entries["2026-08-17"].crossedChartTemps, [36.65]);
   const savedMaps = JSON.parse(localStorage.getItem(MAPS_STORAGE_KEY));
-  assert.deepEqual(savedMaps[map.id].entries["2026-08-17"].crossedRows, ["bleedingRow"]);
+  assert.deepEqual(savedMaps[map.id].entries["2026-08-17"].crossedChartTemps, [36.65]);
+});
+
+test("deleting a map removes it and clears active map state", () => {
+  globalThis.localStorage = new MemoryStorage();
+  const store = new Store();
+  const map = store.createMap("Delete me");
+  store.entries["2026-08-17"] = { temp: 36.5 };
+
+  assert.equal(store.deleteMap(map.id), true);
+  assert.equal(store.getMap(map.id), null);
+  assert.equal(store.getActiveMapId(), null);
+  assert.deepEqual(store.entries, {});
+  assert.equal(localStorage.getItem("activeMapId"), null);
 });

@@ -4,7 +4,7 @@
 // resolving cycle IDs and cycle-day numbers,
 // and building the column array consumed by render.
 
-import { store } from "./store.js";
+import { normalizeDayMarkers, store } from "./store.js";
 import { normalize, parseDateKey, columnX, columnCenterX, getTimeAdjustment, getAdjustedTemp } from "./core.js";
 
 /* ─── cycle detection ─────────────────────── */
@@ -94,11 +94,7 @@ function buildColumn(key, index, date, starts) {
     other: raw.other ?? "",
     isFertile: isFertileDay(key, store.entries),
     isPeak: raw.isPeak ?? false,
-    marker: raw.marker ?? "",
-    markerColor: raw.markerColor === "green" || raw.markerColor === "blue" || raw.markerColor === "orange"
-      ? raw.markerColor
-      : "blue",
-    markerPointType: raw.markerPointType ?? "temp",
+    markers: normalizeDayMarkers(raw.markers, raw),
     manualCoverline: raw.manualCoverline ?? null,
     coverlineStart: raw.coverlineStart ?? false,
   };
@@ -124,47 +120,6 @@ export function buildColumns() {
   });
 }
 
-/**
- * Returns all columns for a specific cycle by index (0-based).
- * If cycleIndex is null, returns the latest cycle.
- * Falls back to all columns if no cycles detected.
- */
-export function buildCycleColumns() {
-  const allKeys = Object.keys(store.entries).sort();
-  if (!allKeys.length) return [];
-
-  const starts = getCycleStartDates();
-
-  if (!starts.length) {
-    return buildColumns();
-  }
-
-  const index = store.currentCycleIndex ?? starts.length - 1;
-  const clampedIndex = Math.max(0, Math.min(index, starts.length - 1));
-
-  const cycleStart = starts[clampedIndex];
-  const cycleEnd = starts[clampedIndex + 1]
-    ? new Date(starts[clampedIndex + 1].getTime() - 86_400_000)
-    : null;
-
-  const cycleKeys = allKeys.filter(key => {
-    const d = normalize(parseDateKey(key));
-    if (d < normalize(cycleStart)) return false;
-    if (cycleEnd && d > normalize(cycleEnd)) return false;
-    return true;
-  });
-
-  return cycleKeys.map((key, index) => {
-    const date = parseDateKey(key);
-    return buildColumn(key, index, date, starts);
-  });
-}
-
-/** Returns total number of detected cycles. */
-export function getCycleCount() {
-  return Math.max(getCycleStartDates().length, 1);
-}
-
 export function getFertileRange() {
   const { start, end } = store.fertileRange;
   return start && end ? { start, end } : null;
@@ -182,12 +137,20 @@ export function isFertileDay(key, entries = store.entries) {
   return day >= normalize(parseDateKey(range.start)) && day <= normalize(parseDateKey(range.end));
 }
 
-export function getCycleCoverlineValues(cycleIndex = store.currentCycleIndex) {
+export function getCycleCoverlineValues(cycleIndex = null) {
   const key = cycleIndex == null ? "default" : `cycle-${cycleIndex}`;
-  return store.coverlines?.[key] ?? {};
+  if (store.coverlines?.[key]) return store.coverlines[key];
+  if (cycleIndex != null) return {};
+
+  // Maps saved before cycle navigation was removed stored coverlines per cycle.
+  const legacyKey = Object.keys(store.coverlines || {})
+    .filter(value => /^cycle-\d+$/.test(value))
+    .sort((a, b) => Number(a.slice(6)) - Number(b.slice(6)))
+    .at(-1);
+  return legacyKey ? store.coverlines[legacyKey] : {};
 }
 
-export function setCycleCoverlineValues(values, cycleIndex = store.currentCycleIndex) {
+export function setCycleCoverlineValues(values, cycleIndex = null) {
   const key = cycleIndex == null ? "default" : `cycle-${cycleIndex}`;
   if (!store.coverlines[key]) store.coverlines[key] = {};
   const data = store.coverlines[key];

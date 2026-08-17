@@ -88,7 +88,7 @@ Cervix firmness, height, and openness, and mucus sensation, consistency, and col
  
 ## Markers
  
-A day can be flagged as a peak day and tagged with one of three marker types — fertility, mucus, or cervix — each rendered in its own color on the chart and map. The marker value itself is picked from a short fixed list (P, 1–6), matching the notation used in the paper method rather than free text.
+A day can be flagged as a peak day and independently tagged with BBT, mucus, and cervix markers, so all three types can coexist on the same day. Each is rendered in its own chart or map location. Marker values come from a short fixed list (P, 1–6), matching the notation used in the paper method rather than free text.
  
 ## Additional symptoms
  
@@ -134,9 +134,11 @@ Observations are stored locally via `localStorage`, keyed by date string. Coverl
         "color": "",
         "colorOther": "",
         "isPeak": false,
-        "marker": "",
-        "markerColor": "blue",
-        "markerPointType": "temp",
+        "markers": {
+          "bbt": { "value": "", "pointType": "temp" },
+          "mucus": { "value": "", "pointType": "temp" },
+          "cervix": { "value": "", "pointType": "temp" }
+        },
         "cervixFirmness": "",
         "cervixHeight": "",
         "cervixOpenness": "",
@@ -169,7 +171,7 @@ Vite + vanilla JS, no framework. Core modules live in the repository root and sc
 | `app.js` | Entry point — top-level rendering, interaction state, and event listener initialization |
 | `core.js` | Shared side-effect-free date, temperature, DOM, and chart geometry utilities |
 | `store.js` | `Store` class — app state and `localStorage` persistence |
-| `domain.js` | Cycle detection, cycle-day calculation, building chart columns (`buildColumns`, `buildCycleColumns`) |
+| `domain.js` | Cycle detection, cycle-day calculation, and chart-column building (`buildColumns`) |
 | `chart.js` | Canvas rendering (temperature chart, coverlines, markers) |
 | `ui.js` | Calendar, info panel, cycle map rows, temperature scale, day-edit modals |
 | `router.js` | Routing between screens (`menu`, `my-profile`, `my-maps`, `create-map`, `active-map`, `profile-setup`) |

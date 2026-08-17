@@ -40,7 +40,7 @@ function matchesFilter(map, year, month) {
   });
 }
 
-function renderMapList(container, maps, activeMapId, year, month, onOpen, onRename) {
+function renderMapList(container, maps, activeMapId, year, month, onOpen, onRename, onDelete) {
   const filteredMaps = maps.filter(map => matchesFilter(map, year, month));
   const list = container.querySelector("#mapsList");
 
@@ -71,7 +71,15 @@ function renderMapList(container, maps, activeMapId, year, month, onOpen, onRena
         </div>
         <div class="map-list-actions">
           <button type="button" class="btn secondary map-edit-btn" data-map-rename-id="${escapeHtml(map.id)}">Edit name</button>
+          <button type="button" class="btn danger map-delete-btn" data-map-delete-id="${escapeHtml(map.id)}">Delete</button>
           <button type="button" class="btn primary map-open-btn" data-map-id="${escapeHtml(map.id)}">${map.status === "closed" ? "Reopen" : "Open"}</button>
+        </div>
+      </div>
+      <div class="map-delete-confirmation hidden" data-map-delete-confirmation="${escapeHtml(map.id)}" role="alert">
+        <span>Are you sure you want to delete this map? This cannot be undone.</span>
+        <div class="map-delete-confirmation-actions">
+          <button type="button" class="btn secondary" data-map-delete-no="${escapeHtml(map.id)}">No</button>
+          <button type="button" class="btn danger" data-map-delete-yes="${escapeHtml(map.id)}">Yes</button>
         </div>
       </div>
     </article>
@@ -93,9 +101,27 @@ function renderMapList(container, maps, activeMapId, year, month, onOpen, onRena
       onRename?.(mapId, nextName);
     });
   });
+
+  list.querySelectorAll("[data-map-delete-id]").forEach(button => {
+    button.addEventListener("click", () => {
+      const confirmation = button.closest(".map-list-card")?.querySelector(".map-delete-confirmation");
+      confirmation?.classList.remove("hidden");
+      confirmation?.querySelector("[data-map-delete-no]")?.focus();
+    });
+  });
+
+  list.querySelectorAll("[data-map-delete-no]").forEach(button => {
+    button.addEventListener("click", () => {
+      button.closest(".map-delete-confirmation")?.classList.add("hidden");
+    });
+  });
+
+  list.querySelectorAll("[data-map-delete-yes]").forEach(button => {
+    button.addEventListener("click", () => onDelete?.(button.dataset.mapDeleteYes));
+  });
 }
 
-export function renderMyMapsView(container, { maps, activeMapId, onCreate, onOpen, onRename }) {
+export function renderMyMapsView(container, { maps, activeMapId, onCreate, onOpen, onRename, onDelete }) {
   const mapMeta = maps.map(buildMapMeta);
   const allYears = [...new Set(mapMeta.flatMap(map => map.years))].sort();
   let selectedYear = "";
@@ -154,7 +180,7 @@ export function renderMyMapsView(container, { maps, activeMapId, onCreate, onOpe
   const refresh = () => {
     selectedYear = yearFilter?.value ?? "";
     selectedMonth = monthFilter?.value ?? "";
-    renderMapList(container, mapMeta, activeMapId, selectedYear, selectedMonth, onOpen, onRename);
+    renderMapList(container, mapMeta, activeMapId, selectedYear, selectedMonth, onOpen, onRename, onDelete);
   };
 
   yearFilter?.addEventListener("change", refresh);

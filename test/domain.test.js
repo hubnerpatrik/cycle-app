@@ -4,7 +4,7 @@ import { MemoryStorage } from "./setup.js";
 
 globalThis.localStorage = new MemoryStorage();
 const { store } = await import("../store.js");
-const { getCycleStartDates } = await import("../domain.js");
+const { buildColumns, getCycleStartDates } = await import("../domain.js");
 
 function cycleKeys(entries) {
   store.entries = entries;
@@ -35,4 +35,22 @@ test("consecutive dates across a year boundary remain one period", () => {
     "2026-12-31": { bleeding: "menstruation" },
     "2027-01-01": { bleeding: "menstruation" },
   }), ["2026-12-31"]);
+});
+
+test("columns expose all three marker types for the same day", () => {
+  store.entries = {
+    "2026-08-17": {
+      markers: {
+        bbt: { value: "P", pointType: "temp" },
+        mucus: { value: "1", pointType: "temp" },
+        cervix: { value: "3", pointType: "temp" },
+      },
+    },
+  };
+
+  assert.deepEqual(buildColumns()[0].markers, {
+    bbt: { value: "P", pointType: "temp" },
+    mucus: { value: "1", pointType: "temp" },
+    cervix: { value: "3", pointType: "temp" },
+  });
 });

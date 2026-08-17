@@ -31,12 +31,17 @@
   --purple:#8b5cf6;
   --orange:#fb923c;
   --teal:#14b8a6;
+  --tool-coverline:#08736c;
+  --tool-marker:#4b43c6;
+  --tool-cross:#a93659;
   --gray-chip:#9aa6b2;
 
   /* radii (less rounded look) */
   --radius-lg:8px;
   --radius-md:6px;
   --radius-sm:4px;
+  --control-height:40px;
+  --control-radius:10px;
 
   /* elevation — softer, brighter shadows for a light UI */
   --shadow-card:
@@ -79,6 +84,14 @@ select{
 
 button{
   -webkit-tap-highlight-color:transparent;
+  line-height:1.2;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible{
+  outline:2px solid rgba(10,132,255,0.38);
+  outline-offset:2px;
 }
 
 /* ─── app layout ─────────────────────────── */
@@ -92,7 +105,7 @@ button{
 
 .app-header{
   display:grid;
-  grid-template-columns:1fr auto 1fr;
+  grid-template-columns:minmax(240px, 1fr) auto;
   align-items:start;
   gap:16px;
   margin-bottom:24px;
@@ -100,6 +113,7 @@ button{
 
 .header-brand{
   justify-self:start;
+  min-width:0;
 }
 
 .app-kicker,
@@ -113,7 +127,7 @@ button{
 }
 
 .header-nav{
-  justify-self:center;
+  justify-self:end;
   display:flex;
   align-items:center;
   gap:8px;
@@ -121,10 +135,10 @@ button{
 }
 
 .header-nav-btn{
-  height:34px;
-  padding:0 12px;
+  height:var(--control-height);
+  padding:0 14px;
   border:none;
-  border-radius:999px;
+  border-radius:var(--control-radius);
   background:transparent;
   color:var(--muted);
   font-size:14px;
@@ -177,6 +191,7 @@ button{
   font-size:32px;
   letter-spacing:-0.04em;
   line-height:1.05;
+  font-weight:700;
 }
 
 .screen-hero p:last-child{
@@ -388,6 +403,34 @@ button{
   min-width:120px;
 }
 
+.map-delete-btn{
+  flex:0 0 auto;
+  min-width:100px;
+}
+
+.map-delete-confirmation{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:16px;
+  margin-top:16px;
+  padding-top:14px;
+  border-top:1px solid rgba(239,68,68,.2);
+  color:#b91c1c;
+  font-size:14px;
+  font-weight:600;
+}
+
+.map-delete-confirmation-actions{
+  display:flex;
+  gap:8px;
+}
+
+.map-delete-confirmation-actions .btn{
+  flex:0 0 auto;
+  min-width:72px;
+}
+
 .empty-state{
   text-align:center;
 }
@@ -484,8 +527,8 @@ h1::before{
 }
 
 .calendar-nav button{
-  width:32px;
-  height:32px;
+  width:36px;
+  height:36px;
 
   border:none;
   border-radius:50%;
@@ -859,16 +902,6 @@ h1::before{
   align-items:start;
 }
 
-.cycle-nav {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-}
-
 /* ─── chart tools ────────────────────────── */
 
 .chart-tools{
@@ -879,7 +912,7 @@ h1::before{
 
   margin-bottom:12px;
   padding:10px 12px;
-  border-radius:16px;
+  border-radius:var(--radius-md);
   background:var(--card);
   position:relative;
 }
@@ -919,7 +952,6 @@ h1::before{
   gap:8px 12px;
 }
 
-.cycle-nav,
 .zoom-controls{
   display:flex;
   align-items:center;
@@ -935,7 +967,7 @@ h1::before{
   right:0;
   top:calc(100% + 6px);
   width:160px;
-  border-radius:14px;
+  border-radius:var(--control-radius);
   background:var(--card);
   box-shadow:0 14px 32px rgba(0,0,0,0.12);
   padding:8px 0;
@@ -957,13 +989,21 @@ h1::before{
   background:var(--hairline);
 }
 
+.coverline-option:first-child{
+  border-radius:calc(var(--control-radius) - 2px) calc(var(--control-radius) - 2px) 0 0;
+}
+
+.coverline-option:last-child{
+  border-radius:0 0 calc(var(--control-radius) - 2px) calc(var(--control-radius) - 2px);
+}
+
 .tool-btn{
-  height:32px;
+  height:var(--control-height);
 
   padding:0 14px;
 
   border:none;
-  border-radius:999px;
+  border-radius:var(--control-radius);
 
   background:var(--bg);
 
@@ -972,7 +1012,7 @@ h1::before{
   cursor:pointer;
 
   font-size:13px;
-  font-weight:500;
+  font-weight:600;
 
   transition:
     background 0.15s var(--ease),
@@ -996,12 +1036,13 @@ h1::before{
 }
 
 .marker-btn{
-  background:var(--purple);
+  background:linear-gradient(135deg, #5964d8, var(--tool-marker));
   color:white;
+  box-shadow:0 6px 16px rgba(75,67,198,0.2);
 }
 
 .marker-btn:hover{
-  background:#7c3aed;
+  background:linear-gradient(135deg, #5964d8, #3f38ad);
 }
 
 .marker-btn:active{
@@ -1011,16 +1052,35 @@ h1::before{
 .coverline-btn{
   flex-shrink:0;
   min-width:112px;
-  background:linear-gradient(135deg, var(--orange), #ff6f61);
+  background:linear-gradient(135deg, #128078, var(--tool-coverline));
   color:white;
+  box-shadow:0 6px 16px rgba(8,115,108,0.2);
 }
 
 .coverline-btn:hover{
-  background:#ff7c4c;
+  background:linear-gradient(135deg, #168e87, #075f59);
 }
 
 .coverline-btn:active{
   transform:scale(0.96);
+}
+
+.cross-cells-btn{
+  background:linear-gradient(135deg, #c24466, var(--tool-cross));
+  color:white;
+  box-shadow:0 6px 16px rgba(169,54,89,0.2);
+}
+
+.cross-cells-btn:hover{
+  background:linear-gradient(135deg, #c54b6a, #922c4b);
+}
+
+.coverline-btn.active,
+.marker-btn.active,
+.cross-cells-btn.active{
+  color:white;
+  border:1px solid rgba(255,255,255,0.48);
+  box-shadow:0 0 0 3px rgba(15,23,32,0.12), inset 0 1px 0 rgba(255,255,255,0.28);
 }
 
 /* ─── map structure ──────────────────────── */
@@ -1225,6 +1285,15 @@ h1::before{
   box-shadow:inset 0 0 0 2px var(--blue);
 }
 
+.zoom-controls .tool-btn{
+  width:var(--control-height);
+  padding:0;
+}
+
+.cross-cell-selection-mode{
+  cursor:crosshair;
+}
+
 /* ─── cell states ────────────────────────── */
 
 .map-cell.period{
@@ -1289,6 +1358,7 @@ h1::before{
   display: flex;
   align-items: center;
   justify-content: center;
+  padding:20px;
   background: rgba(2,6,23,0.06); /* subtle overlay for light UI */
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
@@ -1307,9 +1377,11 @@ h1::before{
 }
 
 .modal-card{
-  width:340px;
-  max-height:86vh;
+  width:min(400px, 100%);
+  max-height:calc(100vh - 40px);
+  max-height:calc(100dvh - 40px);
   overflow-y:auto;
+  scrollbar-gutter:stable;
 
   background:var(--card);
 
@@ -1327,7 +1399,7 @@ h1::before{
 }
 
 .modal-card.wide{
-  width:380px;
+  width:min(560px, 100%);
 }
 
 .modal.show .modal-card{
@@ -1360,12 +1432,12 @@ h1::before{
 
 select{
   width:100%;
-  height:40px;
+  height:var(--control-height);
 
   padding:0 12px;
 
   border:1px solid var(--hairline);
-  border-radius:var(--radius-sm);
+  border-radius:var(--control-radius);
 
   background:var(--card);
   color:var(--text);
@@ -1377,12 +1449,12 @@ select{
 
 input{
   width:100%;
-  height:40px;
+  height:var(--control-height);
 
   padding:0 12px;
 
   border:1px solid var(--hairline);
-  border-radius:var(--radius-sm);
+  border-radius:var(--control-radius);
 
   background:var(--card);
   color:var(--text);
@@ -1475,7 +1547,7 @@ input:focus{
   padding:3px;
 
   background:var(--bg);
-  border-radius:10px;
+  border-radius:calc(var(--control-radius) + 3px);
 }
 
 .segmented.three{
@@ -1491,10 +1563,10 @@ input:focus{
 }
 
 .segmented button{
-  min-height:34px;
+  min-height:var(--control-height);
 
   border:none;
-  border-radius:8px;
+  border-radius:var(--control-radius);
 
   background:transparent;
   color:var(--text);
@@ -1527,15 +1599,21 @@ input:focus{
 }
 
 .btn{
-  flex:1;
-  height:42px;
+  flex:0 0 auto;
+  height:var(--control-height);
+  min-width:104px;
+  padding:0 18px;
+
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
 
   border:none;
-  border-radius:var(--radius-sm);
+  border-radius:var(--control-radius);
 
   cursor:pointer;
 
-  font-size:15px;
+  font-size:14px;
   font-weight:600;
 
   transition:transform 0.1s var(--ease), opacity 0.15s var(--ease);
@@ -1553,6 +1631,28 @@ input:focus{
 .btn.secondary{
   background:var(--bg);
   color:var(--text);
+}
+
+.btn.secondary:hover{
+  background:var(--hairline);
+}
+
+.modal-actions .btn{
+  flex:1 1 0;
+}
+
+.btn:disabled{
+  opacity:0.5;
+  cursor:not-allowed;
+}
+
+.btn.danger{
+  background:var(--red);
+  color:white;
+}
+
+.btn.danger:hover{
+  background:#dc2626;
 }
 
 .field-hint{
@@ -1653,10 +1753,46 @@ input:focus{
     justify-self:stretch;
   }
 
+  .header-brand h1{
+    white-space:normal;
+  }
+
   .chart-tools-left,
   .chart-tools-right,
   .active-map-meta{
     width:100%;
+  }
+
+  .chart-tools{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .chart-tools-right,
+  .map-list-actions{
+    flex-wrap:wrap;
+  }
+
+  .chart-tools-right .chart-save-btn{
+    flex:1 1 132px;
+  }
+
+  .map-list-actions .btn{
+    flex:1 1 100px;
+    min-width:0;
+  }
+
+  .map-delete-confirmation{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .map-delete-confirmation-actions{
+    width:100%;
+  }
+
+  .map-delete-confirmation-actions .btn{
+    flex:1 1 0;
   }
 
   .menu-grid,
@@ -1673,4 +1809,43 @@ input:focus{
     grid-template-columns:1fr;
   }
 
+}
+
+@media (max-width:560px){
+  .header-nav{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+  }
+
+  .header-nav-btn:last-child{
+    grid-column:1 / -1;
+  }
+
+  .chart-tools-left{
+    gap:8px 4px;
+  }
+
+  .zoom-controls .tool-btn{
+    width:36px;
+    height:36px;
+  }
+
+  .modal{
+    padding:12px;
+  }
+
+  .modal-card,
+  .modal-card.wide{
+    max-height:calc(100vh - 24px);
+    max-height:calc(100dvh - 24px);
+    padding:20px;
+  }
+
+  .modal-actions{
+    flex-wrap:wrap;
+  }
+
+  .modal-actions .btn{
+    min-width:min(132px, 100%);
+  }
 }

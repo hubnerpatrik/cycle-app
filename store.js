@@ -22,6 +22,50 @@ export function normalizeCrossedRows(rows) {
   return [...new Set(rows.filter(rowId => CROSSABLE_ROW_IDS.includes(rowId)))];
 }
 
+export function normalizeCrossedChartTemps(temps) {
+  if (!Array.isArray(temps)) return [];
+  return [...new Set(temps
+    .filter(temp => typeof temp === "number" && Number.isFinite(temp) && temp >= 36 && temp <= 37.4)
+    .map(temp => Math.round(temp * 100) / 100))];
+}
+
+export const MARKER_TYPES = Object.freeze(["bbt", "mucus", "cervix"]);
+const VALID_MARKER_VALUES = new Set(["", "P", "1", "2", "3", "4", "5", "6"]);
+
+function normalizeMarkerValue(value) {
+  const normalized = String(value ?? "");
+  return VALID_MARKER_VALUES.has(normalized) ? normalized : "";
+}
+
+/** Normalizes independent per-day markers and migrates the legacy single-marker fields. */
+export function normalizeDayMarkers(markers, legacyEntry = {}) {
+  const normalized = Object.fromEntries(MARKER_TYPES.map(type => [type, {
+    value: "",
+    pointType: "temp",
+  }]));
+
+  if (isPlainObject(markers)) {
+    MARKER_TYPES.forEach(type => {
+      const marker = isPlainObject(markers[type]) ? markers[type] : {};
+      normalized[type] = {
+        value: normalizeMarkerValue(marker.value),
+        pointType: marker.pointType === "adjusted" ? "adjusted" : "temp",
+      };
+    });
+    return normalized;
+  }
+
+  const legacyValue = normalizeMarkerValue(legacyEntry.marker);
+  const legacyType = legacyEntry.markerColor === "green"
+    ? "bbt"
+    : legacyEntry.markerColor === "orange" ? "cervix" : "mucus";
+  normalized[legacyType] = {
+    value: legacyValue,
+    pointType: legacyEntry.markerPointType === "adjusted" ? "adjusted" : "temp",
+  };
+  return normalized;
+}
+
 export function isPlainObject(value) {
   if (value === null || typeof value !== "object") return false;
   const prototype = Object.getPrototypeOf(value);
@@ -96,6 +140,7 @@ _emptyModal() {
 
     sediment: false,
     marker: "",
+    markers: normalizeDayMarkers(),
     isPeak: false,
 
     cervixFirmness: "",
@@ -152,7 +197,12 @@ _emptyModal() {
       entries: isPlainObject(normalized.entries)
         ? Object.fromEntries(Object.entries(normalized.entries).map(([key, entry]) => [
             key,
-            isPlainObject(entry) ? { ...entry, crossedRows: normalizeCrossedRows(entry.crossedRows) } : {},
+            isPlainObject(entry) ? {
+              ...entry,
+              crossedRows: normalizeCrossedRows(entry.crossedRows),
+              crossedChartTemps: normalizeCrossedChartTemps(entry.crossedChartTemps),
+              markers: normalizeDayMarkers(entry.markers, entry),
+            } : {},
           ]))
         : {},
       coverlines: isPlainObject(normalized.coverlines) ? normalized.coverlines : {},
@@ -184,7 +234,6 @@ _emptyModal() {
     this.selectedKey = null;
     this.hoveredKey = null;
     this.hoveredPointType = null;
-    this.currentCycleIndex = null;
   }
 
   _syncActiveMapState() {
@@ -318,6 +367,20 @@ _emptyModal() {
     return true;
   }
 
+  deleteMap(mapId) {
+    if (!this.maps[mapId]) return false;
+    delete this.maps[mapId];
+
+    if (this.activeMapId === mapId) {
+      this.activeMapId = null;
+      this._clearTransientSelection();
+      this._syncActiveMapState();
+    }
+
+    this._persistAll();
+    return true;
+  }
+
   getActiveMapId() {
     return this.activeMapId;
   }
@@ -378,25 +441,26 @@ _emptyModal() {
 
   beginCrossCellSelection() {
     this.crossCellDraft = Object.fromEntries(
-      Object.entries(this.entries).map(([key, entry]) => [key, normalizeCrossedRows(entry.crossedRows)]),
+      Object.entries(this.entries).map(([key, entry]) => [key, normalizeCrossedChartTemps(entry.crossedChartTemps)]),
     );
     this.crossCellSelectionMode = true;
   }
 
-  toggleCrossedCell(key, rowId) {
-    if (!this.crossCellSelectionMode || !CROSSABLE_ROW_IDS.includes(rowId)) return;
-    const rows = new Set(this.crossCellDraft?.[key] || []);
-    if (rows.has(rowId)) rows.delete(rowId);
-    else rows.add(rowId);
-    this.crossCellDraft[key] = [...rows];
+  toggleCrossedCell(key, temp) {
+    const normalizedTemp = normalizeCrossedChartTemps([temp])[0];
+    if (!this.crossCellSelectionMode || normalizedTemp == null) return;
+    const temps = new Set(this.crossCellDraft?.[key] || []);
+    if (temps.has(normalizedTemp)) temps.delete(normalizedTemp);
+    else temps.add(normalizedTemp);
+    this.crossCellDraft[key] = [...temps];
   }
 
   commitCrossCellSelection() {
     if (!this.crossCellSelectionMode) return;
-    Object.entries(this.crossCellDraft || {}).forEach(([key, rows]) => {
-      const crossedRows = normalizeCrossedRows(rows);
-      if (!this.entries[key] && crossedRows.length === 0) return;
-      this.entries[key] = { ...(this.entries[key] || {}), crossedRows };
+    Object.entries(this.crossCellDraft || {}).forEach(([key, temps]) => {
+      const crossedChartTemps = normalizeCrossedChartTemps(temps);
+      if (!this.entries[key] && crossedChartTemps.length === 0) return;
+      this.entries[key] = { ...(this.entries[key] || {}), crossedChartTemps };
     });
     this.cancelCrossCellSelection();
     this.save();
@@ -429,7 +493,6 @@ _emptyModal() {
     this.profile                 = this._emptyProfile();
     this.selectedPointType       = "temp";
     this.hoveredPointType        = null;
-    this.currentCycleIndex       = null;
     this.modal = this._emptyModal();
   }
 }
