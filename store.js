@@ -10,6 +10,18 @@ export const PROFILE_STORAGE_KEY = "profile";
 export const MAPS_STORAGE_KEY = "maps";
 export const ACTIVE_MAP_ID_STORAGE_KEY = "activeMapId";
 
+export const CROSSABLE_ROW_IDS = Object.freeze([
+  "cycleDayRow", "bleedingRow", "spottingRow", "sedimentRow", "sensationRow",
+  "stretchRow", "visibleRow", "consistencyRow", "colorRow", "blueMarkerRow",
+  "cervixFirmnessRow", "cervixHeightRow", "cervixOpennessRow", "orangeMarkerRow",
+  "otherRow", "sexRow",
+]);
+
+export function normalizeCrossedRows(rows) {
+  if (!Array.isArray(rows)) return [];
+  return [...new Set(rows.filter(rowId => CROSSABLE_ROW_IDS.includes(rowId)))];
+}
+
 export function isPlainObject(value) {
   if (value === null || typeof value !== "object") return false;
   const prototype = Object.getPrototypeOf(value);
@@ -32,6 +44,8 @@ constructor() {
 
   this.horizontalCoverlineMode = false;
   this.verticalCoverlineMode = false;
+  this.crossCellSelectionMode = false;
+  this.crossCellDraft = null;
 
   // visual guides only
   this.coverlines = {};
@@ -135,7 +149,12 @@ _emptyModal() {
       createdAt: normalized.createdAt || new Date().toISOString(),
       status: normalized.status === "closed" ? "closed" : "open",
       closedAt: normalized.closedAt ?? null,
-      entries: isPlainObject(normalized.entries) ? normalized.entries : {},
+      entries: isPlainObject(normalized.entries)
+        ? Object.fromEntries(Object.entries(normalized.entries).map(([key, entry]) => [
+            key,
+            isPlainObject(entry) ? { ...entry, crossedRows: normalizeCrossedRows(entry.crossedRows) } : {},
+          ]))
+        : {},
       coverlines: isPlainObject(normalized.coverlines) ? normalized.coverlines : {},
       fertileRange: isPlainObject(normalized.fertileRange)
         ? {
@@ -355,6 +374,37 @@ _emptyModal() {
     }
 
     this._persistAll();
+  }
+
+  beginCrossCellSelection() {
+    this.crossCellDraft = Object.fromEntries(
+      Object.entries(this.entries).map(([key, entry]) => [key, normalizeCrossedRows(entry.crossedRows)]),
+    );
+    this.crossCellSelectionMode = true;
+  }
+
+  toggleCrossedCell(key, rowId) {
+    if (!this.crossCellSelectionMode || !CROSSABLE_ROW_IDS.includes(rowId)) return;
+    const rows = new Set(this.crossCellDraft?.[key] || []);
+    if (rows.has(rowId)) rows.delete(rowId);
+    else rows.add(rowId);
+    this.crossCellDraft[key] = [...rows];
+  }
+
+  commitCrossCellSelection() {
+    if (!this.crossCellSelectionMode) return;
+    Object.entries(this.crossCellDraft || {}).forEach(([key, rows]) => {
+      const crossedRows = normalizeCrossedRows(rows);
+      if (!this.entries[key] && crossedRows.length === 0) return;
+      this.entries[key] = { ...(this.entries[key] || {}), crossedRows };
+    });
+    this.cancelCrossCellSelection();
+    this.save();
+  }
+
+  cancelCrossCellSelection() {
+    this.crossCellSelectionMode = false;
+    this.crossCellDraft = null;
   }
 
   /** Clears all data and resets state to defaults. */

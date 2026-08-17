@@ -215,7 +215,7 @@ function makeAccentCell(text = "", selected = "", group, ...classes) {
  * Renders all cycle map rows (day numbers, cycle day, mucus, bleeding, etc.).
  * Interaction callbacks are passed in to avoid circular imports with app.js.
  */
-export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
+export function renderMapRows(columns, selectColumn, hoverColumn, clearHover, toggleCrossedCell) {
   const width = chartWidth(columns);
   const dayNumbers = qs("dayNumbers");
   const mapRows = qs("mapRows");
@@ -283,10 +283,16 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
   );
 
   // attaches hover and click handlers to a map cell
-  const attach = (el, col) => {
+  const attach = (el, col, rowId = null) => {
     el.onmouseenter = () => hoverColumn(col.key);
     el.onmouseleave = () => clearHover();
-    el.onclick      = () => selectColumn(col.key);
+    el.onclick = () => {
+      if (store.crossCellSelectionMode && rowId) {
+        toggleCrossedCell(col.key, rowId);
+        return;
+      }
+      selectColumn(col.key);
+    };
   };
 
   const CONSISTENCY_LABELS = {
@@ -337,7 +343,17 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
     rowDefinitionsWithPosition.forEach(def => {
       const cell = def.render(col, sel);
       if (col.isFertile) cell.classList.add("fertility-cell");
-      attach(cell, col);
+      const crossedRows = store.crossCellSelectionMode
+        ? store.crossCellDraft?.[col.key]
+        : store.entries[col.key]?.crossedRows;
+      if (Array.isArray(crossedRows) && crossedRows.includes(def.id)) cell.classList.add("crossed-cell");
+      if (store.crossCellSelectionMode) {
+        cell.classList.add("cross-cell-selectable");
+        cell.setAttribute("role", "checkbox");
+        cell.setAttribute("aria-checked", String(cell.classList.contains("crossed-cell")));
+        cell.title = "Toggle crossed cell";
+      }
+      attach(cell, col, def.id);
       rows[def.id].appendChild(cell);
     });
   });
@@ -903,7 +919,10 @@ export function openDayInfoModal(currentColumns) {
     ? `${formatTemp(data.temp)} °C${data.measurementTime ? ` at ${data.measurementTime}` : ""}${adjustedTemp != null ? ` (adjusted ${formatTemp(adjustedTemp)} °C)` : ""}`
     : "-";
   qs("infoTempFactors").innerText = data.tempFactors ? TEMP_FACTORS[data.tempFactors] : "-";
-  qs("infoBleeding").innerText    = BLEEDING_LABELS[data.bleeding ?? "none"];
+  renderInfoLines(qs("infoBleeding"), [
+    `Bleeding: ${BLEEDING_LABELS[data.bleeding ?? "none"]}`,
+    `Clots: ${data.sediment ? "Yes" : "No"}`,
+  ]);
 
   renderInfoLines(qs("infoMucus"), [
     `Sensation: ${SENSATION_LABELS[data.sensation ?? ""]}`,
@@ -911,7 +930,6 @@ export function openDayInfoModal(currentColumns) {
     `Discharge: ${data.visible ? "Yes" : "None"}`,
     `Consistency: ${CONSISTENCY_FULL_LABELS[data.consistency ?? ""]}`,
     `Color: ${COLOR_FULL_LABELS[data.color ?? ""]}${data.colorOther ? ` (${data.colorOther})` : ""}`,
-    `Clots: ${data.sediment ? "Yes" : "No"}`,
   ]);
 
   const CERVIX_LABELS = {
