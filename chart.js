@@ -4,7 +4,8 @@
 // Draw order: bg → overlays → grid → annotations → data
 
 import { store } from "./store.js";
-import { LAYOUT, qs, chartY, chartLineY, chartGridY, tempSlotCount, graphHeight, chartWidth, getCycleCoverlineValues, setCycleCoverlineValues, currentColumns, pixelYToTemp, pixelXToColumnKey } from "./app.js";
+import { LAYOUT, qs, chartY, chartLineY, chartGridY, tempSlotCount, graphHeight, chartWidth, pixelYToTemp, pixelXToColumnKey } from "./core.js";
+import { getCycleCoverlineValues, setCycleCoverlineValues } from "./domain.js";
 
 /* ─── cycle grouping ──────────────────────── */
 
@@ -371,7 +372,7 @@ export function renderChart(columns) {
  * Deactivates coverline mode after placement.
  */
 
-export function handleCanvasClick(event) {
+export function handleCanvasClick(event, columns, onRender) {
   if (!store.horizontalCoverlineMode && !store.verticalCoverlineMode) {
     return;
   }
@@ -387,7 +388,7 @@ export function handleCanvasClick(event) {
   }
 
   if (store.verticalCoverlineMode) {
-    const key = pixelXToColumnKey(x, currentColumns);
+    const key = pixelXToColumnKey(x, columns);
     if (key != null) setCycleCoverlineValues({ verticalKey: key });
   }
 
@@ -402,5 +403,5 @@ export function handleCanvasClick(event) {
 
   store.save();
 
-  import("./app.js").then(({ render }) => render());
+  onRender?.();
 }

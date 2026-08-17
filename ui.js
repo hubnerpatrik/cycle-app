@@ -5,12 +5,11 @@
 
 import { store } from "./store.js";
 import {
-  LAYOUT, TEMP_FACTORS, qs, qsa,
-  chartY, chartWidth,
-  getDaysInMonth, getMonthOffset, formatDateKey, parseDateKey, formatTemp,
-  isFertileDay, getFertileRange, clearFertileRange,
-  getTimeAdjustment, getAdjustedTemp,
-} from "./app.js";
+  LAYOUT, TEMP_FACTORS, qs, qsa, chartY, chartWidth, getDaysInMonth,
+  getMonthOffset, formatDateKey, parseDateKey, formatTemp, getTimeAdjustment,
+  getAdjustedTemp,
+} from "./core.js";
+import { isFertileDay, getFertileRange, clearFertileRange } from "./domain.js";
 
 /* ─── month label ─────────────────────────── */
 
@@ -881,6 +880,14 @@ const SENSATION_LABELS = { "": "-", dry: "Dry", moist: "Moist", wet: "Wet" };
 const CONSISTENCY_FULL_LABELS = { "": "-", creamy: "Creamy", slightlyStretchy: "Slightly stretchy", stretchy: "Stretchy" };
 const COLOR_FULL_LABELS = { "": "-", white: "White", whiteTranslucent: "White-translucent", translucent: "Translucent", other: "Other" };
 
+export function renderInfoLines(element, lines) {
+  element.replaceChildren();
+  lines.forEach((line, index) => {
+    if (index > 0) element.appendChild(document.createElement("br"));
+    element.appendChild(document.createTextNode(line));
+  });
+}
+
 /** Opens the read-only day info modal for the currently selected day. */
 export function openDayInfoModal(currentColumns) {
   if (!store.selectedKey) return showMessage("Select a day first");
@@ -898,14 +905,14 @@ export function openDayInfoModal(currentColumns) {
   qs("infoTempFactors").innerText = data.tempFactors ? TEMP_FACTORS[data.tempFactors] : "-";
   qs("infoBleeding").innerText    = BLEEDING_LABELS[data.bleeding ?? "none"];
 
-  qs("infoMucus").innerHTML = [
+  renderInfoLines(qs("infoMucus"), [
     `Sensation: ${SENSATION_LABELS[data.sensation ?? ""]}`,
     `Slippery: ${data.stretch ? "Yes" : "No"}`,
     `Discharge: ${data.visible ? "Yes" : "None"}`,
     `Consistency: ${CONSISTENCY_FULL_LABELS[data.consistency ?? ""]}`,
     `Color: ${COLOR_FULL_LABELS[data.color ?? ""]}${data.colorOther ? ` (${data.colorOther})` : ""}`,
     `Clots: ${data.sediment ? "Yes" : "No"}`,
-  ].join("<br>");
+  ]);
 
   const CERVIX_LABELS = {
     firmness: {
@@ -927,15 +934,15 @@ export function openDayInfoModal(currentColumns) {
     },
   };
 
-  qs("infoCervix").innerHTML = [
+  renderInfoLines(qs("infoCervix"), [
     `Firmness: ${CERVIX_LABELS.firmness[data.cervixFirmness ?? ""]}`,
     `Height: ${CERVIX_LABELS.height[data.cervixHeight ?? ""]}`,
     `Openness: ${CERVIX_LABELS.openness[data.cervixOpenness ?? ""]}`,
-  ].join("<br>");
+  ]);
 
   const sexText = data.sex === true ? "Yes" : data.sex === false ? "No" : "-";
   const otherText = data.other?.trim() ? data.other : "-";
-  qs("infoOther").innerHTML = `Sex: ${sexText}<br>Notes: ${otherText}`;
+  renderInfoLines(qs("infoOther"), [`Sex: ${sexText}`, `Notes: ${otherText}`]);
 
   showModal("dayInfoModal");
 }

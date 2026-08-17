@@ -149,7 +149,8 @@ Vite + vanilla JS, no framework. The app is split into a core (`src`) and screen
  
 | File | Responsibility |
 |---|---|
-| `app.js` | Entry point — constants, utilities, layout geometry, `render()`, event listener initialization |
+| `app.js` | Entry point — top-level rendering, interaction state, and event listener initialization |
+| `core.js` | Shared side-effect-free date, temperature, DOM, and chart geometry utilities |
 | `store.js` | `Store` class — app state and `localStorage` persistence |
 | `domain.js` | Cycle detection, cycle-day calculation, building chart columns (`buildColumns`, `buildCycleColumns`) |
 | `chart.js` | Canvas rendering (temperature chart, coverlines, markers) |
