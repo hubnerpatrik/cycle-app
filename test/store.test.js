@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { MemoryStorage } from "./setup.js";
 
 globalThis.localStorage = new MemoryStorage();
-const { Store, PROFILE_STORAGE_KEY, MAPS_STORAGE_KEY } = await import("../store.js");
+const { Store, PROFILE_STORAGE_KEY, MAPS_STORAGE_KEY, normalizeCrossedRows } = await import("../store.js");
 
 test("a corrupt stored profile does not bypass setup", () => {
   globalThis.localStorage = new MemoryStorage({ [PROFILE_STORAGE_KEY]: "{broken" });
@@ -56,4 +56,39 @@ test("an array maps payload is rejected", () => {
     [MAPS_STORAGE_KEY]: JSON.stringify([{ id: "unexpected" }]),
   });
   assert.deepEqual(new Store().listMaps(), []);
+});
+
+test("crossed rows are limited to known chart rows", () => {
+  assert.deepEqual(
+    normalizeCrossedRows(["bleedingRow", "unknownRow", "bleedingRow", 42]),
+    ["bleedingRow"],
+  );
+});
+
+test("cross-cell selection can be cancelled without changing entries", () => {
+  globalThis.localStorage = new MemoryStorage();
+  const store = new Store();
+  store.createMap("Test map");
+  store.entries["2026-08-17"] = { crossedRows: ["bleedingRow"] };
+
+  store.beginCrossCellSelection();
+  store.toggleCrossedCell("2026-08-17", "spottingRow");
+  store.cancelCrossCellSelection();
+
+  assert.deepEqual(store.entries["2026-08-17"].crossedRows, ["bleedingRow"]);
+});
+
+test("confirmed cross-cell selection is persisted", () => {
+  globalThis.localStorage = new MemoryStorage();
+  const store = new Store();
+  const map = store.createMap("Test map");
+
+  store.beginCrossCellSelection();
+  store.toggleCrossedCell("2026-08-17", "mucusModal");
+  store.toggleCrossedCell("2026-08-17", "bleedingRow");
+  store.commitCrossCellSelection();
+
+  assert.deepEqual(store.entries["2026-08-17"].crossedRows, ["bleedingRow"]);
+  const savedMaps = JSON.parse(localStorage.getItem(MAPS_STORAGE_KEY));
+  assert.deepEqual(savedMaps[map.id].entries["2026-08-17"].crossedRows, ["bleedingRow"]);
 });

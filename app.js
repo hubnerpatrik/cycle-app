@@ -159,6 +159,57 @@ export function hoverColumn(key)  { store.hoveredKey = key; store.hoveredPointTy
 /** Clears hover state and redraws the chart layer. */
 export function clearHover()      { store.hoveredKey = null; renderChart(currentColumns); }
 
+function setCrossCellsModal(confirming = false) {
+  qs("crossCellsModal").classList.remove("hidden");
+  requestAnimationFrame(() => qs("crossCellsModal").classList.add("show"));
+  qs("crossCellsModal").querySelector("h2").innerText = confirming ? "Confirm crossed cells" : "Cross out cells";
+  qs("crossCellsModal").querySelector("p").innerText = confirming
+    ? "Save the selected cells, or cancel to discard your changes."
+    : "Select the cells you want to cross out, then confirm your selection.";
+  qs("startCrossCellsBtn").innerText = confirming ? "Save selection" : "Select cells";
+}
+
+function openCrossCellsModal() {
+  setCrossCellsModal(store.crossCellSelectionMode === true);
+}
+
+function hideCrossCellsModal() {
+  qs("crossCellsModal")?.classList.remove("show");
+  qs("crossCellsModal")?.classList.add("hidden");
+}
+
+function startOrSaveCrossCellSelection() {
+  if (store.crossCellSelectionMode) {
+    store.commitCrossCellSelection();
+    qs("crossCellsActionBtn").classList.remove("active");
+    qs("crossCellsActionBtn").innerText = "Cross cells";
+    hideCrossCellsModal();
+    render();
+    showMessage("Crossed cells saved.");
+    return;
+  }
+
+  store.beginCrossCellSelection();
+  qs("crossCellsActionBtn").classList.add("active");
+  qs("crossCellsActionBtn").innerText = "Confirm crosses";
+  hideCrossCellsModal();
+  showMessage("Select the cells you want to cross out.");
+  render();
+}
+
+function cancelCrossCellSelection() {
+  store.cancelCrossCellSelection();
+  qs("crossCellsActionBtn")?.classList.remove("active");
+  if (qs("crossCellsActionBtn")) qs("crossCellsActionBtn").innerText = "Cross cells";
+  hideCrossCellsModal();
+  render();
+}
+
+function toggleCrossedCell(key, rowId) {
+  store.toggleCrossedCell(key, rowId);
+  render();
+}
+
 /* ─── render ──────────────────────────────── */
 
 /** Full re-render — rebuilds columns from store and updates all UI layers. */
@@ -167,7 +218,7 @@ export function render() {
   renderCalendar(selectColumn);
   renderTempScale();
   currentColumns = buildCycleColumns();
-  renderMapRows(currentColumns, selectColumn, hoverColumn, clearHover);
+  renderMapRows(currentColumns, selectColumn, hoverColumn, clearHover, toggleCrossedCell);
   renderChart(currentColumns);
   renderCycleNav();
   renderProfileInfo();
@@ -299,6 +350,10 @@ function initActiveMap() {
     setTimeout(() => showMessage("Click a day on the chart to choose a marker day."), 300);
   });
 
+  bindButton("crossCellsActionBtn", openCrossCellsModal);
+  bindButton("cancelCrossCellsBtn", cancelCrossCellSelection);
+  bindButton("startCrossCellsBtn", startOrSaveCrossCellSelection);
+
   bindButton("saveFertileRangeModalBtn", () => saveFertileRangeModal(render));
   bindButton("clearFertileRangeBtn", () => clearFertileRangeModal(render));
   bindButton("fertileRangePrevMonth", () => changeFertileRangeMonth(-1));
@@ -327,6 +382,7 @@ function initActiveMap() {
     ["bleedingModal", closeBleedingModal],
     ["mucusModal", closeMucusModal],
     ["markersModal", closeMarkersModal],
+    ["crossCellsModal", cancelCrossCellSelection],
     ["cervixModal", closeCervixModal],
     ["fertileRangeModal", closeFertileRangeModal],
     ["otherModal", closeOtherModal],
@@ -523,6 +579,7 @@ function hideAllModals() {
     "bleedingModal",
     "mucusModal",
     "markersModal",
+    "crossCellsModal",
     "cervixModal",
     "fertileRangeModal",
     "otherModal",

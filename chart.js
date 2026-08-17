@@ -216,7 +216,7 @@ export function drawTemperaturePoints(ctx, columns) {
 
     ctx.beginPath();
     ctx.arc(col.centerX, pointY, 4, 0, Math.PI * 2);
-    ctx.fillStyle = store.selectedKey === col.key ? "#2563eb" : "#111";
+    ctx.fillStyle = "#111";
     ctx.fill();
   });
 
@@ -357,7 +357,6 @@ export function renderChart(columns) {
   drawTemperatureLine(ctx, cycleGroups);
   drawTemperaturePoints(ctx, columns);
   drawHoveredPointHighlight(ctx, columns);
-  drawSelectedPointHighlight(ctx, columns);
   drawAdjustedTemperaturePoints(ctx, columns);
 
   drawMeasurementTimes(ctx, columns);

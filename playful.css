@@ -185,6 +185,19 @@ body::before {
   box-shadow: 0 10px 32px rgba(22, 32, 41, 0.1);
 }
 
+.day.fertile-day.selected {
+  background: #245c3a;
+  color: #fff;
+  border-color: #183e27;
+}
+
+.day.red.selected,
+.day.red.fertile-day.selected {
+  background: #7a1f2b;
+  color: #fff;
+  border-color: #53151d;
+}
+
 .day-cycle-num {
   color: var(--text);
   background: rgba(255, 255, 255, 0.88);
