@@ -119,6 +119,33 @@ export function drawOverlayBands(ctx, columns) {
   });
 }
 
+/** Draws an ascending diagonal inside every chart grid cell marked by the user. */
+export function drawCrossedChartCells(ctx, columns) {
+  columns.forEach(col => {
+    const temps = store.crossCellSelectionMode
+      ? store.crossCellDraft?.[col.key]
+      : store.entries[col.key]?.crossedChartTemps;
+    if (!Array.isArray(temps)) return;
+
+    temps.forEach(temp => {
+      const centerY = chartY(temp);
+      const insetX = Math.min(7, LAYOUT.columnWidth * 0.22);
+      const cellHalfHeight = graphHeight() / tempSlotCount() / 2;
+      const insetY = Math.min(4, cellHalfHeight * 0.3);
+      const left = col.x + insetX;
+      const right = col.x + LAYOUT.columnWidth - insetX;
+
+      ctx.beginPath();
+      ctx.strokeStyle = "rgba(17,17,17,0.72)";
+      ctx.lineWidth = 1.5;
+      ctx.moveTo(left, centerY + cellHalfHeight - insetY);
+      ctx.lineTo(right, centerY - cellHalfHeight + insetY);
+      ctx.stroke();
+    });
+  });
+  ctx.lineWidth = 1;
+}
+
 /** Highlights the currently selected column. */
 export function drawSelectedHighlight(ctx, columns) {
   if (!store.selectedKey) return;
@@ -192,7 +219,7 @@ export function drawTemperaturePoints(ctx, columns) {
     if (col.temp == null) return;
 
     const pointY = chartY(col.temp);
-    const markerY = col.markerPointType === "adjusted" && col.adjustedTemp != null
+    const markerY = col.markers?.bbt?.pointType === "adjusted" && col.adjustedTemp != null
       ? chartY(col.adjustedTemp)
       : pointY;
 
@@ -240,23 +267,6 @@ export function drawSelectedPointHighlight(ctx, columns) {
   ctx.setLineDash([]);
 }
 
-export function drawHoveredPointHighlight(ctx, columns) {
-  if (!store.hoveredKey) return;
-  const col = columns.find(c => c.key === store.hoveredKey && c.temp != null);
-  if (!col) return;
-
-  const pointY = store.hoveredPointType === "adjusted" && col.adjustedTemp != null
-    ? chartY(col.adjustedTemp)
-    : chartY(col.temp);
-
-  ctx.beginPath();
-  ctx.arc(col.centerX, pointY, 12, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(37,99,235,0.5)";
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.setLineDash([]);
-}
-
 /** Draws a secondary dot for the time-adjusted temperature — connects it to the measured point with a dashed blue line. */
 export function drawAdjustedTemperaturePoints(ctx, columns) {
   columns.forEach(col => {
@@ -296,17 +306,11 @@ export function drawMeasurementTimes(ctx, columns) {
 }
 /** Draws anomaly marker labels above (or below, if that would overlap the other dot) the anchor temperature dot. */
 export function drawMarkers(ctx, columns) {
-  const MARKER_COLORS = {
-    blue: "#2563eb",
-    green: "#16a34a",
-    orange: "#ea580c",
-  };
-
   columns.forEach(col => {
-    if (col.temp == null || !col.marker) return;
-    if (col.markerColor !== "green") return;
+    const marker = col.markers?.bbt;
+    if (col.temp == null || !marker?.value) return;
 
-    const usingAdjusted = col.markerPointType === "adjusted" && col.adjustedTemp != null;
+    const usingAdjusted = marker.pointType === "adjusted" && col.adjustedTemp != null;
     const markerY = usingAdjusted ? chartY(col.adjustedTemp) : chartY(col.temp);
 
     // flip label below the dot when the anchor sits lower than its counterpart, to avoid overlapping it
@@ -318,9 +322,9 @@ export function drawMarkers(ctx, columns) {
     }
 
     ctx.font = "bold 14px Inter";
-    ctx.fillStyle = MARKER_COLORS[col.markerColor] || "#111";
+    ctx.fillStyle = "#16a34a";
     ctx.textAlign = "center";
-    ctx.fillText(col.marker, col.centerX, labelBelow ? markerY + 20 : markerY - 14);
+    ctx.fillText(marker.value, col.centerX, labelBelow ? markerY + 20 : markerY - 14);
   });
 }
 
@@ -338,6 +342,7 @@ export function renderChart(columns) {
 
   canvas.style.width  = `${width}px`;
   canvas.style.height = `${LAYOUT.chartHeight}px`;
+  canvas.classList.toggle("cross-cell-selection-mode", store.crossCellSelectionMode);
   canvas.width        = width * dpr;
   canvas.height       = LAYOUT.chartHeight * dpr;
 
@@ -350,13 +355,13 @@ export function renderChart(columns) {
   drawOverlayBands(ctx, columns);
   drawVerticalGrid(ctx, columns);
   drawHorizontalGrid(ctx, width);
+  drawCrossedChartCells(ctx, columns);
   drawCycleSeparators(ctx, cycleGroups);
   drawHoverLine(ctx, columns);
   drawHorizontalCoverline(ctx, columns);
   drawVerticalCoverline(ctx, columns);
   drawTemperatureLine(ctx, cycleGroups);
   drawTemperaturePoints(ctx, columns);
-  drawHoveredPointHighlight(ctx, columns);
   drawAdjustedTemperaturePoints(ctx, columns);
 
   drawMeasurementTimes(ctx, columns);

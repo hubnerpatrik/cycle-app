@@ -88,6 +88,17 @@ export function pixelYToTemp(y) {
   return LAYOUT.minTemp + (slots - line) * LAYOUT.tempStep;
 }
 
+/** Returns the temperature cell containing a canvas Y coordinate. */
+export function pixelYToChartCellTemp(y) {
+  const slots = tempSlotCount();
+  const gridBottom = LAYOUT.chartHeight - LAYOUT.chartPaddingBottom;
+  if (y < LAYOUT.chartPaddingTop || y >= gridBottom) return null;
+
+  const row = Math.floor((y - LAYOUT.chartPaddingTop) / tempSlotHeight());
+  const temp = LAYOUT.minTemp + (slots - 1 - row) * LAYOUT.tempStep;
+  return Math.round(temp * 100) / 100;
+}
+
 export function pixelXToColumnKey(x, columns) {
   if (!columns.length) return null;
   return columns.reduce((closest, column) =>

@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { MemoryStorage } from "./setup.js";
 
 globalThis.localStorage = new MemoryStorage();
-const { renderInfoLines } = await import("../ui.js");
+const { store } = await import("../store.js");
+const { renderInfoLines, selectMarkerType } = await import("../ui.js");
 
 test("day-info lines append user input as text nodes", () => {
   const appended = [];
@@ -25,4 +26,24 @@ test("day-info lines append user input as text nodes", () => {
     { textContent: `Notes: ${payload}` },
   ]);
   assert.equal(globalThis.pwned, undefined);
+});
+
+test("switching marker types preserves each marker draft", () => {
+  const markerInput = { value: "P" };
+  globalThis.document = {
+    getElementById: id => id === "markersMarker" ? markerInput : null,
+    querySelectorAll: () => [],
+  };
+  store.modal = store._emptyModal();
+  store.modal.markerColor = "green";
+  store.modal.markers.mucus.value = "2";
+
+  selectMarkerType("blue");
+  assert.equal(store.modal.markers.bbt.value, "P");
+  assert.equal(markerInput.value, "2");
+
+  markerInput.value = "4";
+  selectMarkerType("orange");
+  assert.equal(store.modal.markers.mucus.value, "4");
+  assert.equal(store.modal.markers.bbt.value, "P");
 });

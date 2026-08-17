@@ -15,7 +15,7 @@
 "use strict";
 
 import { store } from "./store.js";
-import { buildCycleColumns, getCycleCount, getCycleStartDates } from "./domain.js";
+import { buildColumns } from "./domain.js";
 import { renderChart, handleCanvasClick } from "./chart.js";
 import { createRouter } from "./router.js";
 
@@ -42,6 +42,7 @@ import {
   openMarkersModal,
   closeMarkersModal,
   clearMarkersModalInput,
+  selectMarkerType,
   saveMarkersModal,
   openCervixModal,
   closeCervixModal,
@@ -64,7 +65,7 @@ import {
 /* ─── shared constants and utilities ───────── */
 
 import {
-  LAYOUT, qs, qsa, normalize, parseDateKey, chartY, pixelXToColumnKey,
+  LAYOUT, qs, qsa, parseDateKey, chartY, pixelXToColumnKey, pixelYToChartCellTemp,
   syncCSSVariables,
 } from "./core.js";
 
@@ -128,21 +129,21 @@ export function pixelToPointColumnHit(x, y, columns) {
   return closest;
 }
 
-/** Selects a day column, switches to the correct cycle, and triggers a full re-render. */
+/** Converts pointer coordinates from the displayed canvas to its logical chart coordinates. */
+export function canvasPointerPosition(event, canvas) {
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return null;
+  const dpr = window.devicePixelRatio || 1;
+  return {
+    x: (event.clientX - rect.left) * (canvas.width / dpr / rect.width),
+    y: (event.clientY - rect.top) * (canvas.height / dpr / rect.height),
+  };
+}
+
+/** Selects a day column and triggers a full re-render. */
 export function selectColumn(key, pointType = "temp") {
   store.selectedKey = key;
   store.selectedPointType = pointType;
-
-  // switch to the cycle containing this key
-  const starts = getCycleStartDates();
-  if (starts.length) {
-    const date = normalize(parseDateKey(key));
-    let cycleIndex = 0;
-    for (let i = 0; i < starts.length; i++) {
-      if (normalize(starts[i]) <= date) cycleIndex = i;
-    }
-    store.currentCycleIndex = cycleIndex;
-  }
 
   render();
 
@@ -165,7 +166,7 @@ function setCrossCellsModal(confirming = false) {
   qs("crossCellsModal").querySelector("h2").innerText = confirming ? "Confirm crossed cells" : "Cross out cells";
   qs("crossCellsModal").querySelector("p").innerText = confirming
     ? "Save the selected cells, or cancel to discard your changes."
-    : "Select the cells you want to cross out, then confirm your selection.";
+    : "Select the cells directly in the temperature chart, then confirm your selection.";
   qs("startCrossCellsBtn").innerText = confirming ? "Save selection" : "Select cells";
 }
 
@@ -193,7 +194,7 @@ function startOrSaveCrossCellSelection() {
   qs("crossCellsActionBtn").classList.add("active");
   qs("crossCellsActionBtn").innerText = "Confirm crosses";
   hideCrossCellsModal();
-  showMessage("Select the cells you want to cross out.");
+  showMessage("Select cells directly in the temperature chart.");
   render();
 }
 
@@ -205,8 +206,8 @@ function cancelCrossCellSelection() {
   render();
 }
 
-function toggleCrossedCell(key, rowId) {
-  store.toggleCrossedCell(key, rowId);
+function toggleCrossedCell(key, temp) {
+  store.toggleCrossedCell(key, temp);
   render();
 }
 
@@ -217,23 +218,11 @@ export function render() {
   renderMonth();
   renderCalendar(selectColumn);
   renderTempScale();
-  currentColumns = buildCycleColumns();
-  renderMapRows(currentColumns, selectColumn, hoverColumn, clearHover, toggleCrossedCell);
+  currentColumns = buildColumns();
+  renderMapRows(currentColumns, selectColumn, hoverColumn, clearHover);
   renderChart(currentColumns);
-  renderCycleNav();
   renderProfileInfo();
   renderActiveMapMeta();
-}
-
-/** Updates cycle navigation label and button states. */
-function renderCycleNav() {
-  const starts = getCycleStartDates();
-  const total  = Math.max(starts.length, 1);
-  const index  = store.currentCycleIndex ?? total - 1;
-
-  qs("cycleNavLabel").innerText = `Cycle ${index + 1} / ${total}`;
-  qs("prevCycleBtn").disabled   = index <= 0;
-  qs("nextCycleBtn").disabled   = index >= total - 1;
 }
 
 /** Updates zoom percentage label. */
@@ -296,21 +285,6 @@ function initActiveMap() {
     render();
   };
 
-  // cycle navigation
-  qs("prevCycleBtn").onclick = () => {
-    const total = getCycleCount();
-    const index = store.currentCycleIndex ?? total - 1;
-    store.currentCycleIndex = Math.max(0, index - 1);
-    render();
-  };
-
-  qs("nextCycleBtn").onclick = () => {
-    const total = getCycleCount();
-    const index = store.currentCycleIndex ?? total - 1;
-    store.currentCycleIndex = Math.min(total - 1, index + 1);
-    render();
-  };
-
   // action modal
   const animatePrimaryButton = button => {
     if (!button) return;
@@ -350,7 +324,13 @@ function initActiveMap() {
     setTimeout(() => showMessage("Click a day on the chart to choose a marker day."), 300);
   });
 
-  bindButton("crossCellsActionBtn", openCrossCellsModal);
+  bindButton("crossCellsActionBtn", () => {
+    if (store.crossCellSelectionMode) {
+      openCrossCellsModal();
+      return;
+    }
+    startOrSaveCrossCellSelection();
+  });
   bindButton("cancelCrossCellsBtn", cancelCrossCellSelection);
   bindButton("startCrossCellsBtn", startOrSaveCrossCellSelection);
 
@@ -468,20 +448,28 @@ function initActiveMap() {
   const tempChart = qs("tempChart");
   if (tempChart) {
     tempChart.addEventListener("click", event => {
-    if (store.horizontalCoverlineMode || store.verticalCoverlineMode) {
-      handleCanvasClick(event, currentColumns, render);
-      return;
-    }
+      const pointer = canvasPointerPosition(event, tempChart);
+      if (!pointer) return;
+      const { x, y } = pointer;
 
-    const rect = tempChart.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    const hit = pixelToPointColumnHit(x, y, currentColumns);
-    const key = hit?.key || pixelXToColumnKey(x, currentColumns);
-    if (!key) return;
+      if (store.crossCellSelectionMode) {
+        const key = pixelXToColumnKey(x, currentColumns);
+        const temp = pixelYToChartCellTemp(y);
+        if (key && temp != null) toggleCrossedCell(key, temp);
+        return;
+      }
 
-    selectColumn(key, hit?.type || "temp");
-  });
+      if (store.horizontalCoverlineMode || store.verticalCoverlineMode) {
+        handleCanvasClick(event, currentColumns, render);
+        return;
+      }
+
+      const hit = pixelToPointColumnHit(x, y, currentColumns);
+      const key = hit?.key || pixelXToColumnKey(x, currentColumns);
+      if (!key) return;
+
+      selectColumn(key, hit?.type || "temp");
+    });
 
     tempChart.addEventListener("mousemove", event => {
       const rect = tempChart.getBoundingClientRect();
@@ -520,6 +508,10 @@ function initActiveMap() {
       let value = btn.dataset.value;
       if (value === "true")  value = true;
       if (value === "false") value = false;
+      if (btn.dataset.group === "markerColor") {
+        selectMarkerType(value);
+        return;
+      }
       store.modal[btn.dataset.group] = value;
       syncModalUI();
     };
@@ -598,7 +590,6 @@ function focusActiveMap() {
     const now = new Date();
     store.month = now.getMonth();
     store.year = now.getFullYear();
-    store.currentCycleIndex = null;
     return;
   }
 
@@ -606,8 +597,6 @@ function focusActiveMap() {
   store.month = latest.getMonth();
   store.year = latest.getFullYear();
 
-  const starts = getCycleStartDates();
-  store.currentCycleIndex = starts.length ? starts.length - 1 : null;
 }
 
 function showStandaloneScreen() {

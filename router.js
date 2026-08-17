@@ -100,6 +100,11 @@ export function createRouter({ root, showStandaloneScreen, openActiveMap, showMe
             showMessage?.("Map renamed ✓");
             navigate("my-maps");
           },
+          onDelete: mapId => {
+            if (!store.deleteMap(mapId)) return;
+            showMessage?.("Map deleted");
+            navigate("my-maps");
+          },
           onOpen: mapId => {
             store.setActiveMapId(mapId);
             openActiveMap(mapId);

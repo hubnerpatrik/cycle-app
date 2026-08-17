@@ -3,7 +3,7 @@
 // Owns calendar, info panel, cycle map rows,
 // temperature scale, and the edit modal.
 
-import { store } from "./store.js";
+import { normalizeDayMarkers, store } from "./store.js";
 import {
   LAYOUT, TEMP_FACTORS, qs, qsa, chartY, chartWidth, getDaysInMonth,
   getMonthOffset, formatDateKey, parseDateKey, formatTemp, getTimeAdjustment,
@@ -180,11 +180,31 @@ export function renderProfileInfo() {
 
   if (!rows.length) { card.innerHTML = ""; return; }
 
-  card.innerHTML =
-    `<div class="profile-info-title">Profile</div>` +
-    rows.map(([k, v]) =>
-      `<div class="profile-info-row"><span class="profile-info-label">${k}</span><span class="profile-info-value">${v}</span></div>`
-    ).join("");
+  card.innerHTML = `
+    <div class="profile-info-title">Profile</div>
+    <div class="sidebar-profile-photo" role="img" aria-label="Empty profile photo placeholder">
+      <svg viewBox="0 0 96 96" aria-hidden="true">
+        <circle cx="48" cy="35" r="17"></circle>
+        <path d="M18 84c2-19 14-30 30-30s28 11 30 30"></path>
+      </svg>
+    </div>
+    <div class="profile-info-rows"></div>
+  `;
+
+  const rowsContainer = card.querySelector(".profile-info-rows");
+  rows.forEach(([label, value]) => {
+    const row = document.createElement("div");
+    const labelElement = document.createElement("span");
+    const valueElement = document.createElement("span");
+
+    row.className = "profile-info-row";
+    labelElement.className = "profile-info-label";
+    valueElement.className = "profile-info-value";
+    labelElement.textContent = label;
+    valueElement.textContent = value;
+    row.append(labelElement, valueElement);
+    rowsContainer?.appendChild(row);
+  });
 }
 
 /* ─── cycle map rows ──────────────────────── */
@@ -201,6 +221,18 @@ function normalizeMarkerColor(value) {
   return value === "green" || value === "blue" || value === "orange" ? value : "blue";
 }
 
+function markerTypeFromColor(color) {
+  if (color === "green") return "bbt";
+  if (color === "orange") return "cervix";
+  return "mucus";
+}
+
+function markerColorFromType(type) {
+  if (type === "bbt") return "green";
+  if (type === "cervix") return "orange";
+  return "blue";
+}
+
 function makeAccentCell(text = "", selected = "", group, ...classes) {
   return makeCell(
     text,
@@ -215,7 +247,7 @@ function makeAccentCell(text = "", selected = "", group, ...classes) {
  * Renders all cycle map rows (day numbers, cycle day, mucus, bleeding, etc.).
  * Interaction callbacks are passed in to avoid circular imports with app.js.
  */
-export function renderMapRows(columns, selectColumn, hoverColumn, clearHover, toggleCrossedCell) {
+export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
   const width = chartWidth(columns);
   const dayNumbers = qs("dayNumbers");
   const mapRows = qs("mapRows");
@@ -237,8 +269,7 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover, to
     { id: "consistencyRow", label: "Consistency", group: "mucus", render: (col, sel) => makeAccentCell(CONSISTENCY_LABELS[col.consistency] || "", sel, "mucus") },
     { id: "colorRow", label: "Color", group: "mucus", render: (col, sel) => makeAccentCell(COLOR_LABELS[col.color] || "", sel, "mucus") },
     { id: "blueMarkerRow", label: "Peak Mucus", group: "mucus", render: (col, sel) => {
-      const markerColor = normalizeMarkerColor(col.markerColor);
-      const marker = col.marker && markerColor === "blue" ? col.marker : "";
+      const marker = col.markers?.mucus?.value || "";
       return makeAccentCell(marker, sel, "mucus", marker ? "marker-blue" : "");
     } },
     { id: "cervixFirmnessRow", label: "Firmness", group: "cervix", render: (col, sel) => makeAccentCell(CERVIX_FIRMNESS_LABELS[col.cervixFirmness] || "", sel, "cervix") },
@@ -254,8 +285,7 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover, to
       return cell;
     } },
     { id: "orangeMarkerRow", label: "Peak Cervix", group: "cervix", render: (col, sel) => {
-      const markerColor = normalizeMarkerColor(col.markerColor);
-      const marker = col.marker && markerColor === "orange" ? col.marker : "";
+      const marker = col.markers?.cervix?.value || "";
       return makeAccentCell(marker, sel, "cervix", marker ? "marker-orange" : "");
     } },
     { id: "otherRow", label: "Additional symptoms", group: "symptoms", render: (col, sel) => makeAccentCell(col.other ? "✓" : "", sel, "symptoms") },
@@ -287,10 +317,6 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover, to
     el.onmouseenter = () => hoverColumn(col.key);
     el.onmouseleave = () => clearHover();
     el.onclick = () => {
-      if (store.crossCellSelectionMode && rowId) {
-        toggleCrossedCell(col.key, rowId);
-        return;
-      }
       selectColumn(col.key);
     };
   };
@@ -343,16 +369,8 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover, to
     rowDefinitionsWithPosition.forEach(def => {
       const cell = def.render(col, sel);
       if (col.isFertile) cell.classList.add("fertility-cell");
-      const crossedRows = store.crossCellSelectionMode
-        ? store.crossCellDraft?.[col.key]
-        : store.entries[col.key]?.crossedRows;
+      const crossedRows = store.entries[col.key]?.crossedRows;
       if (Array.isArray(crossedRows) && crossedRows.includes(def.id)) cell.classList.add("crossed-cell");
-      if (store.crossCellSelectionMode) {
-        cell.classList.add("cross-cell-selectable");
-        cell.setAttribute("role", "checkbox");
-        cell.setAttribute("aria-checked", String(cell.classList.contains("crossed-cell")));
-        cell.title = "Toggle crossed cell";
-      }
       attach(cell, col, def.id);
       rows[def.id].appendChild(cell);
     });
@@ -630,9 +648,17 @@ export function openMarkersModal() {
   const data = store.entries[store.selectedKey] || {};
 
   store.modal.isPeak = data.isPeak === true;
-  store.modal.marker = data.marker ?? "";
-  store.modal.markerColor = normalizeMarkerColor(data.markerColor ?? "blue");
-  store.modal.markerPointType = data.markerPointType ?? store.selectedPointType ?? "temp";
+  store.modal.markers = normalizeDayMarkers(data.markers, data);
+  const firstSavedType = ["bbt", "mucus", "cervix"].find(type => store.modal.markers[type].value);
+  store.modal.markerColor = normalizeMarkerColor(
+    data.markerColor ?? markerColorFromType(firstSavedType || "mucus"),
+  );
+  const selectedType = markerTypeFromColor(store.modal.markerColor);
+  if (!store.modal.markers.bbt.value) {
+    store.modal.markers.bbt.pointType = store.selectedPointType ?? "temp";
+  }
+  store.modal.markerPointType = store.modal.markers[selectedType].pointType;
+  store.modal.marker = store.modal.markers[selectedType].value;
 
   qs("markersMarker").value = store.modal.marker;
 
@@ -650,19 +676,41 @@ export function clearMarkersModalInput() {
   if (markerInput) markerInput.value = "";
 }
 
+function saveVisibleMarkerDraft() {
+  const type = markerTypeFromColor(store.modal.markerColor);
+  const value = qs("markersMarker")?.value || "";
+  store.modal.markers[type] = {
+    value,
+    pointType: type === "bbt"
+      ? (store.modal.markerPointType || store.selectedPointType || "temp")
+      : "temp",
+  };
+  store.modal.marker = value;
+}
+
+/** Preserves the visible marker before switching between BBT, mucus, and cervix. */
+export function selectMarkerType(color) {
+  saveVisibleMarkerDraft();
+  store.modal.markerColor = normalizeMarkerColor(color);
+  const type = markerTypeFromColor(store.modal.markerColor);
+  const marker = store.modal.markers[type];
+  store.modal.marker = marker.value;
+  store.modal.markerPointType = marker.pointType;
+  const markerInput = qs("markersMarker");
+  if (markerInput) markerInput.value = marker.value;
+  syncModalUI();
+}
+
 export function saveMarkersModal(render) {
   if (!store.selectedKey) return;
 
-  store.modal.marker = qs("markersMarker").value || "";
-
-  const markerColor = normalizeMarkerColor(store.modal.markerColor || "blue");
+  saveVisibleMarkerDraft();
 
   store.entries[store.selectedKey] = {
     ...(store.entries[store.selectedKey] || {}),
     isPeak: store.modal.isPeak === true,
-    marker: store.modal.marker,
-    markerColor,
-    markerPointType: store.modal.markerPointType || "temp",
+    markers: normalizeDayMarkers(store.modal.markers),
+    markerColor: store.modal.markerColor,
   };
 
   store.save();

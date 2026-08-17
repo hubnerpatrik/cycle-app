@@ -15,7 +15,7 @@
   </title>
 
   <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
     rel="stylesheet"
   >
 
@@ -86,11 +86,6 @@
               <span id="activeMapName" class="active-map-name">Active map</span>
               <span id="activeMapStatusPill" class="map-pill hidden">Open</span>
             </div>
-            <div class="cycle-nav">
-              <button id="prevCycleBtn" class="tool-btn" type="button">‹</button>
-              <span id="cycleNavLabel"></span>
-              <button id="nextCycleBtn" class="tool-btn" type="button">›</button>
-            </div>
             <div class="zoom-controls">
               <button id="zoomOutBtn" class="tool-btn" type="button">−</button>
               <span id="zoomLabel">100%</span>
@@ -106,7 +101,7 @@
               </div>
             </div>
             <button id="markersActionBtn" class="tool-btn marker-btn" type="button">Markers</button>
-            <button id="crossCellsActionBtn" class="tool-btn" type="button">Cross cells</button>
+            <button id="crossCellsActionBtn" class="tool-btn cross-cells-btn" type="button">Cross cells</button>
             <button id="saveActiveMapBtn" class="btn primary chart-save-btn" type="button">Save Map</button>
           </div>
         </div>
@@ -310,7 +305,7 @@
   <div id="crossCellsModal" class="modal hidden">
     <div class="modal-card">
       <h2>Cross out cells</h2>
-      <p>Select the cells you want to cross out, then confirm your selection.</p>
+      <p>Select the cells directly in the temperature chart, then confirm your selection.</p>
       <div class="modal-actions">
         <button id="cancelCrossCellsBtn" class="btn secondary" type="button">Cancel</button>
         <button id="startCrossCellsBtn" class="btn primary" type="button">Select cells</button>
