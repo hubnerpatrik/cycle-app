@@ -1,30 +1,53 @@
 # Contributing
 
+Cycle Tracker uses a simple two-branch workflow designed to keep active development separate from stable releases.
+
+---
+
 ## Branches
 
-- `main` is the stable, releasable version of the real project.
-- `develop` is the only working branch. All features, fixes, tests, and documentation changes are committed there.
-- Do not commit directly to `main` and do not create additional branches for normal work.
-- When `develop` is tested and ready, open a pull request from `develop` into `main`.
+| Branch | Purpose |
+|---|---|
+| `main` | Stable and releasable version of the project |
+| `develop` | Active development branch for features, fixes, tests, and documentation |
 
-Start each work session on `develop`:
+Normal development happens only on `develop`.
+
+Do not commit directly to `main` and do not create additional branches for routine work.
+
+When `develop` is tested and ready for release, open a pull request:
+
+```text
+develop → main
+```
+
+### Starting a work session
 
 ```bash
 git switch develop
 git status
 ```
 
-After changing files, run the checks and commit to `develop`:
+### Before committing
+
+Run the project checks:
 
 ```bash
 npm run check
+```
+
+Then commit the changed files:
+
+```bash
 git add <changed-files>
 git commit -m "feat: describe the change"
 ```
 
+---
+
 ## Commits
 
-Keep commits focused and use Conventional Commit-style subjects:
+Keep commits focused and use concise Conventional Commit-style subjects.
 
 ```text
 feat: add map export
@@ -34,34 +57,123 @@ test: cover year-boundary cycles
 chore: update repository tooling
 ```
 
-Use the imperative mood, keep the subject concise, and explain motivation or migration concerns in the body when needed. Avoid commit messages such as `update`, `changes`, or `final touch-ups`.
+### Common prefixes
 
-## Pull requests
+| Prefix | Use |
+|---|---|
+| `feat:` | New functionality |
+| `fix:` | Bug fix |
+| `docs:` | Documentation |
+| `test:` | Tests |
+| `chore:` | Tooling, maintenance, or repository changes |
 
-1. Finish and commit the intended release changes on `develop`.
-2. Run `npm ci` after dependency changes.
-3. Run `npm run check`.
-4. Open a pull request from `develop` into `main`.
-5. Describe the user-visible effect, implementation, tests, and any data migration.
-6. Merge only after CI passes; prefer a regular merge so `develop` and `main` can be synchronized without rewriting `develop` history.
-7. After merging, update local branches with `git pull --ff-only` where possible.
+Use the imperative mood and keep the subject short and specific.
 
-## Versioning and releases
+When necessary, use the commit body to explain motivation, implementation details, or migration concerns.
 
-This pre-1.0 project uses Semantic Versioning:
+Avoid vague messages such as:
 
-- Patch (`0.9.1`): compatible bug or security fix.
-- Minor (`0.10.0`): new functionality or a meaningful pre-1.0 behavior change.
-- Major (`1.0.0`): first stable release; later major bumps contain breaking changes.
+```text
+update
+changes
+final touch-ups
+```
 
-Release procedure:
+---
 
-1. Move relevant entries from `Unreleased` in `CHANGELOG.md` into a dated version section.
-2. Run `npm version <patch|minor|major> --no-git-tag-version`.
-3. Run `npm run check` on `develop` and merge the `develop` → `main` release pull request.
-4. On `main`, create an annotated tag: `git tag -a vX.Y.Z -m "Release vX.Y.Z"`.
-5. Push the commit and tag: `git push origin main --follow-tags`.
-6. Synchronize `develop` from the released `main` if the merge created a new commit.
-7. Create a GitHub release from the changelog section.
+## Pull Requests
 
-Do not rewrite or tag historical commits merely to clean up old commit messages. Apply these conventions to new work.
+A release normally follows this flow:
+
+1. Finish the intended changes on `develop`.
+2. Commit all relevant files.
+3. Run `npm ci` after dependency changes.
+4. Run:
+
+```bash
+npm run check
+```
+
+5. Open a pull request from `develop` into `main`.
+6. Describe:
+   - user-visible changes,
+   - important implementation details,
+   - tests performed,
+   - any required data migration.
+7. Merge only after CI passes.
+8. Prefer a regular merge so `develop` and `main` can remain synchronized without rewriting development history.
+9. Update local branches afterward using `git pull --ff-only` where possible.
+
+---
+
+## Versioning
+
+Cycle Tracker follows [Semantic Versioning](https://semver.org/) during pre-1.0 development.
+
+| Version | Meaning |
+|---|---|
+| `0.9.1` | Compatible bug fix or security fix |
+| `0.10.0` | New functionality or meaningful pre-1.0 behavior change |
+| `1.0.0` | First stable release |
+
+After `1.0.0`, major version changes indicate breaking changes.
+
+---
+
+## Release Process
+
+### 1. Update the changelog
+
+Move relevant entries from `Unreleased` in `CHANGELOG.md` into a dated release section.
+
+### 2. Update the version
+
+```bash
+npm version <patch|minor|major> --no-git-tag-version
+```
+
+### 3. Validate the release
+
+Run the full project checks on `develop`:
+
+```bash
+npm run check
+```
+
+### 4. Merge into `main`
+
+Open and merge the release pull request:
+
+```text
+develop → main
+```
+
+### 5. Create the release tag
+
+On `main`:
+
+```bash
+git tag -a vX.Y.Z -m "Release vX.Y.Z"
+```
+
+### 6. Push the release
+
+```bash
+git push origin main --follow-tags
+```
+
+### 7. Synchronize `develop`
+
+If the merge created a new commit on `main`, synchronize `develop` with the released state.
+
+### 8. Publish the GitHub release
+
+Create a GitHub Release using the corresponding section from `CHANGELOG.md`.
+
+---
+
+## Historical Commits
+
+Do not rewrite old history or recreate historical tags solely to standardize earlier commit messages.
+
+These conventions apply to new development going forward.
