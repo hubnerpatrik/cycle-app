@@ -1,81 +1,47 @@
-// store.js — Application state and localStorage persistence
+// store.js — Application state and persistence coordination
 // ─────────────────────────────────────────────
 // Owns the Store class and the singleton store instance.
 // Active-map data is exposed through store.entries for compatibility.
 
-/* ─── storage keys ────────────────────────── */
+import {
+  ACTIVE_MAP_ID_STORAGE_KEY,
+  LEGACY_STORAGE_KEY,
+  LocalStorageAdapter,
+  MAPS_STORAGE_KEY,
+  PROFILE_STORAGE_KEY,
+} from "./storage/local-storage-adapter.js";
+import {
+  CROSSABLE_ROW_IDS,
+  MARKER_TYPES,
+  emptyProfile,
+  isPlainObject,
+  normalizeApplicationData,
+  normalizeCrossedChartTemps,
+  normalizeCrossedRows,
+  normalizeDayMarkers,
+  normalizeMap,
+  normalizeProfile,
+} from "./data-validation.js";
+import { parseBackup, serializeBackup } from "./backup.js";
 
-export const LEGACY_STORAGE_KEY = "cycleData";
-export const PROFILE_STORAGE_KEY = "profile";
-export const MAPS_STORAGE_KEY = "maps";
-export const ACTIVE_MAP_ID_STORAGE_KEY = "activeMapId";
-
-export const CROSSABLE_ROW_IDS = Object.freeze([
-  "cycleDayRow", "bleedingRow", "spottingRow", "sedimentRow", "sensationRow",
-  "stretchRow", "visibleRow", "consistencyRow", "colorRow", "blueMarkerRow",
-  "cervixFirmnessRow", "cervixHeightRow", "cervixOpennessRow", "orangeMarkerRow",
-  "otherRow", "sexRow",
-]);
-
-export function normalizeCrossedRows(rows) {
-  if (!Array.isArray(rows)) return [];
-  return [...new Set(rows.filter(rowId => CROSSABLE_ROW_IDS.includes(rowId)))];
-}
-
-export function normalizeCrossedChartTemps(temps) {
-  if (!Array.isArray(temps)) return [];
-  return [...new Set(temps
-    .filter(temp => typeof temp === "number" && Number.isFinite(temp) && temp >= 36 && temp <= 37.4)
-    .map(temp => Math.round(temp * 100) / 100))];
-}
-
-export const MARKER_TYPES = Object.freeze(["bbt", "mucus", "cervix"]);
-const VALID_MARKER_VALUES = new Set(["", "P", "1", "2", "3", "4", "5", "6"]);
-
-function normalizeMarkerValue(value) {
-  const normalized = String(value ?? "");
-  return VALID_MARKER_VALUES.has(normalized) ? normalized : "";
-}
-
-/** Normalizes independent per-day markers and migrates the legacy single-marker fields. */
-export function normalizeDayMarkers(markers, legacyEntry = {}) {
-  const normalized = Object.fromEntries(MARKER_TYPES.map(type => [type, {
-    value: "",
-    pointType: "temp",
-  }]));
-
-  if (isPlainObject(markers)) {
-    MARKER_TYPES.forEach(type => {
-      const marker = isPlainObject(markers[type]) ? markers[type] : {};
-      normalized[type] = {
-        value: normalizeMarkerValue(marker.value),
-        pointType: marker.pointType === "adjusted" ? "adjusted" : "temp",
-      };
-    });
-    return normalized;
-  }
-
-  const legacyValue = normalizeMarkerValue(legacyEntry.marker);
-  const legacyType = legacyEntry.markerColor === "green"
-    ? "bbt"
-    : legacyEntry.markerColor === "orange" ? "cervix" : "mucus";
-  normalized[legacyType] = {
-    value: legacyValue,
-    pointType: legacyEntry.markerPointType === "adjusted" ? "adjusted" : "temp",
-  };
-  return normalized;
-}
-
-export function isPlainObject(value) {
-  if (value === null || typeof value !== "object") return false;
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
-}
+export {
+  ACTIVE_MAP_ID_STORAGE_KEY,
+  CROSSABLE_ROW_IDS,
+  LEGACY_STORAGE_KEY,
+  MAPS_STORAGE_KEY,
+  MARKER_TYPES,
+  PROFILE_STORAGE_KEY,
+  isPlainObject,
+  normalizeCrossedChartTemps,
+  normalizeCrossedRows,
+  normalizeDayMarkers,
+};
 
 /* ─── store ───────────────────────────────── */
 
 export class Store {
-constructor() {
+constructor(persistence = new LocalStorageAdapter()) {
+  this.persistence = persistence;
   this.selectedKey = null;
   this.selectedPointType = "temp";
   this.hoveredKey = null;
@@ -109,14 +75,7 @@ constructor() {
 
   /** Returns a blank profile state object. */
   _emptyProfile() {
-    return {
-      name: "",
-      consultantName: "",
-      age: "",
-      usualMeasurementTime: "",
-      goal: "",
-      measurementMethod: "",
-    };
+    return emptyProfile();
   }
 
   /** Returns a blank modal state object. */
@@ -163,6 +122,8 @@ _emptyModal() {
       entries: {},
       coverlines: {},
       fertileRange: { start: null, end: null },
+      profileSnapshot: { ...this.profile },
+      profileSnapshotLocked: false,
     };
   }
 
@@ -176,10 +137,7 @@ _emptyModal() {
   }
 
   _normalizeProfile(profile) {
-    return {
-      ...this._emptyProfile(),
-      ...(isPlainObject(profile) ? profile : {}),
-    };
+    return normalizeProfile(profile);
   }
 
   _isProfileComplete(profile = this.profile) {
@@ -187,32 +145,7 @@ _emptyModal() {
   }
 
   _normalizeMap(map, fallbackId, fallbackName = "") {
-    const normalized = isPlainObject(map) ? map : {};
-    return {
-      id: fallbackId,
-      name: typeof normalized.name === "string" ? normalized.name : fallbackName,
-      createdAt: normalized.createdAt || new Date().toISOString(),
-      status: normalized.status === "closed" ? "closed" : "open",
-      closedAt: normalized.closedAt ?? null,
-      entries: isPlainObject(normalized.entries)
-        ? Object.fromEntries(Object.entries(normalized.entries).map(([key, entry]) => [
-            key,
-            isPlainObject(entry) ? {
-              ...entry,
-              crossedRows: normalizeCrossedRows(entry.crossedRows),
-              crossedChartTemps: normalizeCrossedChartTemps(entry.crossedChartTemps),
-              markers: normalizeDayMarkers(entry.markers, entry),
-            } : {},
-          ]))
-        : {},
-      coverlines: isPlainObject(normalized.coverlines) ? normalized.coverlines : {},
-      fertileRange: isPlainObject(normalized.fertileRange)
-        ? {
-            start: normalized.fertileRange.start ?? null,
-            end: normalized.fertileRange.end ?? null,
-          }
-        : { start: null, end: null },
-    };
+    return normalizeMap(map, fallbackId, fallbackName);
   }
 
   _generateMapId() {
@@ -220,14 +153,7 @@ _emptyModal() {
   }
 
   _persistAll() {
-    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(this.profile));
-    localStorage.setItem(MAPS_STORAGE_KEY, JSON.stringify(this.maps));
-
-    if (this.activeMapId) {
-      localStorage.setItem(ACTIVE_MAP_ID_STORAGE_KEY, this.activeMapId);
-    } else {
-      localStorage.removeItem(ACTIVE_MAP_ID_STORAGE_KEY);
-    }
+    this.persistence.saveState(this.getPersistentState());
   }
 
   _clearTransientSelection() {
@@ -255,8 +181,8 @@ _emptyModal() {
   }
 
   _migrateLegacyData() {
-    const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
-    if (!raw || localStorage.getItem(MAPS_STORAGE_KEY)) return false;
+    const raw = this.persistence.read(LEGACY_STORAGE_KEY);
+    if (!raw || this.persistence.read(MAPS_STORAGE_KEY)) return false;
 
     const parsed = this._safeParse(raw, null);
     if (!parsed) return false;
@@ -278,18 +204,19 @@ _emptyModal() {
     };
     this.activeMapId = mapId;
     this.profile = this._normalizeProfile(parsed.profile);
+    this._syncActiveMapState();
     this._persistAll();
     return true;
   }
 
-  /** Loads profile + maps from localStorage and migrates legacy single-map data if needed. */
+  /** Loads profile + maps and migrates legacy single-map data if needed. */
   _load() {
     const migrated = this._migrateLegacyData();
 
-    const rawProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
+    const rawProfile = this.persistence.read(PROFILE_STORAGE_KEY);
     const storedProfile = this._safeParse(rawProfile, null);
-    const storedMaps = this._safeParse(localStorage.getItem(MAPS_STORAGE_KEY), {});
-    const storedActiveMapId = localStorage.getItem(ACTIVE_MAP_ID_STORAGE_KEY);
+    const storedMaps = this._safeParse(this.persistence.read(MAPS_STORAGE_KEY), {});
+    const storedActiveMapId = this.persistence.read(ACTIVE_MAP_ID_STORAGE_KEY);
 
     this.profile = this._normalizeProfile(storedProfile);
     if (isPlainObject(storedProfile) && storedProfile.setupCompleted !== false) {
@@ -303,7 +230,7 @@ _emptyModal() {
     this._ensureActiveMap();
 
     if (migrated) {
-      localStorage.removeItem(LEGACY_STORAGE_KEY);
+      this.persistence.remove(LEGACY_STORAGE_KEY);
     }
   }
 
@@ -313,6 +240,103 @@ _emptyModal() {
 
   getProfile() {
     return this.profile;
+  }
+
+  /** Returns the profile captured with the active map, falling back for older maps. */
+  getActiveMapProfile() {
+    const mapProfile = this.activeMapId ? this.maps[this.activeMapId]?.profileSnapshot : null;
+    return mapProfile || this.profile;
+  }
+
+  /** Returns all state required to restore the application. */
+  getPersistentState() {
+    const maps = { ...this.maps };
+    if (this.activeMapId && maps[this.activeMapId]) {
+      maps[this.activeMapId] = {
+        ...maps[this.activeMapId],
+        entries: this.entries,
+        coverlines: this.coverlines,
+        fertileRange: this.fertileRange,
+      };
+    }
+    return { profile: this.profile, maps, activeMapId: this.activeMapId };
+  }
+
+  createBackup(exportedAt) {
+    return serializeBackup(this.getPersistentState(), exportedAt);
+  }
+
+  /** Creates a portable backup containing one selected map and its profile context. */
+  createMapBackup(mapId, exportedAt) {
+    const state = this.getPersistentState();
+    const map = state.maps[mapId];
+    if (!map) throw new Error("The selected map no longer exists.");
+    const profileSnapshot = map.profileSnapshot || state.profile;
+    const portableMap = { ...map, profileSnapshot };
+    return serializeBackup({
+      profile: profileSnapshot,
+      maps: { [mapId]: portableMap },
+      activeMapId: state.activeMapId === mapId ? mapId : null,
+    }, exportedAt);
+  }
+
+  validateBackup(json) {
+    return parseBackup(json);
+  }
+
+  validateMapBackup(json) {
+    const state = parseBackup(json);
+    if (Object.keys(state.maps).length !== 1) {
+      throw new Error("A shared-map backup must contain exactly one map.");
+    }
+    return state;
+  }
+
+  /** Replaces persisted state only after complete validation and successful storage. */
+  restoreBackup(json) {
+    const nextState = parseBackup(json);
+    this.persistence.saveState(nextState);
+    this.profile = nextState.profile;
+    this.maps = nextState.maps;
+    this.activeMapId = nextState.activeMapId;
+    this._clearTransientSelection();
+    this._syncActiveMapState();
+    return this.getPersistentState();
+  }
+
+  /** Adds one shared-map backup without replacing the recipient's profile or maps. */
+  importMapBackup(json) {
+    const importedState = this.validateMapBackup(json);
+    const importedMaps = Object.values(importedState.maps);
+    const sourceMap = importedMaps[0];
+    const mapId = this.maps[sourceMap.id] ? this._generateMapId() : sourceMap.id;
+    const importedMap = {
+      ...sourceMap,
+      id: mapId,
+      status: "closed",
+      profileSnapshot: sourceMap.profileSnapshot || importedState.profile,
+      profileSnapshotLocked: true,
+    };
+    const currentState = this.getPersistentState();
+    const nextState = {
+      profile: currentState.profile,
+      maps: { ...currentState.maps, [mapId]: importedMap },
+      activeMapId: currentState.activeMapId,
+    };
+
+    this.persistence.saveState(nextState);
+    this.maps = nextState.maps;
+    return this.getMap(mapId);
+  }
+
+  restoreData(data) {
+    const nextState = normalizeApplicationData(data, { strict: true });
+    this.persistence.saveState(nextState);
+    this.profile = nextState.profile;
+    this.maps = nextState.maps;
+    this.activeMapId = nextState.activeMapId;
+    this._clearTransientSelection();
+    this._syncActiveMapState();
   }
 
   saveProfile(profile) {
@@ -425,14 +449,18 @@ _emptyModal() {
     return closedMap;
   }
 
-  /** Persists current entries to localStorage. */
+  /** Persists current entries through the configured storage adapter. */
   save() {
     if (this.activeMapId && this.maps[this.activeMapId]) {
+      const activeMap = this.maps[this.activeMapId];
       this.maps[this.activeMapId] = {
-        ...this.maps[this.activeMapId],
+        ...activeMap,
         entries: this.entries,
         coverlines: this.coverlines,
         fertileRange: this.fertileRange,
+        profileSnapshot: activeMap.profileSnapshotLocked
+          ? activeMap.profileSnapshot
+          : { ...this.profile },
       };
     }
 
@@ -473,10 +501,7 @@ _emptyModal() {
 
   /** Clears all data and resets state to defaults. */
   reset() {
-    localStorage.removeItem(LEGACY_STORAGE_KEY);
-    localStorage.removeItem(PROFILE_STORAGE_KEY);
-    localStorage.removeItem(MAPS_STORAGE_KEY);
-    localStorage.removeItem(ACTIVE_MAP_ID_STORAGE_KEY);
+    this.persistence.clear();
     this.maps        = {};
     this.activeMapId = null;
     this.entries     = {};

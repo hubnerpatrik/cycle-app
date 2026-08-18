@@ -168,7 +168,7 @@ export function renderProfileInfo() {
   const GOAL_LABELS   = { avoid: "Avoid pregnancy", achieve: "Achieve pregnancy", observation: "Observation only" };
   const METHOD_LABELS = { oral: "Oral", vaginal: "Vaginal", rectal: "Rectal" };
 
-  const p = store.profile;
+  const p = store.getActiveMapProfile();
   const rows = [
     ["Name",        p.name],
     ["Consultant",  p.consultantName],
@@ -554,7 +554,7 @@ export function syncMeasurementTimeUI() {
   const hint = qs("timeAdjustmentHint");
   if (hint) {
     const adjustment = store.modal.measurementTimeEnabled
-      ? getTimeAdjustment(store.modal.measurementTime, store.profile.usualMeasurementTime)
+      ? getTimeAdjustment(store.modal.measurementTime, store.getActiveMapProfile().usualMeasurementTime)
       : 0;
     hint.innerText = adjustment !== 0
       ? `≈ ${adjustment > 0 ? "+" : ""}${adjustment.toFixed(2)} °C vs usual time`
@@ -962,7 +962,7 @@ export function openDayInfoModal(currentColumns) {
 
   qs("dayInfoTitle").innerText = `${key} (CD ${column?.cycleDay ?? "-"})`;
 
-  const adjustedTemp = getAdjustedTemp(data.temp, data.measurementTime, store.profile.usualMeasurementTime);
+  const adjustedTemp = getAdjustedTemp(data.temp, data.measurementTime, store.getActiveMapProfile().usualMeasurementTime);
   qs("infoTemp").innerText = data.temp != null
     ? `${formatTemp(data.temp)} °C${data.measurementTime ? ` at ${data.measurementTime}` : ""}${adjustedTemp != null ? ` (adjusted ${formatTemp(adjustedTemp)} °C)` : ""}`
     : "-";

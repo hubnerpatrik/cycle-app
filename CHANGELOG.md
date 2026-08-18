@@ -16,37 +16,47 @@ vMAJOR.MINOR.PATCH
 
 ### Added
 
-- Git contribution and release conventions.
-- Automated CI workflow conventions.
-- Two-branch workflow with stable `main` and active development on `develop`.
+- Per-map JSON backup export with saved author profiles and cycle observations.
+- Shared-map import that preserves the recipient's profile and existing maps.
+- Validation of imported application data.
+- User-facing data management controls in My Profile.
+- Git contribution, release, and CI conventions.
+- Two-branch workflow with stable `main` and working `develop`.
 
----
+### Changed
+
+- Refactored browser persistence behind a dedicated local-storage adapter.
+- Improved resilience when loading persisted application state.
 
 ## 0.9.0 — 2026-08-17
 
 ### Added
 
-- Shared `core.js` utilities.
-- Dependency-free unit tests.
-- Automated syntax checks.
-- Automated test execution.
-- Automated production build validation.
+- Shared `core.js` utilities and dependency-free unit tests.
+- Automated syntax, test, and production-build checks.
 
 ### Changed
 
-- Hardened profile and map persistence against malformed local data.
-- Improved cycle boundary detection for sparse observations.
-- Removed circular imports from chart rendering.
+* Refactored shared utilities out of feature-specific modules.
+* Hardened profile and map persistence against malformed local data.
+* Improved cycle boundary detection for sparse observations.
+* Removed circular imports from chart rendering.
+* Simplified map controls and removed deprecated cycle navigation controls.
+* Updated the chart to display all columns of the current map.
+* Unified buttons, typography, spacing, cards, navigation, and modal layouts.
+* Refined the pastel visual design across the application.
+* Improved desktop, tablet, and mobile layouts.
+* Improved calendar readability on narrow screens.
+* Improved map action layouts for touch devices.
+* Improved modal centering, scrolling, and short-screen behavior.
+* Added safe-area handling for mobile devices with display cutouts.
+* Prevented unintended horizontal page overflow.
 
 ### Security
 
-- Day notes and custom observation text are rendered using text nodes.
-- Map identifiers used in HTML attributes are escaped.
+- Rendered day notes and custom observation text with text nodes.
+- Escaped map identifiers used in HTML attributes.
 
----
+## [0.8.0]
 
-## 0.8.0
-
-Previous active-prototype milestone.
-
-Earlier development history remains available through the Git commit history.
+- Previous active-prototype milestone. Earlier changes remain available in Git history.

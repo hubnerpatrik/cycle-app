@@ -806,6 +806,30 @@ select:focus {
   background: rgba(255, 255, 255, 0.92);
 }
 
+.btn.map-export-btn {
+  border-color: rgba(111, 143, 91, 0.22);
+  background: linear-gradient(135deg, #d8edc5, #edf6df);
+  color: #3f5736;
+  box-shadow: 0 10px 24px rgba(111, 143, 91, 0.1);
+}
+
+.btn.map-export-btn:hover {
+  background: linear-gradient(135deg, #cce7b3, #e5f2d3);
+  box-shadow: 0 15px 30px rgba(111, 143, 91, 0.16);
+}
+
+.btn.map-delete-btn {
+  border: 1px solid rgba(180, 82, 82, 0.18);
+  background: linear-gradient(135deg, #ffd6d6, #ffe8df);
+  color: #8e3e3e;
+  box-shadow: 0 10px 24px rgba(180, 82, 82, 0.09);
+}
+
+.btn.map-delete-btn:hover {
+  background: linear-gradient(135deg, #ffcaca, #ffded5);
+  box-shadow: 0 15px 30px rgba(180, 82, 82, 0.14);
+}
+
 .map-list-card {
   border-color: rgba(111, 73, 62, 0.1);
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.7), rgba(255, 239, 233, 0.74));

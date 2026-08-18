@@ -6,7 +6,7 @@
 // Module map:
 //   app.js      render, interaction state, init
 //   core.js     constants, date/temperature/geometry utilities
-//   store.js    Store class, localStorage persistence
+//   store.js    Store class and persistence coordination
 //   domain.js   cycle detection, column building
 //   chart.js    canvas rendering, coverline interaction
 //   ui.js       calendar, info panel, map rows, modal

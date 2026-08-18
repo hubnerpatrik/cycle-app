@@ -61,6 +61,7 @@ export function resolveCycleId(date) {
 
 function buildColumn(key, index, date, starts) {
   const raw = store.entries[key] ?? {};
+  const mapProfile = store.getActiveMapProfile();
 
   return {
     key,
@@ -76,8 +77,8 @@ function buildColumn(key, index, date, starts) {
     temp: raw.temp ?? null,
     tempFactors: raw.tempFactors ?? "",
     measurementTime: raw.measurementTime ?? "",
-    timeAdjustment: getTimeAdjustment(raw.measurementTime, store.profile.usualMeasurementTime),
-    adjustedTemp: getAdjustedTemp(raw.temp, raw.measurementTime, store.profile.usualMeasurementTime),
+    timeAdjustment: getTimeAdjustment(raw.measurementTime, mapProfile.usualMeasurementTime),
+    adjustedTemp: getAdjustedTemp(raw.temp, raw.measurementTime, mapProfile.usualMeasurementTime),
 
     bleeding: raw.bleeding ?? "none",
     discharge: raw.discharge ?? "none",
