@@ -1,22 +1,36 @@
 # Changelog
 
-All notable changes to this project are documented here.
+All notable changes to **Cycle Tracker** are documented here.
 
-The project follows [Semantic Versioning](https://semver.org/) while it is in active pre-1.0 development. Versions are released from `main` and tagged as `vMAJOR.MINOR.PATCH`.
+The project follows [Semantic Versioning](https://semver.org/) during active pre-1.0 development.
 
-## [Unreleased]
+Stable releases are published from `main` and tagged as:
+
+```text
+vMAJOR.MINOR.PATCH
+```
+
+---
+
+## Unreleased
 
 ### Added
 
-- Git contribution, release, and CI conventions.
-- Two-branch workflow with stable `main` and working `develop`.
+- Git contribution and release conventions.
+- Automated CI workflow conventions.
+- Two-branch workflow with stable `main` and active development on `develop`.
 
-## [0.9.0] - 2026-08-17
+---
+
+## 0.9.0 — 2026-08-17
 
 ### Added
 
-- Shared `core.js` utilities and dependency-free unit tests.
-- Automated syntax, test, and production-build checks.
+- Shared `core.js` utilities.
+- Dependency-free unit tests.
+- Automated syntax checks.
+- Automated test execution.
+- Automated production build validation.
 
 ### Changed
 
@@ -26,9 +40,13 @@ The project follows [Semantic Versioning](https://semver.org/) while it is in ac
 
 ### Security
 
-- Rendered day notes and custom observation text with text nodes.
-- Escaped map identifiers used in HTML attributes.
+- Day notes and custom observation text are rendered using text nodes.
+- Map identifiers used in HTML attributes are escaped.
 
-## [0.8.0]
+---
 
-- Previous active-prototype milestone. Earlier changes remain available in Git history.
+## 0.8.0
+
+Previous active-prototype milestone.
+
+Earlier development history remains available through the Git commit history.
