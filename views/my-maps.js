@@ -40,7 +40,7 @@ function matchesFilter(map, year, month) {
   });
 }
 
-function renderMapList(container, maps, activeMapId, year, month, onOpen, onRename, onDelete) {
+function renderMapList(container, maps, activeMapId, year, month, onOpen, onRename, onDelete, onExport) {
   const filteredMaps = maps.filter(map => matchesFilter(map, year, month));
   const list = container.querySelector("#mapsList");
 
@@ -64,12 +64,14 @@ function renderMapList(container, maps, activeMapId, year, month, onOpen, onRena
             <h3>${escapeHtml(map.name || "Untitled map")}</h3>
             <span class="map-pill ${map.status === "closed" ? "map-pill-closed" : ""}">${map.status === "closed" ? "Closed" : "Open"}</span>
             ${map.id === activeMapId ? '<span class="map-pill">Active</span>' : ""}
+            ${map.profileSnapshotLocked ? '<span class="map-pill">Shared</span>' : ""}
           </div>
           <p class="map-list-meta">${escapeHtml(map.dateRange)}</p>
           <p class="map-list-preview">Preview: ${escapeHtml(map.preview)}</p>
           <p class="map-list-meta">Last activity: ${escapeHtml(String(map.lastActivity).slice(0, 10))}</p>
         </div>
         <div class="map-list-actions">
+          <button type="button" class="btn secondary map-export-btn" data-map-export-id="${escapeHtml(map.id)}">Export</button>
           <button type="button" class="btn secondary map-edit-btn" data-map-rename-id="${escapeHtml(map.id)}">Edit name</button>
           <button type="button" class="btn danger map-delete-btn" data-map-delete-id="${escapeHtml(map.id)}">Delete</button>
           <button type="button" class="btn primary map-open-btn" data-map-id="${escapeHtml(map.id)}">${map.status === "closed" ? "Reopen" : "Open"}</button>
@@ -87,6 +89,10 @@ function renderMapList(container, maps, activeMapId, year, month, onOpen, onRena
 
   list.querySelectorAll("[data-map-id]").forEach(button => {
     button.addEventListener("click", () => onOpen?.(button.dataset.mapId));
+  });
+
+  list.querySelectorAll("[data-map-export-id]").forEach(button => {
+    button.addEventListener("click", () => onExport?.(button.dataset.mapExportId));
   });
 
   list.querySelectorAll("[data-map-rename-id]").forEach(button => {
@@ -121,7 +127,7 @@ function renderMapList(container, maps, activeMapId, year, month, onOpen, onRena
   });
 }
 
-export function renderMyMapsView(container, { maps, activeMapId, onCreate, onOpen, onRename, onDelete }) {
+export function renderMyMapsView(container, { maps, activeMapId, onCreate, onImport, onOpen, onRename, onDelete, onExport }) {
   const mapMeta = maps.map(buildMapMeta);
   const allYears = [...new Set(mapMeta.flatMap(map => map.years))].sort();
   let selectedYear = "";
@@ -133,7 +139,7 @@ export function renderMyMapsView(container, { maps, activeMapId, onCreate, onOpe
         <div class="screen-hero">
           <p class="screen-kicker">My Maps</p>
           <h2>Saved cycle maps</h2>
-          <p>Open any map as the active working chart.</p>
+          <p>Export individual maps with their saved profile, or import a shared map without replacing your own data.</p>
         </div>
 
         <div class="screen-card map-filter-card">
@@ -165,7 +171,9 @@ export function renderMyMapsView(container, { maps, activeMapId, onCreate, onOpe
             </label>
           </div>
           <div class="screen-inline-actions">
+            <button type="button" class="btn secondary" id="myMapsImportBtn">Import map</button>
             <button type="button" class="btn primary" id="myMapsCreateBtn">Create map</button>
+            <input class="visually-hidden" id="myMapsImportFile" type="file" accept="application/json,.json" tabindex="-1">
           </div>
         </div>
 
@@ -180,12 +188,19 @@ export function renderMyMapsView(container, { maps, activeMapId, onCreate, onOpe
   const refresh = () => {
     selectedYear = yearFilter?.value ?? "";
     selectedMonth = monthFilter?.value ?? "";
-    renderMapList(container, mapMeta, activeMapId, selectedYear, selectedMonth, onOpen, onRename, onDelete);
+    renderMapList(container, mapMeta, activeMapId, selectedYear, selectedMonth, onOpen, onRename, onDelete, onExport);
   };
 
   yearFilter?.addEventListener("change", refresh);
   monthFilter?.addEventListener("change", refresh);
   container.querySelector("#myMapsCreateBtn")?.addEventListener("click", () => onCreate?.());
+  const importInput = container.querySelector("#myMapsImportFile");
+  container.querySelector("#myMapsImportBtn")?.addEventListener("click", () => importInput?.click());
+  importInput?.addEventListener("change", () => {
+    const file = importInput.files?.[0];
+    importInput.value = "";
+    if (file) onImport?.(file);
+  });
 
   refresh();
 }

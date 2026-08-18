@@ -16,8 +16,17 @@ vMAJOR.MINOR.PATCH
 
 ### Added
 
+- Per-map JSON backup export with saved author profiles and cycle observations.
+- Shared-map import that preserves the recipient's profile and existing maps.
+- Validation of imported application data.
+- User-facing data management controls in My Profile.
 - Git contribution, release, and CI conventions.
 - Two-branch workflow with stable `main` and working `develop`.
+
+### Changed
+
+- Refactored browser persistence behind a dedicated local-storage adapter.
+- Improved resilience when loading persisted application state.
 
 ## 0.9.0 — 2026-08-17
 

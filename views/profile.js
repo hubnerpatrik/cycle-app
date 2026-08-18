@@ -110,6 +110,7 @@ export function renderProfileScreen(container, {
             </aside>
           </div>
         </form>
+
       </div>
     </section>
   `;

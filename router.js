@@ -3,6 +3,19 @@ import { renderMenuView } from "./views/menu.js";
 import { renderProfileScreen } from "./views/profile.js";
 import { renderMyMapsView } from "./views/my-maps.js";
 import { renderCreateMapView } from "./views/create-map.js";
+import { backupFilename } from "./backup.js";
+
+function downloadBackup(contents, mapName) {
+  const blob = new Blob([contents], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = backupFilename(new Date(), mapName);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
 
 export function createRouter({ root, showStandaloneScreen, openActiveMap, showMessage }) {
   const state = {
@@ -91,6 +104,32 @@ export function createRouter({ root, showStandaloneScreen, openActiveMap, showMe
           maps: store.listMaps(),
           activeMapId: store.getActiveMapId(),
           onCreate: () => navigate("create-map"),
+          onImport: async file => {
+            let contents;
+            try {
+              contents = await file.text();
+            } catch {
+              showMessage?.("The map backup could not be read.");
+              return;
+            }
+
+            try {
+              store.validateMapBackup(contents);
+            } catch (error) {
+              showMessage?.(error.message || "The map backup is invalid.");
+              return;
+            }
+
+            if (!confirm("Import this shared map? It will be added to My Maps without changing your profile or existing maps.")) return;
+
+            try {
+              const importedMap = store.importMapBackup(contents);
+              showMessage?.(`“${importedMap.name || "Untitled map"}” imported ✓`);
+              navigate("my-maps");
+            } catch (error) {
+              showMessage?.(error.message || "Import failed. Your existing data was preserved.");
+            }
+          },
           onRename: (mapId, name) => {
             const renamed = store.renameMap(mapId, name);
             if (!renamed) {
@@ -104,6 +143,16 @@ export function createRouter({ root, showStandaloneScreen, openActiveMap, showMe
             if (!store.deleteMap(mapId)) return;
             showMessage?.("Map deleted");
             navigate("my-maps");
+          },
+          onExport: mapId => {
+            try {
+              const map = store.getMap(mapId);
+              if (!map) throw new Error("Map not found");
+              downloadBackup(store.createMapBackup(mapId), map.name);
+              showMessage?.(`“${map.name || "Untitled map"}” exported ✓`);
+            } catch {
+              showMessage?.("Map export failed. Your data was not changed.");
+            }
           },
           onOpen: mapId => {
             store.setActiveMapId(mapId);

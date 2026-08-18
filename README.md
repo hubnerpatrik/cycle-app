@@ -22,7 +22,7 @@ The app combines **basal body temperature, bleeding, cervical mucus, cervix obse
 
 It does **not** predict ovulation, assign fertility scores or automatically decide what the cycle data means.
 
-> **Current status:** Active prototype · v0.9.0
+> **Current status:** Active prototype · v0.10.0
 
 ## Core features
 
@@ -36,6 +36,7 @@ It does **not** predict ovulation, assign fertility scores or automatically deci
 | **Multiple maps** | Create, rename, close, reopen and filter separate cycle maps. |
 | **Day summary** | Open a read-only overview of everything recorded for a selected day. |
 | **Local storage** | Data currently stays in the browser using `localStorage`. |
+| **Map sharing and restore** | Export individual maps with their saved profile and import shared maps without replacing existing data. |
 
 ## Daily tracking
 
@@ -109,7 +110,10 @@ The frontend is built with **vanilla JavaScript and ES modules** without a frame
 ```text
 app.js          Application entry point and active-map rendering
 core.js         Shared date, temperature, DOM and chart utilities
-store.js        Application state and localStorage persistence
+store.js        Application state and persistence coordination
+backup.js       JSON backup serialization and parsing
+data-validation.js  Persisted and imported data normalization
+storage/        Browser local-storage adapter
 domain.js       Cycle detection and chart-column generation
 chart.js        Canvas temperature chart and markers
 ui.js           Calendar, cycle map and observation modals
@@ -143,7 +147,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the repository workflow and [CHANGELO
 
 ## Data storage
 
-The current prototype stores profile data, maps, daily observations, coverlines, fertile days and the active map identifier in `localStorage`.
+The current prototype stores profile data, maps, daily observations, coverlines, fertile days and the active map identifier locally in the browser using `localStorage`. No account or server is required.
+
+Each saved map captures a profile snapshot and has an **Export** action in **My Maps**, allowing maps to be shared separately as identifiable JSON backup files. **Import map** validates a shared backup and asks for confirmation before adding it to My Maps. The recipient's profile, existing maps and active map are preserved, while opening the imported map displays the profile saved by its author. If reading, validation, or persistence fails, existing data is preserved.
 
 A database-backed persistence layer is planned for a future version.
 

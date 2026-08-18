@@ -4,9 +4,26 @@ import { MemoryStorage } from "./setup.js";
 
 globalThis.localStorage = new MemoryStorage();
 const {
-  Store, PROFILE_STORAGE_KEY, MAPS_STORAGE_KEY, normalizeCrossedChartTemps, normalizeCrossedRows,
+  Store, LEGACY_STORAGE_KEY, PROFILE_STORAGE_KEY, MAPS_STORAGE_KEY, normalizeCrossedChartTemps, normalizeCrossedRows,
   normalizeDayMarkers,
 } = await import("../store.js");
+
+test("legacy single-map data migrates without losing observations", () => {
+  globalThis.localStorage = new MemoryStorage({
+    [LEGACY_STORAGE_KEY]: JSON.stringify({
+      profile: { name: "Legacy user" },
+      entries: { "2026-08-18": { temp: 36.45, other: "Keep me" } },
+      coverlines: { default: { horizontalTemp: 36.4 } },
+      fertileRange: { start: "2026-08-17", end: "2026-08-19" },
+    }),
+  });
+
+  const store = new Store();
+  assert.equal(store.listMaps().length, 1);
+  assert.equal(store.entries["2026-08-18"].other, "Keep me");
+  assert.equal(store.coverlines.default.horizontalTemp, 36.4);
+  assert.equal(localStorage.getItem(LEGACY_STORAGE_KEY), null);
+});
 
 test("a corrupt stored profile does not bypass setup", () => {
   globalThis.localStorage = new MemoryStorage({ [PROFILE_STORAGE_KEY]: "{broken" });
