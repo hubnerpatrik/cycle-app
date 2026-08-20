@@ -62,7 +62,7 @@ export function drawHorizontalGrid(ctx, canvasWidth) {
 
 /** Draws the manually placed vertical coverline — anchored to a day, recomputed to pixels each render. */
 export function drawVerticalCoverline(ctx, columns) {
-  const { verticalKey } = getCycleCoverlineValues();
+  const { horizontalTemp, verticalKey } = getCycleCoverlineValues();
   if (verticalKey == null) return;
 
   const col = columns.find(c => c.key === verticalKey);
@@ -73,8 +73,11 @@ export function drawVerticalCoverline(ctx, columns) {
   ctx.strokeStyle = "rgba(180,20,20,0.8)";
   ctx.lineWidth = 1.5;
 
-  ctx.moveTo(col.x, LAYOUT.chartPaddingTop);
-  ctx.lineTo(col.x, LAYOUT.chartHeight - LAYOUT.chartPaddingBottom);
+  const originY = horizontalTemp == null
+    ? LAYOUT.chartHeight - LAYOUT.chartPaddingBottom
+    : chartLineY(horizontalTemp);
+  ctx.moveTo(col.x, originY);
+  ctx.lineTo(col.x, LAYOUT.chartPaddingTop);
 
   ctx.stroke();
 
@@ -84,17 +87,19 @@ export function drawVerticalCoverline(ctx, columns) {
 
 /** Draws the manually placed horizontal coverline — anchored to a temperature, recomputed to pixels each render. */
 export function drawHorizontalCoverline(ctx, columns) {
-  const { horizontalTemp } = getCycleCoverlineValues();
+  const { horizontalTemp, verticalKey } = getCycleCoverlineValues();
   if (horizontalTemp == null) return;
 
   const y = chartLineY(horizontalTemp);
+  const verticalColumn = verticalKey == null ? null : columns.find(col => col.key === verticalKey);
+  const originX = verticalColumn?.x ?? 0;
 
   ctx.beginPath();
   ctx.setLineDash([6, 4]);
   ctx.strokeStyle = "rgba(180,20,20,0.8)";
   ctx.lineWidth = 1.5;
 
-  ctx.moveTo(0, y);
+  ctx.moveTo(originX, y);
   ctx.lineTo(chartWidth(columns), y);
 
   ctx.stroke();
@@ -136,7 +141,7 @@ export function drawCrossedChartCells(ctx, columns) {
       const right = col.x + LAYOUT.columnWidth - insetX;
 
       ctx.beginPath();
-      ctx.strokeStyle = "rgba(17,17,17,0.72)";
+      ctx.strokeStyle = "rgba(22,163,74,0.78)";
       ctx.lineWidth = 1.5;
       ctx.moveTo(left, centerY + cellHalfHeight - insetY);
       ctx.lineTo(right, centerY - cellHalfHeight + insetY);

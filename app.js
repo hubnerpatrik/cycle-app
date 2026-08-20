@@ -65,7 +65,7 @@ import {
 /* ─── shared constants and utilities ───────── */
 
 import {
-  LAYOUT, qs, qsa, parseDateKey, chartY, pixelXToColumnKey, pixelYToChartCellTemp,
+  LAYOUT, qs, qsa, getCalendarFocusDate, chartY, pixelXToColumnKey, pixelYToChartCellTemp,
   syncCSSVariables,
 } from "./core.js";
 
@@ -585,18 +585,9 @@ function hideAllModals() {
 }
 
 function focusActiveMap() {
-  const keys = Object.keys(store.entries).sort();
-  if (!keys.length) {
-    const now = new Date();
-    store.month = now.getMonth();
-    store.year = now.getFullYear();
-    return;
-  }
-
-  const latest = parseDateKey(keys[keys.length - 1]);
-  store.month = latest.getMonth();
-  store.year = latest.getFullYear();
-
+  const focusDate = getCalendarFocusDate(store.entries);
+  store.month = focusDate.getMonth();
+  store.year = focusDate.getFullYear();
 }
 
 function showStandaloneScreen() {

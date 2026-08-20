@@ -58,6 +58,15 @@ export function formatDateKey(date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/** Uses the latest dated graph entry when available, otherwise local today. */
+export function getCalendarFocusDate(entries, today = new Date()) {
+  const latestKey = Object.keys(entries || {})
+    .filter(key => /^\d{4}-\d{2}-\d{2}$/.test(key))
+    .sort()
+    .at(-1);
+  return latestKey ? parseDateKey(latestKey) : new Date(today);
+}
+
 export function getDaysInMonth(year, month) { return new Date(year, month + 1, 0).getDate(); }
 export function getMonthOffset(year, month) { return (new Date(year, month, 1).getDay() + 6) % 7; }
 export function formatTemp(temp) { return temp != null ? Number(temp).toFixed(2) : "-"; }
