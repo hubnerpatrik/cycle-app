@@ -16,6 +16,14 @@ vMAJOR.MINOR.PATCH
 
 - No changes yet.
 
+## 0.10.1 — 2026-08-20
+
+### Changed
+
+- Calendar opens on the latest month represented in the active map, falling back to the local current month for empty maps.
+- Crossed temperature-chart cells now use green lines.
+- Horizontal and vertical coverlines meet at a shared origin and render as an L shape.
+
 ## 0.10.0 — 2026-08-18
 
 ### Added
