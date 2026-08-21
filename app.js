@@ -15,8 +15,13 @@
 "use strict";
 
 import { store } from "./store.js";
-import { buildColumns } from "./domain.js";
-import { renderChart, handleCanvasClick } from "./chart.js";
+import { buildColumns, clearCycleCoverlineValues } from "./domain.js";
+import {
+  renderChart,
+  handleCanvasClick,
+  getCoverlineDragTarget,
+  updateCoverlineDrag,
+} from "./chart.js";
 import { createRouter } from "./router.js";
 
 import {
@@ -95,6 +100,100 @@ function bindModalOverlayClicks(definitions) {
 export let currentColumns = [];
 let activeMapInitialized = false;
 let router = null;
+let activeCoverlineDrag = null;
+let coverlineSelected = false;
+let suppressNextChartClick = false;
+let markerHintTimer = null;
+
+function setCoverlineCursor(canvas, target, dragging = false) {
+  canvas.classList.remove(
+    "coverline-drag-horizontal",
+    "coverline-drag-vertical",
+    "coverline-drag-both",
+    "coverline-dragging",
+  );
+  if (target) canvas.classList.add(`coverline-drag-${target}`);
+  if (dragging) canvas.classList.add("coverline-dragging");
+}
+
+function hideToolPill() {
+  qs("toast")?.classList.remove("action-toast");
+  showMessage("", 0);
+}
+
+function showPersistentHint(text) {
+  // Cancel the timer of any earlier transient message. Older cached versions
+  // may still schedule a hide here, so the node replacement below isolates it.
+  showMessage("", null);
+  const currentToast = qs("toast");
+  if (!currentToast) return null;
+
+  // Replace the node so any timer attached to an earlier transient message
+  // can only affect the detached old node, never this persistent hint.
+  const toast = currentToast.cloneNode(false);
+  toast.className = "toast persistent-toast";
+  toast.textContent = text;
+  currentToast.replaceWith(toast);
+  requestAnimationFrame(() => toast.classList.add("show"));
+  return toast;
+}
+
+function showCrossCellsPill() {
+  const toast = showPersistentHint("");
+  if (!toast) return;
+
+  const label = document.createElement("span");
+  label.textContent = "Select cells directly in the temperature chart.";
+
+  const saveButton = document.createElement("button");
+  saveButton.type = "button";
+  saveButton.className = "toast-action toast-action-primary";
+  saveButton.textContent = "Save";
+  saveButton.onclick = startOrSaveCrossCellSelection;
+
+  toast.replaceChildren(label, saveButton);
+  toast.classList.add("action-toast");
+}
+
+function deleteSelectedCoverline() {
+  if (!coverlineSelected || !clearCycleCoverlineValues()) return;
+  coverlineSelected = false;
+  activeCoverlineDrag = null;
+  const canvas = qs("tempChart");
+  if (canvas) setCoverlineCursor(canvas, null);
+  hideToolPill();
+  store.save();
+  render();
+  showMessage("Coverline deleted.");
+}
+
+function showCoverlineSelectionPill() {
+  const toast = showPersistentHint("");
+  if (!toast) return;
+
+  const label = document.createElement("span");
+  label.textContent = "Drag to move";
+
+  const deleteButton = document.createElement("button");
+  deleteButton.type = "button";
+  deleteButton.className = "toast-action toast-action-danger";
+  deleteButton.textContent = "Delete";
+  deleteButton.onclick = deleteSelectedCoverline;
+
+  toast.replaceChildren(label, deleteButton);
+  toast.classList.add("action-toast");
+}
+
+function renderCurrentChart() {
+  renderChart(currentColumns, { coverlineSelected });
+}
+
+function cancelMarkerPlacement() {
+  clearTimeout(markerHintTimer);
+  markerHintTimer = null;
+  store.markerSelectionMode = false;
+  qs("markersActionBtn")?.classList.remove("active");
+}
 
 export function pixelToPointColumnHit(x, y, columns) {
   if (!columns.length) return null;
@@ -148,53 +247,39 @@ export function selectColumn(key, pointType = "temp") {
   render();
 
   if (store.markerSelectionMode) {
-    store.markerSelectionMode = false;
-    qs("markersActionBtn")?.classList.remove("active");
+    cancelMarkerPlacement();
+    hideToolPill();
     openMarkersModal();
   }
 }
 
 /** Highlights a column on hover — only redraws the chart layer. */
-export function hoverColumn(key)  { store.hoveredKey = key; store.hoveredPointType = null; renderChart(currentColumns); }
+export function hoverColumn(key)  { store.hoveredKey = key; store.hoveredPointType = null; renderCurrentChart(); }
 
 /** Clears hover state and redraws the chart layer. */
-export function clearHover()      { store.hoveredKey = null; renderChart(currentColumns); }
-
-function setCrossCellsModal(confirming = false) {
-  qs("crossCellsModal").classList.remove("hidden");
-  requestAnimationFrame(() => qs("crossCellsModal").classList.add("show"));
-  qs("crossCellsModal").querySelector("h2").innerText = confirming ? "Confirm crossed cells" : "Cross out cells";
-  qs("crossCellsModal").querySelector("p").innerText = confirming
-    ? "Save the selected cells, or cancel to discard your changes."
-    : "Select the cells directly in the temperature chart, then confirm your selection.";
-  qs("startCrossCellsBtn").innerText = confirming ? "Save selection" : "Select cells";
-}
-
-function openCrossCellsModal() {
-  setCrossCellsModal(store.crossCellSelectionMode === true);
-}
-
-function hideCrossCellsModal() {
-  qs("crossCellsModal")?.classList.remove("show");
-  qs("crossCellsModal")?.classList.add("hidden");
-}
+export function clearHover()      { store.hoveredKey = null; renderCurrentChart(); }
 
 function startOrSaveCrossCellSelection() {
   if (store.crossCellSelectionMode) {
     store.commitCrossCellSelection();
     qs("crossCellsActionBtn").classList.remove("active");
     qs("crossCellsActionBtn").innerText = "Cross cells";
-    hideCrossCellsModal();
+    hideToolPill();
     render();
     showMessage("Crossed cells saved.");
     return;
   }
 
+  cancelMarkerPlacement();
+  coverlineSelected = false;
+  store.horizontalCoverlineMode = false;
+  store.verticalCoverlineMode = false;
+  qs("coverlineBtn")?.classList.remove("active");
+  qs("coverlineBtn")?.setAttribute("aria-pressed", "false");
   store.beginCrossCellSelection();
   qs("crossCellsActionBtn").classList.add("active");
-  qs("crossCellsActionBtn").innerText = "Confirm crosses";
-  hideCrossCellsModal();
-  showMessage("Select cells directly in the temperature chart.");
+  qs("crossCellsActionBtn").innerText = "Cross cells";
+  showCrossCellsPill();
   render();
 }
 
@@ -202,7 +287,7 @@ function cancelCrossCellSelection() {
   store.cancelCrossCellSelection();
   qs("crossCellsActionBtn")?.classList.remove("active");
   if (qs("crossCellsActionBtn")) qs("crossCellsActionBtn").innerText = "Cross cells";
-  hideCrossCellsModal();
+  hideToolPill();
   render();
 }
 
@@ -220,7 +305,7 @@ export function render() {
   renderTempScale();
   currentColumns = buildColumns();
   renderMapRows(currentColumns, selectColumn, hoverColumn, clearHover);
-  renderChart(currentColumns);
+  renderCurrentChart();
   renderProfileInfo();
   renderActiveMapMeta();
 }
@@ -318,21 +403,37 @@ function initActiveMap() {
   bindButton("saveMucusModalBtn", () => saveMucusModal(render));
 
   bindButton("markersActionBtn", () => {
+    if (store.markerSelectionMode) {
+      cancelMarkerPlacement();
+      hideToolPill();
+      return;
+    }
+
     closeActionModal();
+    if (store.crossCellSelectionMode) store.cancelCrossCellSelection();
+    coverlineSelected = false;
+    store.horizontalCoverlineMode = false;
+    store.verticalCoverlineMode = false;
+    qs("crossCellsActionBtn")?.classList.remove("active");
+    qs("coverlineBtn")?.classList.remove("active");
+    qs("coverlineBtn")?.setAttribute("aria-pressed", "false");
+    render();
     store.markerSelectionMode = true;
     qs("markersActionBtn").classList.add("active");
-    setTimeout(() => showMessage("Click a day on the chart to choose a marker day."), 300);
+    markerHintTimer = setTimeout(() => {
+      if (store.markerSelectionMode) {
+        showPersistentHint("Click a day on the chart to choose a marker day.");
+      }
+    }, 300);
   });
 
   bindButton("crossCellsActionBtn", () => {
     if (store.crossCellSelectionMode) {
-      openCrossCellsModal();
+      cancelCrossCellSelection();
       return;
     }
     startOrSaveCrossCellSelection();
   });
-  bindButton("cancelCrossCellsBtn", cancelCrossCellSelection);
-  bindButton("startCrossCellsBtn", startOrSaveCrossCellSelection);
 
   bindButton("saveFertileRangeModalBtn", () => saveFertileRangeModal(render));
   bindButton("clearFertileRangeBtn", () => clearFertileRangeModal(render));
@@ -362,54 +463,37 @@ function initActiveMap() {
     ["bleedingModal", closeBleedingModal],
     ["mucusModal", closeMucusModal],
     ["markersModal", closeMarkersModal],
-    ["crossCellsModal", cancelCrossCellSelection],
     ["cervixModal", closeCervixModal],
     ["fertileRangeModal", closeFertileRangeModal],
     ["otherModal", closeOtherModal],
     ["dayInfoModal", closeDayInfoModal],
   ]);
 
-  // coverline tool menu
+  // coverline placement tool
   const coverlineBtn = qs("coverlineBtn");
-  const coverlineMenu = qs("coverlineMenu");
-
-  const refreshCoverlineButton = () => {
-    if (!coverlineBtn) return;
-    const menuOpen = coverlineMenu && !coverlineMenu.classList.contains("hidden");
-    const active = menuOpen || store.horizontalCoverlineMode || store.verticalCoverlineMode;
-    coverlineBtn.classList.toggle("active", active);
-    if (store.horizontalCoverlineMode) {
-      coverlineBtn.innerText = "Horizontal coverline";
-    } else if (store.verticalCoverlineMode) {
-      coverlineBtn.innerText = "Vertical coverline";
-    } else {
-      coverlineBtn.innerText = "Coverline";
-    }
-  };
-
-  if (coverlineBtn && coverlineMenu) {
-    coverlineBtn.onclick = event => {
-      event.stopPropagation();
-      coverlineMenu.classList.toggle("hidden");
-      refreshCoverlineButton();
-    };
-
-    qsa(".coverline-option").forEach(option => {
-      option.onclick = () => {
-        const mode = option.dataset.coverline;
-        store.horizontalCoverlineMode = mode === "horizontal";
-        store.verticalCoverlineMode = mode === "vertical";
-        coverlineMenu.classList.add("hidden");
-        refreshCoverlineButton();
-      };
-    });
-
-    document.addEventListener("click", event => {
-      if (!coverlineMenu.contains(event.target) && event.target !== coverlineBtn) {
-        coverlineMenu.classList.add("hidden");
-        refreshCoverlineButton();
+  if (coverlineBtn) {
+    coverlineBtn.onclick = () => {
+      const active = !(store.horizontalCoverlineMode && store.verticalCoverlineMode);
+      const otherToolActive = store.crossCellSelectionMode || store.markerSelectionMode;
+      const selectionWasActive = coverlineSelected;
+      coverlineSelected = false;
+      if (active && store.crossCellSelectionMode) {
+        store.cancelCrossCellSelection();
+        qs("crossCellsActionBtn")?.classList.remove("active");
       }
-    });
+      if (active && store.markerSelectionMode) cancelMarkerPlacement();
+      if (active && otherToolActive) render();
+      else if (selectionWasActive) renderCurrentChart();
+      store.horizontalCoverlineMode = active;
+      store.verticalCoverlineMode = active;
+      coverlineBtn.classList.toggle("active", active);
+      coverlineBtn.setAttribute("aria-pressed", String(active));
+      if (active) {
+        showPersistentHint("Click then drag lines");
+      } else {
+        hideToolPill();
+      }
+    };
   }
   // zoom controls
   qs("zoomInBtn").onclick = () => {
@@ -447,10 +531,93 @@ function initActiveMap() {
 
   const tempChart = qs("tempChart");
   if (tempChart) {
+    tempChart.addEventListener("pointerdown", event => {
+      if (event.button !== 0
+        || store.crossCellSelectionMode
+        || store.markerSelectionMode
+        || store.horizontalCoverlineMode
+        || store.verticalCoverlineMode) return;
+      const pointer = canvasPointerPosition(event, tempChart);
+      if (!pointer) return;
+
+      const target = getCoverlineDragTarget(pointer.x, pointer.y, currentColumns);
+      if (!target) return;
+
+      event.preventDefault();
+      coverlineSelected = true;
+      showCoverlineSelectionPill();
+      renderCurrentChart();
+      activeCoverlineDrag = {
+        pointerId: event.pointerId,
+        target,
+        startX: pointer.x,
+        startY: pointer.y,
+        moved: false,
+      };
+      tempChart.setPointerCapture?.(event.pointerId);
+      setCoverlineCursor(tempChart, target, true);
+    });
+
+    tempChart.addEventListener("pointermove", event => {
+      const pointer = canvasPointerPosition(event, tempChart);
+      if (!pointer) return;
+
+      if (activeCoverlineDrag?.pointerId === event.pointerId) {
+        event.preventDefault();
+        const distance = Math.hypot(
+          pointer.x - activeCoverlineDrag.startX,
+          pointer.y - activeCoverlineDrag.startY,
+        );
+        if (distance >= 3) activeCoverlineDrag.moved = true;
+        if (activeCoverlineDrag.moved
+          && updateCoverlineDrag(activeCoverlineDrag.target, pointer.x, pointer.y, currentColumns)) {
+          renderCurrentChart();
+        }
+        return;
+      }
+
+      if (store.crossCellSelectionMode || store.horizontalCoverlineMode || store.verticalCoverlineMode) {
+        setCoverlineCursor(tempChart, null);
+        return;
+      }
+      setCoverlineCursor(
+        tempChart,
+        getCoverlineDragTarget(pointer.x, pointer.y, currentColumns),
+      );
+    });
+
+    const finishCoverlineDrag = event => {
+      if (activeCoverlineDrag?.pointerId !== event.pointerId) return;
+      const moved = activeCoverlineDrag.moved;
+      tempChart.releasePointerCapture?.(event.pointerId);
+      activeCoverlineDrag = null;
+      setCoverlineCursor(tempChart, null);
+      if (event.type === "pointerup") {
+        suppressNextChartClick = true;
+        setTimeout(() => { suppressNextChartClick = false; }, 0);
+      }
+      if (!moved) return;
+      store.save();
+      renderCurrentChart();
+    };
+
+    tempChart.addEventListener("pointerup", finishCoverlineDrag);
+    tempChart.addEventListener("pointercancel", finishCoverlineDrag);
+
     tempChart.addEventListener("click", event => {
+      if (suppressNextChartClick) {
+        suppressNextChartClick = false;
+        return;
+      }
       const pointer = canvasPointerPosition(event, tempChart);
       if (!pointer) return;
       const { x, y } = pointer;
+
+      if (coverlineSelected && !getCoverlineDragTarget(x, y, currentColumns)) {
+        coverlineSelected = false;
+        hideToolPill();
+        renderCurrentChart();
+      }
 
       if (store.crossCellSelectionMode) {
         const key = pixelXToColumnKey(x, currentColumns);
@@ -460,7 +627,7 @@ function initActiveMap() {
       }
 
       if (store.horizontalCoverlineMode || store.verticalCoverlineMode) {
-        handleCanvasClick(event, currentColumns, render);
+        if (handleCanvasClick(event, currentColumns, render)) hideToolPill();
         return;
       }
 
@@ -472,31 +639,41 @@ function initActiveMap() {
     });
 
     tempChart.addEventListener("mousemove", event => {
-      const rect = tempChart.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
+      if (activeCoverlineDrag) return;
+      const pointer = canvasPointerPosition(event, tempChart);
+      if (!pointer) return;
+      const { x, y } = pointer;
       const hit = pixelToPointColumnHit(x, y, currentColumns);
 
       if (hit) {
         store.hoveredKey = hit.key;
         store.hoveredPointType = hit.type;
-        renderChart(currentColumns);
+        renderCurrentChart();
         return;
       }
 
       if (store.hoveredKey) {
         store.hoveredKey = null;
         store.hoveredPointType = null;
-        renderChart(currentColumns);
+        renderCurrentChart();
       }
     });
 
     tempChart.addEventListener("mouseleave", () => {
+      if (!activeCoverlineDrag) setCoverlineCursor(tempChart, null);
       if (store.hoveredKey) {
         store.hoveredKey = null;
         store.hoveredPointType = null;
-        renderChart(currentColumns);
+        renderCurrentChart();
       }
+    });
+
+    document.addEventListener("click", event => {
+      if (!coverlineSelected) return;
+      if (event.target === tempChart || event.target.closest?.("#toast")) return;
+      coverlineSelected = false;
+      hideToolPill();
+      renderCurrentChart();
     });
   }
 
@@ -571,7 +748,6 @@ function hideAllModals() {
     "bleedingModal",
     "mucusModal",
     "markersModal",
-    "crossCellsModal",
     "cervixModal",
     "fertileRangeModal",
     "otherModal",
@@ -591,6 +767,19 @@ function focusActiveMap() {
 }
 
 function showStandaloneScreen() {
+  const coverlineModeActive = store.horizontalCoverlineMode || store.verticalCoverlineMode;
+  const crossCellModeActive = store.crossCellSelectionMode;
+  const markerModeActive = store.markerSelectionMode;
+  const coverlineSelectionActive = coverlineSelected;
+  coverlineSelected = false;
+  store.horizontalCoverlineMode = false;
+  store.verticalCoverlineMode = false;
+  cancelMarkerPlacement();
+  if (crossCellModeActive) store.cancelCrossCellSelection();
+  qs("coverlineBtn")?.classList.remove("active");
+  qs("coverlineBtn")?.setAttribute("aria-pressed", "false");
+  qs("crossCellsActionBtn")?.classList.remove("active");
+  if (coverlineModeActive || coverlineSelectionActive || crossCellModeActive || markerModeActive) hideToolPill();
   hideAllModals();
   qs("screenRoot")?.classList.remove("hidden");
   qs("activeMapScreen")?.classList.add("hidden");
@@ -602,6 +791,7 @@ function openActiveMapScreen(mapId = store.getActiveMapId()) {
   }
 
   initActiveMap();
+  coverlineSelected = false;
   hideAllModals();
   focusActiveMap();
   qs("screenRoot")?.classList.add("hidden");

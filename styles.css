@@ -1010,45 +1010,6 @@ h1::before{
   gap:8px;
 }
 
-.coverline-menu-wrapper{
-  position:relative;
-}
-
-.coverline-menu{
-  position:absolute;
-  right:0;
-  top:calc(100% + 6px);
-  width:160px;
-  border-radius:var(--control-radius);
-  background:var(--card);
-  box-shadow:0 14px 32px rgba(0,0,0,0.12);
-  padding:8px 0;
-  z-index:10;
-}
-
-.coverline-option{
-  width:100%;
-  border:none;
-  background:none;
-  color:var(--text);
-  text-align:left;
-  padding:10px 14px;
-  font-size:13px;
-  cursor:pointer;
-}
-
-.coverline-option:hover{
-  background:var(--hairline);
-}
-
-.coverline-option:first-child{
-  border-radius:calc(var(--control-radius) - 2px) calc(var(--control-radius) - 2px) 0 0;
-}
-
-.coverline-option:last-child{
-  border-radius:0 0 calc(var(--control-radius) - 2px) calc(var(--control-radius) - 2px);
-}
-
 .tool-btn{
   height:var(--control-height);
 
@@ -1344,6 +1305,23 @@ h1::before{
 
 .cross-cell-selection-mode{
   cursor:crosshair;
+}
+
+.coverline-drag-horizontal{
+  cursor:ns-resize;
+}
+
+.coverline-drag-vertical{
+  cursor:ew-resize;
+}
+
+.coverline-drag-both{
+  cursor:move;
+}
+
+.coverline-dragging{
+  touch-action:none;
+  user-select:none;
 }
 
 /* ─── cell states ────────────────────────── */
@@ -1744,6 +1722,50 @@ input:focus{
 .toast.show{
   opacity:1;
   transform:translateX(-50%) translateY(0);
+}
+
+.toast.action-toast{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 8px 8px 16px;
+  pointer-events:auto;
+}
+
+.toast.persistent-toast{
+  pointer-events:none;
+}
+
+.toast.persistent-toast.action-toast{
+  pointer-events:auto;
+}
+
+.toast-action{
+  height:32px;
+  padding:0 14px;
+  border:1px solid rgba(255,255,255,0.28);
+  border-radius:999px;
+  color:white;
+  font:inherit;
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.toast-action-primary{
+  border-color:white;
+  background:white;
+  color:var(--text);
+}
+
+.toast-action-danger{
+  border-color:white;
+  background:white;
+  color:#b41414;
+}
+
+.toast-action:hover{
+  transform:translateY(-1px);
 }
 
 /* ─── dev panel ──────────────────────────── */

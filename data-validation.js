@@ -153,7 +153,9 @@ function normalizeCoverlines(coverlines, strict) {
     const validKey = key === "default" || /^cycle-\d+$/.test(key);
     const validValue = isPlainObject(value)
       && (value.horizontalTemp == null || (typeof value.horizontalTemp === "number" && Number.isFinite(value.horizontalTemp)))
-      && (value.verticalKey == null || isDateKey(value.verticalKey));
+      && (value.verticalKey == null || isDateKey(value.verticalKey))
+      && (value.verticalPosition == null
+        || (isDateKey(value.verticalKey) && ["start", "center", "end"].includes(value.verticalPosition)));
     if (!validKey || !validValue) {
       if (strict) throw new DataValidationError(`The coverline “${key}” is malformed.`);
       return;

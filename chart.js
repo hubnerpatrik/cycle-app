@@ -4,8 +4,14 @@
 // Draw order: bg → overlays → grid → annotations → data
 
 import { store } from "./store.js";
-import { LAYOUT, qs, chartY, chartLineY, chartGridY, tempSlotCount, graphHeight, chartWidth, pixelYToTemp, pixelXToColumnKey } from "./core.js";
+import { LAYOUT, qs, chartY, chartLineY, chartGridY, tempSlotCount, graphHeight, chartWidth, pixelYToTemp } from "./core.js";
 import { getCycleCoverlineValues, setCycleCoverlineValues } from "./domain.js";
+
+function coverlineColumnX(column, position = "start") {
+  if (position === "center") return column.centerX ?? column.x + LAYOUT.columnWidth / 2;
+  if (position === "end") return column.x + LAYOUT.columnWidth;
+  return column.x;
+}
 
 /* ─── cycle grouping ──────────────────────── */
 
@@ -61,8 +67,8 @@ export function drawHorizontalGrid(ctx, canvasWidth) {
 }
 
 /** Draws the manually placed vertical coverline — anchored to a day, recomputed to pixels each render. */
-export function drawVerticalCoverline(ctx, columns) {
-  const { horizontalTemp, verticalKey } = getCycleCoverlineValues();
+export function drawVerticalCoverline(ctx, columns, selected = false) {
+  const { horizontalTemp, verticalKey, verticalPosition } = getCycleCoverlineValues();
   if (verticalKey == null) return;
 
   const col = columns.find(c => c.key === verticalKey);
@@ -70,34 +76,41 @@ export function drawVerticalCoverline(ctx, columns) {
 
   ctx.beginPath();
   ctx.setLineDash([6, 4]);
-  ctx.strokeStyle = "rgba(180,20,20,0.8)";
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = selected ? "rgba(180,20,20,1)" : "rgba(180,20,20,0.8)";
+  ctx.lineWidth = selected ? 3 : 1.5;
+  ctx.shadowColor = selected ? "rgba(180,20,20,0.35)" : "transparent";
+  ctx.shadowBlur = selected ? 5 : 0;
 
   const originY = horizontalTemp == null
     ? LAYOUT.chartHeight - LAYOUT.chartPaddingBottom
     : chartLineY(horizontalTemp);
-  ctx.moveTo(col.x, originY);
-  ctx.lineTo(col.x, LAYOUT.chartPaddingTop);
+  const x = coverlineColumnX(col, verticalPosition);
+  ctx.moveTo(x, originY);
+  ctx.lineTo(x, LAYOUT.chartPaddingTop);
 
   ctx.stroke();
 
   ctx.setLineDash([]);
+  ctx.shadowColor = "transparent";
+  ctx.shadowBlur = 0;
   ctx.lineWidth = 1;
 }
 
 /** Draws the manually placed horizontal coverline — anchored to a temperature, recomputed to pixels each render. */
-export function drawHorizontalCoverline(ctx, columns) {
-  const { horizontalTemp, verticalKey } = getCycleCoverlineValues();
+export function drawHorizontalCoverline(ctx, columns, selected = false) {
+  const { horizontalTemp, verticalKey, verticalPosition } = getCycleCoverlineValues();
   if (horizontalTemp == null) return;
 
   const y = chartLineY(horizontalTemp);
   const verticalColumn = verticalKey == null ? null : columns.find(col => col.key === verticalKey);
-  const originX = verticalColumn?.x ?? 0;
+  const originX = verticalColumn ? coverlineColumnX(verticalColumn, verticalPosition) : 0;
 
   ctx.beginPath();
   ctx.setLineDash([6, 4]);
-  ctx.strokeStyle = "rgba(180,20,20,0.8)";
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = selected ? "rgba(180,20,20,1)" : "rgba(180,20,20,0.8)";
+  ctx.lineWidth = selected ? 3 : 1.5;
+  ctx.shadowColor = selected ? "rgba(180,20,20,0.35)" : "transparent";
+  ctx.shadowBlur = selected ? 5 : 0;
 
   ctx.moveTo(originX, y);
   ctx.lineTo(chartWidth(columns), y);
@@ -105,6 +118,8 @@ export function drawHorizontalCoverline(ctx, columns) {
   ctx.stroke();
 
   ctx.setLineDash([]);
+  ctx.shadowColor = "transparent";
+  ctx.shadowBlur = 0;
   ctx.lineWidth = 1;
 }
 
@@ -336,7 +351,7 @@ export function drawMarkers(ctx, columns) {
 /* ─── render ──────────────────────────────── */
 
 /** Main chart render — sets up canvas, scales for DPR, and runs the full draw pipeline. */
-export function renderChart(columns) {
+export function renderChart(columns, { coverlineSelected = false } = {}) {
   const canvas = qs("tempChart");
   if (!canvas) return;
 
@@ -363,8 +378,8 @@ export function renderChart(columns) {
   drawCrossedChartCells(ctx, columns);
   drawCycleSeparators(ctx, cycleGroups);
   drawHoverLine(ctx, columns);
-  drawHorizontalCoverline(ctx, columns);
-  drawVerticalCoverline(ctx, columns);
+  drawHorizontalCoverline(ctx, columns, coverlineSelected);
+  drawVerticalCoverline(ctx, columns, coverlineSelected);
   drawTemperatureLine(ctx, cycleGroups);
   drawTemperaturePoints(ctx, columns);
   drawAdjustedTemperaturePoints(ctx, columns);
@@ -375,12 +390,89 @@ export function renderChart(columns) {
 
 /* ─── coverline interaction ───────────────── */
 
+const COVERLINE_HIT_TOLERANCE = 10;
+
+/** Returns the draggable part of the L-shaped coverline at a chart position. */
+export function getCoverlineDragTarget(x, y, columns, tolerance = COVERLINE_HIT_TOLERANCE) {
+  const { horizontalTemp, verticalKey, verticalPosition } = getCycleCoverlineValues();
+  const verticalColumn = verticalKey == null ? null : columns.find(col => col.key === verticalKey);
+  const originX = verticalColumn ? coverlineColumnX(verticalColumn, verticalPosition) : 0;
+  const originY = horizontalTemp == null
+    ? LAYOUT.chartHeight - LAYOUT.chartPaddingBottom
+    : chartLineY(horizontalTemp);
+
+  const horizontalHit = horizontalTemp != null
+    && x >= originX - tolerance
+    && x <= chartWidth(columns) + tolerance
+    && Math.abs(y - originY) <= tolerance;
+  const verticalHit = verticalColumn != null
+    && y >= LAYOUT.chartPaddingTop - tolerance
+    && y <= originY + tolerance
+    && Math.abs(x - originX) <= tolerance;
+
+  if (horizontalHit && verticalHit) return "both";
+  if (horizontalHit) return "horizontal";
+  if (verticalHit) return "vertical";
+  return null;
+}
+
+function pixelXToCoverlineAnchor(x, columns) {
+  if (!columns.length) return null;
+
+  const anchors = columns.flatMap(column => [
+    { key: column.key, position: "start", x: coverlineColumnX(column, "start") },
+    { key: column.key, position: "center", x: coverlineColumnX(column, "center") },
+  ]);
+  const lastColumn = columns.at(-1);
+  anchors.push({
+    key: lastColumn.key,
+    position: "end",
+    x: coverlineColumnX(lastColumn, "end"),
+  });
+
+  return anchors.reduce((closest, anchor) =>
+    Math.abs(x - anchor.x) < Math.abs(x - closest.x) ? anchor : closest);
+}
+
+/** Moves one arm, or the corner and both arms, while preserving the coverline's L shape. */
+export function updateCoverlineDrag(target, x, y, columns) {
+  const values = {};
+
+  if (target === "horizontal" || target === "both") {
+    values.horizontalTemp = pixelYToTemp(y);
+  }
+
+  if (target === "vertical" || target === "both") {
+    const anchor = pixelXToCoverlineAnchor(x, columns);
+    if (anchor) {
+      values.verticalKey = anchor.key;
+      values.verticalPosition = anchor.position;
+    }
+  }
+
+  if (!Object.keys(values).length) return false;
+  setCycleCoverlineValues(values);
+  return true;
+}
+
+/** Places both arms at once so the initial click always creates a complete L shape. */
+export function placeCoverlinesAt(x, y, columns) {
+  const anchor = pixelXToCoverlineAnchor(x, columns);
+  if (!anchor) return false;
+
+  setCycleCoverlineValues({
+    horizontalTemp: pixelYToTemp(y),
+    verticalKey: anchor.key,
+    verticalPosition: anchor.position,
+  });
+  return true;
+}
+
 /**
  * Handles canvas clicks when a coverline mode is active.
  * Snaps the clicked temperature to the nearest 0.05°C step.
  * Deactivates coverline mode after placement.
  */
-
 export function handleCanvasClick(event, columns, onRender) {
   if (!store.horizontalCoverlineMode && !store.verticalCoverlineMode) {
     return;
@@ -392,14 +484,7 @@ export function handleCanvasClick(event, columns, onRender) {
   const x = event.clientX - rect.left;
   const y = event.clientY - rect.top;
 
-  if (store.horizontalCoverlineMode) {
-    setCycleCoverlineValues({ horizontalTemp: pixelYToTemp(y) });
-  }
-
-  if (store.verticalCoverlineMode) {
-    const key = pixelXToColumnKey(x, columns);
-    if (key != null) setCycleCoverlineValues({ verticalKey: key });
-  }
+  if (!placeCoverlinesAt(x, y, columns)) return false;
 
   store.horizontalCoverlineMode = false;
   store.verticalCoverlineMode = false;
@@ -407,10 +492,11 @@ export function handleCanvasClick(event, columns, onRender) {
   const btn = qs("coverlineBtn");
   if (btn) {
     btn.classList.remove("active");
-    btn.innerText = "Coverline";
+    btn.innerText = "Coverlines";
+    btn.setAttribute("aria-pressed", "false");
   }
-
   store.save();
 
   onRender?.();
+  return true;
 }

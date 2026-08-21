@@ -22,7 +22,7 @@ The app combines **basal body temperature, bleeding, cervical mucus, cervix obse
 
 It does **not** predict ovulation, assign fertility scores or automatically decide what the cycle data means.
 
-> **Current status:** Active prototype · v0.10.1
+> **Current status:** Active prototype · v0.10.2
 
 ## Core features
 

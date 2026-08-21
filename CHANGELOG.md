@@ -16,6 +16,17 @@ vMAJOR.MINOR.PATCH
 
 - No changes yet.
 
+## 0.10.2 — 2026-08-21
+
+### Changed
+
+- Coverlines can now be dragged by either arm or moved together from their shared corner while retaining their existing L shape; vertical coverlines snap to both cell edges and centers.
+- The Coverlines button now creates the complete L shape with one chart click and shows a bottom-center placement hint.
+- Cross-cell selection now adds a Save control to its bottom instruction pill instead of using a confirmation modal.
+- Instruction pills for Coverlines, Cross cells, and Markers remain visible until their action is completed or cancelled.
+- Existing Coverlines can be selected for a highlighted drag state and deleted as a complete L shape from the bottom action pill.
+- A selected Coverline is deselected when the user clicks away from it.
+
 ## 0.10.1 — 2026-08-20
 
 ### Changed

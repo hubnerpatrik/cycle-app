@@ -1221,11 +1221,6 @@ select:focus {
     font-size: 12px;
   }
 
-  .coverline-menu {
-    right: auto;
-    left: 0;
-  }
-
   .profile-editor-layout {
     gap: 18px;
   }
