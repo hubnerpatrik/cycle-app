@@ -40,38 +40,38 @@ export {
 /* ─── store ───────────────────────────────── */
 
 export class Store {
-constructor(persistence = new LocalStorageAdapter()) {
-  this.persistence = persistence;
-  this.selectedKey = null;
-  this.selectedPointType = "temp";
-  this.hoveredKey = null;
-  this.hoveredPointType = null;
+  constructor(persistence = new LocalStorageAdapter()) {
+    this.persistence = persistence;
+    this.selectedKey = null;
+    this.selectedPointType = "temp";
+    this.hoveredKey = null;
+    this.hoveredPointType = null;
 
-  this.month = new Date().getMonth();
-  this.year = new Date().getFullYear();
+    this.month = new Date().getMonth();
+    this.year = new Date().getFullYear();
 
-  this.modal = this._emptyModal();
+    this.modal = this._emptyModal();
 
-  this.horizontalCoverlineMode = false;
-  this.verticalCoverlineMode = false;
-  this.crossCellSelectionMode = false;
-  this.crossCellDraft = null;
+    this.horizontalCoverlineMode = false;
+    this.verticalCoverlineMode = false;
+    this.crossCellSelectionMode = false;
+    this.crossCellDraft = null;
 
   // visual guides only
-  this.coverlines = {};
+    this.coverlines = {};
 
   // manually picked fertile window — one active range at a time
-  this.fertileRange = { start: null, end: null };
+    this.fertileRange = { start: null, end: null };
 
   // person-level info, not tied to any single day
-  this.profile = this._emptyProfile();
+    this.profile = this._emptyProfile();
 
-  this.activeMapId = null;
-  this.maps = {};
-  this.entries = {};
+    this.activeMapId = null;
+    this.maps = {};
+    this.entries = {};
 
-  this._load();
-}
+    this._load();
+  }
 
   /** Returns a blank profile state object. */
   _emptyProfile() {
@@ -79,38 +79,38 @@ constructor(persistence = new LocalStorageAdapter()) {
   }
 
   /** Returns a blank modal state object. */
-_emptyModal() {
-  return {
-    temp: null,
-    tempFactors: "",
-    measurementTime: "",
-    measurementTimeEnabled: false,
-    bleeding: "none",
-    discharge: "none",
+  _emptyModal() {
+    return {
+      temp: null,
+      tempFactors: "",
+      measurementTime: "",
+      measurementTimeEnabled: false,
+      bleeding: "none",
+      discharge: "none",
 
-    sensation: "",
+      sensation: "",
 
-    stretch: false,
-    visible: false,
+      stretch: false,
+      visible: false,
 
-    consistency: "",
-    color: "",
-    colorOther: "",
+      consistency: "",
+      color: "",
+      colorOther: "",
 
-    sediment: false,
-    marker: "",
-    markers: normalizeDayMarkers(),
-    isPeak: false,
+      sediment: false,
+      marker: "",
+      markers: normalizeDayMarkers(),
+      isPeak: false,
 
-    cervixFirmness: "",
-    cervixHeight: "",
-    cervixOpenness: "",
+      cervixFirmness: "",
+      cervixHeight: "",
+      cervixOpenness: "",
 
-    markerColor: "blue",
-    sex: false,
-    other: "",
-  };
-}
+      markerColor: "blue",
+      sex: false,
+      other: "",
+    };
+  }
 
   _emptyMap(id, name = "") {
     return {
@@ -292,15 +292,19 @@ _emptyModal() {
     return state;
   }
 
-  /** Replaces persisted state only after complete validation and successful storage. */
-  restoreBackup(json) {
-    const nextState = parseBackup(json);
-    this.persistence.saveState(nextState);
+  _applyRestoredState(nextState) {
     this.profile = nextState.profile;
     this.maps = nextState.maps;
     this.activeMapId = nextState.activeMapId;
     this._clearTransientSelection();
     this._syncActiveMapState();
+  }
+
+  /** Replaces persisted state only after complete validation and successful storage. */
+  restoreBackup(json) {
+    const nextState = parseBackup(json);
+    this.persistence.saveState(nextState);
+    this._applyRestoredState(nextState);
     return this.getPersistentState();
   }
 
@@ -332,11 +336,7 @@ _emptyModal() {
   restoreData(data) {
     const nextState = normalizeApplicationData(data, { strict: true });
     this.persistence.saveState(nextState);
-    this.profile = nextState.profile;
-    this.maps = nextState.maps;
-    this.activeMapId = nextState.activeMapId;
-    this._clearTransientSelection();
-    this._syncActiveMapState();
+    this._applyRestoredState(nextState);
   }
 
   saveProfile(profile) {

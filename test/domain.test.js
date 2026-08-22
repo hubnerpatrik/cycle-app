@@ -4,7 +4,7 @@ import { MemoryStorage } from "./setup.js";
 
 globalThis.localStorage = new MemoryStorage();
 const { store } = await import("../store.js");
-const { buildColumns, getCycleStartDates } = await import("../domain.js");
+const { buildColumns, getCycleStartDates, resolveCycleId } = await import("../domain.js");
 
 function cycleKeys(entries) {
   store.entries = entries;
@@ -53,4 +53,17 @@ test("columns expose all three marker types for the same day", () => {
     mucus: { value: "1", pointType: "temp" },
     cervix: { value: "3", pointType: "temp" },
   });
+});
+
+test("cycle IDs advance only when a new cycle start occurs", () => {
+  store.entries = {
+    "2026-08-01": { bleeding: "menstruation" },
+    "2026-08-02": { bleeding: "menstruation" },
+    "2026-08-20": { bleeding: "menstruation" },
+  };
+
+  const starts = getCycleStartDates();
+  assert.equal(resolveCycleId(new Date(2026, 7, 5), starts), "cycle-1");
+  assert.equal(resolveCycleId(new Date(2026, 7, 20), starts), "cycle-2");
+  assert.equal(resolveCycleId(new Date(2026, 7, 25), starts), "cycle-2");
 });

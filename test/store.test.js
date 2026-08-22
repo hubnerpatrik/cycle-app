@@ -156,3 +156,33 @@ test("deleting a map removes it and clears active map state", () => {
   assert.deepEqual(store.entries, {});
   assert.equal(localStorage.getItem("activeMapId"), null);
 });
+
+test("restoreData replaces state and clears transient selection", () => {
+  globalThis.localStorage = new MemoryStorage();
+  const store = new Store();
+  store.createMap("Before");
+  store.selectedKey = "2026-08-17";
+  store.hoveredKey = "2026-08-17";
+  store.hoveredPointType = "adjusted";
+
+  store.restoreData({
+    profile: { name: "Ada" },
+    maps: {
+      "map-restored": {
+        id: "map-restored",
+        name: "Restored",
+        entries: {
+          "2026-08-18": { temp: 36.55 },
+        },
+      },
+    },
+    activeMapId: "map-restored",
+  });
+
+  assert.equal(store.getProfile().name, "Ada");
+  assert.equal(store.getActiveMapId(), "map-restored");
+  assert.equal(store.entries["2026-08-18"].temp, 36.55);
+  assert.equal(store.selectedKey, null);
+  assert.equal(store.hoveredKey, null);
+  assert.equal(store.hoveredPointType, null);
+});
