@@ -93,13 +93,7 @@
             </div>
           </div>
           <div class="chart-tools-right">
-            <div class="coverline-menu-wrapper">
-              <button id="coverlineBtn" class="tool-btn coverline-btn" type="button">Coverline</button>
-              <div id="coverlineMenu" class="coverline-menu hidden">
-                <button type="button" data-coverline="horizontal" class="coverline-option">Horizontal</button>
-                <button type="button" data-coverline="vertical" class="coverline-option">Vertical</button>
-              </div>
-            </div>
+            <button id="coverlineBtn" class="tool-btn coverline-btn" type="button" aria-pressed="false">Coverlines</button>
             <button id="markersActionBtn" class="tool-btn marker-btn" type="button">Markers</button>
             <button id="crossCellsActionBtn" class="tool-btn cross-cells-btn" type="button">Cross cells</button>
             <button id="saveActiveMapBtn" class="btn primary chart-save-btn" type="button">Save Map</button>
@@ -135,7 +129,7 @@
     </section>
   </main>
 
-  <div id="toast" class="toast hidden"></div>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
   <div id="modal" class="modal hidden">
     <div class="modal-card">
@@ -298,17 +292,6 @@
         <button id="clearMarkersModalBtn" class="btn secondary" type="button">Clear</button>
         <button id="closeMarkersModalBtn" class="btn secondary" type="button">Close</button>
         <button id="saveMarkersModalBtn" class="btn primary" type="button">Save</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="crossCellsModal" class="modal hidden">
-    <div class="modal-card">
-      <h2>Cross out cells</h2>
-      <p>Select the cells directly in the temperature chart, then confirm your selection.</p>
-      <div class="modal-actions">
-        <button id="cancelCrossCellsBtn" class="btn secondary" type="button">Cancel</button>
-        <button id="startCrossCellsBtn" class="btn primary" type="button">Select cells</button>
       </div>
     </div>
   </div>

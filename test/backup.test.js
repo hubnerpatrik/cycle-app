@@ -22,7 +22,11 @@ function populatedStore(storage = new MemoryStorage()) {
       cervix: { value: "", pointType: "temp" },
     },
   };
-  store.coverlines.default = { horizontalTemp: 36.5, verticalKey: "2026-08-18" };
+  store.coverlines.default = {
+    horizontalTemp: 36.5,
+    verticalKey: "2026-08-18",
+    verticalPosition: "center",
+  };
   store.save();
   return { store, map };
 }
@@ -40,6 +44,7 @@ test("serialization exports all restorable state with stable metadata", () => {
   assert.deepEqual(backup.data.maps[map.id].coverlines.default, {
     horizontalTemp: 36.5,
     verticalKey: "2026-08-18",
+    verticalPosition: "center",
   });
 });
 
@@ -162,6 +167,9 @@ test("malformed observations, markers, and coverlines are rejected", () => {
   })), /marker/i);
   assert.throws(() => parseBackup(wrapMap({
     coverlines: { default: { horizontalTemp: "warm" } },
+  })), /coverline/i);
+  assert.throws(() => parseBackup(wrapMap({
+    coverlines: { default: { verticalKey: "2026-08-18", verticalPosition: "floating" } },
   })), /coverline/i);
   assert.throws(() => parseBackup(wrapMap({ profileSnapshot: [] })), /profile snapshot/i);
 });

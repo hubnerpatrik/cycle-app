@@ -162,7 +162,35 @@ export function setCycleCoverlineValues(values, cycleIndex = null) {
   }
   if ("verticalKey" in values) {
     if (values.verticalKey != null) data.verticalKey = values.verticalKey;
-    else delete data.verticalKey;
+    else {
+      delete data.verticalKey;
+      delete data.verticalPosition;
+    }
+  }
+  if ("verticalPosition" in values) {
+    if (data.verticalKey && ["start", "center", "end"].includes(values.verticalPosition)) {
+      data.verticalPosition = values.verticalPosition;
+    } else {
+      delete data.verticalPosition;
+    }
   }
   if (!Object.keys(data).length) delete store.coverlines[key];
+}
+
+/** Removes the complete visible L-shaped coverline, including legacy cycle storage. */
+export function clearCycleCoverlineValues(cycleIndex = null) {
+  const key = cycleIndex == null ? "default" : `cycle-${cycleIndex}`;
+  if (store.coverlines?.[key]) {
+    delete store.coverlines[key];
+    return true;
+  }
+  if (cycleIndex != null) return false;
+
+  const legacyKey = Object.keys(store.coverlines || {})
+    .filter(value => /^cycle-\d+$/.test(value))
+    .sort((a, b) => Number(a.slice(6)) - Number(b.slice(6)))
+    .at(-1);
+  if (!legacyKey) return false;
+  delete store.coverlines[legacyKey];
+  return true;
 }
