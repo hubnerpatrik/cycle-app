@@ -30,6 +30,15 @@ export function createRouter({ root, showStandaloneScreen, openActiveMap, showMe
     "active-map": "navActiveMapBtn",
   };
 
+  function runStoreAction(action, failureMessage = "Changes could not be saved. Please try again.") {
+    try {
+      return { ok: true, value: action() };
+    } catch {
+      showMessage?.(failureMessage);
+      return { ok: false, value: null };
+    }
+  }
+
   function syncHeaderNavigation(screen) {
     const nav = document.getElementById("headerNav");
     if (!nav) return;
@@ -69,7 +78,7 @@ export function createRouter({ root, showStandaloneScreen, openActiveMap, showMe
           submitLabel: "Save and continue",
           showCancel: false,
           onSave: profile => {
-            store.saveProfile(profile);
+            if (!runStoreAction(() => store.saveProfile(profile)).ok) return;
             showMessage?.("Profile saved ✓");
             navigate("menu");
           },
@@ -92,7 +101,7 @@ export function createRouter({ root, showStandaloneScreen, openActiveMap, showMe
           showCancel: true,
           onCancel: () => navigate("menu"),
           onSave: profile => {
-            store.saveProfile(profile);
+            if (!runStoreAction(() => store.saveProfile(profile)).ok) return;
             showMessage?.("Profile saved ✓");
             navigate("menu");
           },
@@ -131,7 +140,9 @@ export function createRouter({ root, showStandaloneScreen, openActiveMap, showMe
             }
           },
           onRename: (mapId, name) => {
-            const renamed = store.renameMap(mapId, name);
+            const result = runStoreAction(() => store.renameMap(mapId, name));
+            if (!result.ok) return;
+            const renamed = result.value;
             if (!renamed) {
               showMessage?.("Map name cannot be empty");
               return;
@@ -140,7 +151,8 @@ export function createRouter({ root, showStandaloneScreen, openActiveMap, showMe
             navigate("my-maps");
           },
           onDelete: mapId => {
-            if (!store.deleteMap(mapId)) return;
+            const result = runStoreAction(() => store.deleteMap(mapId));
+            if (!result.ok || !result.value) return;
             showMessage?.("Map deleted");
             navigate("my-maps");
           },
@@ -155,7 +167,8 @@ export function createRouter({ root, showStandaloneScreen, openActiveMap, showMe
             }
           },
           onOpen: mapId => {
-            store.setActiveMapId(mapId);
+            const result = runStoreAction(() => store.setActiveMapId(mapId));
+            if (!result.ok || !result.value) return;
             openActiveMap(mapId);
           },
         });
@@ -165,7 +178,9 @@ export function createRouter({ root, showStandaloneScreen, openActiveMap, showMe
         renderCreateMapView(root, {
           onBack: () => navigate("menu"),
           onCreate: name => {
-            const map = store.createMap(name);
+            const result = runStoreAction(() => store.createMap(name));
+            if (!result.ok) return;
+            const map = result.value;
             showMessage?.("Map created ✓");
             openActiveMap(map.id);
           },

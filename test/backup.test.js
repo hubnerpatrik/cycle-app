@@ -169,9 +169,21 @@ test("malformed observations, markers, and coverlines are rejected", () => {
     coverlines: { default: { horizontalTemp: "warm" } },
   })), /coverline/i);
   assert.throws(() => parseBackup(wrapMap({
+    coverlines: { default: { horizontalTemp: 38.05 } },
+  })), /coverline/i);
+  assert.throws(() => parseBackup(wrapMap({
     coverlines: { default: { verticalKey: "2026-08-18", verticalPosition: "floating" } },
   })), /coverline/i);
   assert.throws(() => parseBackup(wrapMap({ profileSnapshot: [] })), /profile snapshot/i);
+  assert.throws(() => parseBackup(wrapMap({
+    entries: { "2026-08-18": { temp: 38.5 } },
+  })), /temp/i);
+  assert.throws(() => parseBackup(wrapMap({
+    entries: { "2026-08-18": { other: { text: "not a string" } } },
+  })), /other/i);
+  assert.throws(() => parseBackup(wrapMap({
+    entries: { "2026-08-18": { bleeding: "unexpected" } },
+  })), /bleeding/i);
 });
 
 test("missing optional map and profile fields receive safe defaults", () => {

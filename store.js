@@ -24,6 +24,10 @@ import {
 } from "./data-validation.js";
 import { parseBackup, serializeBackup } from "./backup.js";
 
+function clonePersistentState(state) {
+  return JSON.parse(JSON.stringify(state));
+}
+
 export {
   ACTIVE_MAP_ID_STORAGE_KEY,
   CROSSABLE_ROW_IDS,
@@ -45,7 +49,6 @@ export class Store {
     this.selectedKey = null;
     this.selectedPointType = "temp";
     this.hoveredKey = null;
-    this.hoveredPointType = null;
 
     this.month = new Date().getMonth();
     this.year = new Date().getFullYear();
@@ -54,6 +57,7 @@ export class Store {
 
     this.horizontalCoverlineMode = false;
     this.verticalCoverlineMode = false;
+    this.markerSelectionMode = false;
     this.crossCellSelectionMode = false;
     this.crossCellDraft = null;
 
@@ -71,6 +75,7 @@ export class Store {
     this.entries = {};
 
     this._load();
+    this._durableState = clonePersistentState(this.getPersistentState());
   }
 
   /** Returns a blank profile state object. */
@@ -86,8 +91,6 @@ export class Store {
       measurementTime: "",
       measurementTimeEnabled: false,
       bleeding: "none",
-      discharge: "none",
-
       sensation: "",
 
       stretch: false,
@@ -153,13 +156,25 @@ export class Store {
   }
 
   _persistAll() {
-    this.persistence.saveState(this.getPersistentState());
+    const nextState = this.getPersistentState();
+    try {
+      this.persistence.saveState(nextState);
+      this._durableState = clonePersistentState(nextState);
+    } catch (error) {
+      // The adapter has already rolled storage back. Restore the matching
+      // in-memory snapshot so an unsaved change is never presented as durable.
+      if (this._durableState) {
+        this._applyRestoredState(clonePersistentState(this._durableState), { clearTransient: false });
+      } else {
+        this._load({ skipMigration: true });
+      }
+      throw error;
+    }
   }
 
   _clearTransientSelection() {
     this.selectedKey = null;
     this.hoveredKey = null;
-    this.hoveredPointType = null;
   }
 
   _syncActiveMapState() {
@@ -210,8 +225,8 @@ export class Store {
   }
 
   /** Loads profile + maps and migrates legacy single-map data if needed. */
-  _load() {
-    const migrated = this._migrateLegacyData();
+  _load({ skipMigration = false } = {}) {
+    const migrated = skipMigration ? false : this._migrateLegacyData();
 
     const rawProfile = this.persistence.read(PROFILE_STORAGE_KEY);
     const storedProfile = this._safeParse(rawProfile, null);
@@ -292,11 +307,11 @@ export class Store {
     return state;
   }
 
-  _applyRestoredState(nextState) {
+  _applyRestoredState(nextState, { clearTransient = true } = {}) {
     this.profile = nextState.profile;
     this.maps = nextState.maps;
     this.activeMapId = nextState.activeMapId;
-    this._clearTransientSelection();
+    if (clearTransient) this._clearTransientSelection();
     this._syncActiveMapState();
   }
 
@@ -305,6 +320,7 @@ export class Store {
     const nextState = parseBackup(json);
     this.persistence.saveState(nextState);
     this._applyRestoredState(nextState);
+    this._durableState = clonePersistentState(this.getPersistentState());
     return this.getPersistentState();
   }
 
@@ -330,6 +346,7 @@ export class Store {
 
     this.persistence.saveState(nextState);
     this.maps = nextState.maps;
+    this._durableState = clonePersistentState(this.getPersistentState());
     return this.getMap(mapId);
   }
 
@@ -337,6 +354,7 @@ export class Store {
     const nextState = normalizeApplicationData(data, { strict: true });
     this.persistence.saveState(nextState);
     this._applyRestoredState(nextState);
+    this._durableState = clonePersistentState(this.getPersistentState());
   }
 
   saveProfile(profile) {
@@ -485,13 +503,22 @@ export class Store {
 
   commitCrossCellSelection() {
     if (!this.crossCellSelectionMode) return;
-    Object.entries(this.crossCellDraft || {}).forEach(([key, temps]) => {
+    const draft = Object.fromEntries(
+      Object.entries(this.crossCellDraft || {}).map(([key, temps]) => [key, [...temps]]),
+    );
+    Object.entries(draft).forEach(([key, temps]) => {
       const crossedChartTemps = normalizeCrossedChartTemps(temps);
       if (!this.entries[key] && crossedChartTemps.length === 0) return;
       this.entries[key] = { ...(this.entries[key] || {}), crossedChartTemps };
     });
     this.cancelCrossCellSelection();
-    this.save();
+    try {
+      this.save();
+    } catch (error) {
+      this.crossCellDraft = draft;
+      this.crossCellSelectionMode = true;
+      throw error;
+    }
   }
 
   cancelCrossCellSelection() {
@@ -513,12 +540,28 @@ export class Store {
 
     this.horizontalCoverlineMode = false;
     this.verticalCoverlineMode   = false;
+    this.markerSelectionMode     = false;
+    this.crossCellSelectionMode = false;
+    this.crossCellDraft          = null;
     this.coverlines              = {};
     this.fertileRange            = { start: null, end: null };
     this.profile                 = this._emptyProfile();
     this.selectedPointType       = "temp";
-    this.hoveredPointType        = null;
     this.modal = this._emptyModal();
+    this._durableState = clonePersistentState(this.getPersistentState());
+  }
+
+  resetModal() {
+    this.modal = this._emptyModal();
+  }
+
+  updateEntry(key, patch) {
+    if (!key || !isPlainObject(patch)) return null;
+    this.entries[key] = {
+      ...(this.entries[key] || {}),
+      ...patch,
+    };
+    return this.entries[key];
   }
 }
 

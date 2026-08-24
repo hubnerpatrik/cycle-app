@@ -1,6 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { chartY, getCalendarFocusDate, getTimeAdjustment, pixelYToChartCellTemp } from "../core.js";
+import {
+  calendarDayDifference,
+  chartY,
+  getCalendarFocusDate,
+  getTimeAdjustment,
+  pixelYToChartCellTemp,
+} from "../core.js";
 
 test("measurement-time adjustment accepts exact 24-hour times", () => {
   assert.equal(getTimeAdjustment("08:30", "07:30"), -0.1);
@@ -36,4 +42,12 @@ test("calendar falls back to local today when the graph is empty", () => {
   assert.equal(focus.getFullYear(), 2026);
   assert.equal(focus.getMonth(), 7);
   assert.equal(focus.getDate(), 20);
+});
+
+test("calendar-day differences ignore daylight-saving clock changes", () => {
+  const beforeSpringChange = new Date("2026-03-29T00:00:00+01:00");
+  const afterSpringChange = new Date("2026-03-30T00:00:00+02:00");
+
+  assert.equal(afterSpringChange - beforeSpringChange, 23 * 60 * 60 * 1000);
+  assert.equal(calendarDayDifference(afterSpringChange, beforeSpringChange), 1);
 });

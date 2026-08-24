@@ -1,3 +1,5 @@
+import { TEMPERATURE_RANGE, TEMP_FACTORS } from "./core.js";
+
 export const CROSSABLE_ROW_IDS = Object.freeze([
   "cycleDayRow", "bleedingRow", "spottingRow", "sedimentRow", "sensationRow",
   "stretchRow", "visibleRow", "consistencyRow", "colorRow", "blueMarkerRow",
@@ -7,6 +9,30 @@ export const CROSSABLE_ROW_IDS = Object.freeze([
 
 export const MARKER_TYPES = Object.freeze(["bbt", "mucus", "cervix"]);
 const VALID_MARKER_VALUES = new Set(["", "P", "1", "2", "3", "4", "5", "6"]);
+const VALID_ENTRY_FIELDS = new Set([
+  "temp", "tempFactors", "measurementTime", "bleeding", "sensation", "stretch", "visible",
+  "consistency", "color", "colorOther", "sediment", "markers", "markerColor", "isPeak",
+  "cervixFirmness", "cervixHeight", "cervixOpenness", "sex", "other", "isFertile",
+  "crossedRows", "crossedChartTemps",
+  // Accepted only so backups created by earlier 0.10.x releases remain importable.
+  "discharge", "marker", "markerPointType", "manualCoverline", "coverlineStart",
+]);
+const ENTRY_ENUMS = Object.freeze({
+  tempFactors: new Set(["", ...Object.keys(TEMP_FACTORS)]),
+  bleeding: new Set(["none", "spotting", "menstruation"]),
+  sensation: new Set(["", "dry", "moist", "wet"]),
+  consistency: new Set(["", "creamy", "slightlyStretchy", "stretchy"]),
+  color: new Set(["", "white", "whiteTranslucent", "translucent", "other"]),
+  markerColor: new Set(["green", "blue", "orange"]),
+  cervixFirmness: new Set(["", "hard", "soft"]),
+  cervixHeight: new Set(["", "low", "medium", "high"]),
+  cervixOpenness: new Set(["", "closed", "medium", "open"]),
+});
+const ENTRY_BOOLEAN_FIELDS = Object.freeze([
+  "stretch", "visible", "sediment", "isPeak", "sex", "isFertile",
+]);
+const ENTRY_STRING_FIELDS = Object.freeze(["colorOther", "other"]);
+const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 const PROFILE_DEFAULTS = Object.freeze({
   name: "",
   consultantName: "",
@@ -37,7 +63,12 @@ export function normalizeCrossedRows(rows) {
 export function normalizeCrossedChartTemps(temps) {
   if (!Array.isArray(temps)) return [];
   return [...new Set(temps
-    .filter(temp => typeof temp === "number" && Number.isFinite(temp) && temp >= 36 && temp <= 37.4)
+    .filter(temp => (
+      typeof temp === "number"
+      && Number.isFinite(temp)
+      && temp >= TEMPERATURE_RANGE.min
+      && temp <= TEMPERATURE_RANGE.max
+    ))
     .map(temp => Math.round(temp * 100) / 100))];
 }
 
@@ -108,6 +139,113 @@ function isDateKey(value) {
   return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
 
+function invalidEntryField(key, field) {
+  return new DataValidationError(`The observation field “${field}” for “${key}” is malformed.`);
+}
+
+function normalizeEntryTemperature(value, key, strict) {
+  if (value == null) return null;
+  const valid = typeof value === "number"
+    && Number.isFinite(value)
+    && value >= TEMPERATURE_RANGE.min
+    && value <= TEMPERATURE_RANGE.max;
+  if (!valid && strict) throw invalidEntryField(key, "temp");
+  return valid ? value : null;
+}
+
+function validateMarkerCollection(markers, entry, key, strict) {
+  if (!strict) return;
+  if (markers != null && !isPlainObject(markers)) throw invalidEntryField(key, "markers");
+  if (isPlainObject(markers)) {
+    Object.keys(markers).forEach(type => {
+      if (!MARKER_TYPES.includes(type) || !isPlainObject(markers[type])) {
+        throw invalidEntryField(key, `markers.${type}`);
+      }
+      const marker = markers[type];
+      if (("value" in marker && !VALID_MARKER_VALUES.has(String(marker.value ?? "")))
+        || ("pointType" in marker && !["temp", "adjusted"].includes(marker.pointType))) {
+        throw invalidEntryField(key, `markers.${type}`);
+      }
+    });
+  }
+  if ("marker" in entry && !VALID_MARKER_VALUES.has(String(entry.marker ?? ""))) {
+    throw invalidEntryField(key, "marker");
+  }
+  if ("markerColor" in entry && !ENTRY_ENUMS.markerColor.has(entry.markerColor)) {
+    throw invalidEntryField(key, "markerColor");
+  }
+  if ("markerPointType" in entry && !["temp", "adjusted"].includes(entry.markerPointType)) {
+    throw invalidEntryField(key, "markerPointType");
+  }
+}
+
+function normalizeEntry(entry, key, strict) {
+  if (strict) {
+    const unknownField = Object.keys(entry).find(field => !VALID_ENTRY_FIELDS.has(field));
+    if (unknownField) throw invalidEntryField(key, unknownField);
+  }
+
+  validateMarkerCollection(entry.markers, entry, key, strict);
+  if (strict && "crossedRows" in entry && !Array.isArray(entry.crossedRows)) {
+    throw invalidEntryField(key, "crossedRows");
+  }
+  if (strict && "crossedChartTemps" in entry && !Array.isArray(entry.crossedChartTemps)) {
+    throw invalidEntryField(key, "crossedChartTemps");
+  }
+
+  const normalized = {
+    crossedRows: normalizeCrossedRows(entry.crossedRows),
+    crossedChartTemps: normalizeCrossedChartTemps(entry.crossedChartTemps),
+    markers: normalizeDayMarkers(entry.markers, entry),
+  };
+
+  if (strict && Array.isArray(entry.crossedRows)
+    && normalized.crossedRows.length !== new Set(entry.crossedRows).size) {
+    throw invalidEntryField(key, "crossedRows");
+  }
+  if (strict && Array.isArray(entry.crossedChartTemps)
+    && normalized.crossedChartTemps.length !== new Set(entry.crossedChartTemps).size) {
+    throw invalidEntryField(key, "crossedChartTemps");
+  }
+
+  if ("temp" in entry) normalized.temp = normalizeEntryTemperature(entry.temp, key, strict);
+  if ("measurementTime" in entry) {
+    const valid = entry.measurementTime === ""
+      || (typeof entry.measurementTime === "string" && TIME_PATTERN.test(entry.measurementTime));
+    if (!valid && strict) throw invalidEntryField(key, "measurementTime");
+    normalized.measurementTime = valid ? entry.measurementTime : "";
+  }
+
+  Object.entries(ENTRY_ENUMS).forEach(([field, values]) => {
+    if (!(field in entry)) return;
+    if (!values.has(entry[field])) {
+      if (strict) throw invalidEntryField(key, field);
+      return;
+    }
+    normalized[field] = entry[field];
+  });
+
+  ENTRY_BOOLEAN_FIELDS.forEach(field => {
+    if (!(field in entry)) return;
+    if (typeof entry[field] !== "boolean") {
+      if (strict) throw invalidEntryField(key, field);
+      return;
+    }
+    normalized[field] = entry[field];
+  });
+
+  ENTRY_STRING_FIELDS.forEach(field => {
+    if (!(field in entry)) return;
+    if (typeof entry[field] !== "string") {
+      if (strict) throw invalidEntryField(key, field);
+      return;
+    }
+    normalized[field] = entry[field];
+  });
+
+  return normalized;
+}
+
 function normalizeEntries(entries, strict) {
   if (entries == null) return {};
   if (strict && !isPlainObject(entries)) {
@@ -121,22 +259,7 @@ function normalizeEntries(entries, strict) {
       if (strict) throw new DataValidationError(`The observation for “${key}” is malformed.`);
       return;
     }
-    if (strict && "markers" in entry && !isPlainObject(entry.markers)) {
-      throw new DataValidationError(`The markers for “${key}” are malformed.`);
-    }
-    if (strict && isPlainObject(entry.markers)) {
-      MARKER_TYPES.forEach(type => {
-        if (type in entry.markers && !isPlainObject(entry.markers[type])) {
-          throw new DataValidationError(`The ${type} marker for “${key}” is malformed.`);
-        }
-      });
-    }
-    normalized[key] = {
-      ...entry,
-      crossedRows: normalizeCrossedRows(entry.crossedRows),
-      crossedChartTemps: normalizeCrossedChartTemps(entry.crossedChartTemps),
-      markers: normalizeDayMarkers(entry.markers, entry),
-    };
+    normalized[key] = normalizeEntry(entry, key, strict);
   });
   return normalized;
 }
@@ -152,7 +275,12 @@ function normalizeCoverlines(coverlines, strict) {
   Object.entries(coverlines).forEach(([key, value]) => {
     const validKey = key === "default" || /^cycle-\d+$/.test(key);
     const validValue = isPlainObject(value)
-      && (value.horizontalTemp == null || (typeof value.horizontalTemp === "number" && Number.isFinite(value.horizontalTemp)))
+      && (value.horizontalTemp == null || (
+        typeof value.horizontalTemp === "number"
+        && Number.isFinite(value.horizontalTemp)
+        && value.horizontalTemp >= TEMPERATURE_RANGE.min
+        && value.horizontalTemp <= TEMPERATURE_RANGE.max
+      ))
       && (value.verticalKey == null || isDateKey(value.verticalKey))
       && (value.verticalPosition == null
         || (isDateKey(value.verticalKey) && ["start", "center", "end"].includes(value.verticalPosition)));

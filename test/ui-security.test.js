@@ -4,7 +4,17 @@ import { MemoryStorage } from "./setup.js";
 
 globalThis.localStorage = new MemoryStorage();
 const { store } = await import("../store.js");
-const { renderInfoLines, selectMarkerType } = await import("../ui.js");
+const {
+  markerHeadingFromColor,
+  renderInfoLines,
+  returnsToActionMenuAfterSave,
+  selectMarkerType,
+} = await import("../ui.js");
+
+test("marker saves return directly to the chart", () => {
+  assert.equal(returnsToActionMenuAfterSave("markersModal"), false);
+  assert.equal(returnsToActionMenuAfterSave("mucusModal"), true);
+});
 
 test("day-info lines append user input as text nodes", () => {
   const appended = [];
@@ -30,8 +40,9 @@ test("day-info lines append user input as text nodes", () => {
 
 test("switching marker types preserves each marker draft", () => {
   const markerInput = { value: "P" };
+  const markerLabel = { textContent: "" };
   globalThis.document = {
-    getElementById: id => id === "markersMarker" ? markerInput : null,
+    getElementById: id => ({ markersMarker: markerInput, markersMarkerLabel: markerLabel })[id] ?? null,
     querySelectorAll: () => [],
   };
   store.modal = store._emptyModal();
@@ -41,9 +52,17 @@ test("switching marker types preserves each marker draft", () => {
   selectMarkerType("blue");
   assert.equal(store.modal.markers.bbt.value, "P");
   assert.equal(markerInput.value, "2");
+  assert.equal(markerLabel.textContent, "Mucus Marker");
 
   markerInput.value = "4";
   selectMarkerType("orange");
   assert.equal(store.modal.markers.mucus.value, "4");
   assert.equal(store.modal.markers.bbt.value, "P");
+  assert.equal(markerLabel.textContent, "Cervix Marker");
+});
+
+test("each peak type has its own marker heading", () => {
+  assert.equal(markerHeadingFromColor("green"), "BBT Marker");
+  assert.equal(markerHeadingFromColor("blue"), "Mucus Marker");
+  assert.equal(markerHeadingFromColor("orange"), "Cervix Marker");
 });

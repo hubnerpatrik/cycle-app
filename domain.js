@@ -5,7 +5,15 @@
 // and building the column array consumed by render.
 
 import { normalizeDayMarkers, store } from "./store.js";
-import { normalize, parseDateKey, columnX, columnCenterX, getTimeAdjustment, getAdjustedTemp } from "./core.js";
+import {
+  normalize,
+  parseDateKey,
+  columnX,
+  columnCenterX,
+  getTimeAdjustment,
+  getAdjustedTemp,
+  calendarDayDifference,
+} from "./core.js";
 
 /* ─── cycle detection ─────────────────────── */
 
@@ -22,7 +30,7 @@ export function getCycleStartDates() {
     const previousKey = keys[i - 1];
     const previousDate = previousKey ? parseDateKey(previousKey) : null;
     const isPreviousCalendarDay = previousDate
-      ? (parseDateKey(key) - previousDate) / 86_400_000 === 1
+      ? calendarDayDifference(parseDateKey(key), previousDate) === 1
       : false;
     const prevIsPeriod = isPreviousCalendarDay
       && store.entries[previousKey]?.bleeding === "menstruation";
@@ -42,7 +50,7 @@ export function resolveCycleDay(date, starts, fallbackIndex) {
   for (let i = starts.length - 1; i >= 0; i--) {
     const start = normalize(starts[i]);
     if (start <= normalizedDate) {
-      return Math.floor((normalizedDate - start) / 86_400_000) + 1;
+      return calendarDayDifference(normalizedDate, start) + 1;
     }
   }
   return fallbackIndex + 1;
@@ -83,7 +91,6 @@ function buildColumn(key, index, date, starts) {
     adjustedTemp: getAdjustedTemp(raw.temp, raw.measurementTime, mapProfile.usualMeasurementTime),
 
     bleeding: raw.bleeding ?? "none",
-    discharge: raw.discharge ?? "none",
     sensation: raw.sensation ?? "",
     stretch: raw.stretch ?? false,
     visible: raw.visible ?? false,
@@ -98,8 +105,6 @@ function buildColumn(key, index, date, starts) {
     isFertile: isFertileDay(key, store.entries),
     isPeak: raw.isPeak ?? false,
     markers: normalizeDayMarkers(raw.markers, raw),
-    manualCoverline: raw.manualCoverline ?? null,
-    coverlineStart: raw.coverlineStart ?? false,
   };
 }
 

@@ -1,8 +1,8 @@
-/* playful.css — theme layer
+/* styles/theme.css — warm visual theme
    ─────────────────────────────────────────────
    This file contains the warm, playful visual overrides.
    It intentionally stays focused on presentation so the
-   structural rules remain in styles.css.
+   structural rules remain in base.css.
    ───────────────────────────────────────────── */
 
 :root {
