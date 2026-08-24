@@ -16,6 +16,18 @@ vMAJOR.MINOR.PATCH
 
 - No changes yet.
 
+## 0.10.3 — 2026-08-24
+
+### Changed
+
+- Centralized chart interaction cleanup so Coverlines, crossed cells, and marker modes reset consistently when switching tools or screens.
+- Simplified restore flows while preserving validation, persistence, and transient selection cleanup.
+- Reused calculated cycle starts when building chart columns and consolidated repeated day-entry updates.
+
+### Fixed
+
+- Cycle identifiers now advance only when a new cycle start occurs.
+
 ## 0.10.2 — 2026-08-21
 
 ### Changed
