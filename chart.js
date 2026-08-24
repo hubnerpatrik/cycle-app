@@ -456,16 +456,10 @@ export function placeCoverlinesAt(x, y, columns) {
  * Snaps the clicked temperature to the nearest 0.05°C step.
  * Deactivates coverline mode after placement.
  */
-export function handleCanvasClick(event, columns, onRender) {
+export function handleCanvasClick(x, y, columns) {
   if (!store.horizontalCoverlineMode && !store.verticalCoverlineMode) {
     return;
   }
-
-  const canvas = qs("tempChart");
-  const rect = canvas.getBoundingClientRect();
-
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
 
   if (!placeCoverlinesAt(x, y, columns)) return false;
 
@@ -478,8 +472,5 @@ export function handleCanvasClick(event, columns, onRender) {
     btn.innerText = "Coverlines";
     btn.setAttribute("aria-pressed", "false");
   }
-  store.save();
-
-  onRender?.();
   return true;
 }

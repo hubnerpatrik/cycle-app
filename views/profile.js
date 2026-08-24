@@ -12,15 +12,6 @@ const METHOD_OPTIONS = [
   ["rectal", "Rectal"],
 ];
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
 function renderOptions(options, selectedValue) {
   return options
     .map(([value, label]) => {
@@ -123,3 +114,4 @@ export function renderProfileScreen(container, {
 
   container.querySelector("#profileScreenCancelBtn")?.addEventListener("click", () => onCancel?.());
 }
+import { escapeHtml } from "./view-utils.js";

@@ -22,7 +22,7 @@ The app combines **basal body temperature, bleeding, cervical mucus, cervix obse
 
 It does **not** predict ovulation, assign fertility scores or automatically decide what the cycle data means.
 
-> **Current status:** Active prototype · v0.10.2
+> **Current status:** Active prototype · v0.10.4
 
 ## Core features
 
@@ -108,7 +108,7 @@ The frontend is built with **vanilla JavaScript and ES modules** without a frame
 <summary><strong>Project structure</strong></summary>
 
 ```text
-app.js          Application entry point and active-map rendering
+app.js          Application entry point and top-level rendering
 core.js         Shared date, temperature, DOM and chart utilities
 store.js        Application state and persistence coordination
 backup.js       JSON backup serialization and parsing
@@ -116,9 +116,12 @@ data-validation.js  Persisted and imported data normalization
 storage/        Browser local-storage adapter
 domain.js       Cycle detection and chart-column generation
 chart.js        Canvas temperature chart and markers
-ui.js           Calendar, cycle map and observation modals
+active-map/     Active-map bindings and chart interactions
+ui.js           Public UI facade
+ui/             Calendar, map grid and observation modals
 router.js       Screen navigation
 views/          Main menu, profile, maps and map creation screens
+styles/         Base and theme styles with one CSS entry point
 ```
 
 </details>

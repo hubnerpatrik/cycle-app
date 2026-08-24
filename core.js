@@ -11,9 +11,16 @@ export const LAYOUT = {
   chartPaddingTop: 12,
   chartPaddingBottom: 8,
   minTemp: 36.0,
-  maxTemp: 37.4,
+  maxTemp: 38.0,
   tempStep: 0.05,
 };
+
+export const TEMPERATURE_RANGE = Object.freeze({
+  min: LAYOUT.minTemp,
+  max: LAYOUT.maxTemp,
+});
+
+const MILLISECONDS_PER_DAY = 86_400_000;
 
 export const TEMP_FACTORS = {
   alcohol: "Alcohol", travel: "Travel", stress: "Stress", medication: "Medication",
@@ -46,6 +53,17 @@ export function normalize(date) {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
   return d;
+}
+
+/** Returns a timezone-independent ordinal for the date's local calendar day. */
+export function calendarDayNumber(date) {
+  const d = new Date(date);
+  return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / MILLISECONDS_PER_DAY);
+}
+
+/** Counts local calendar boundaries without assuming that every day has 24 hours. */
+export function calendarDayDifference(later, earlier) {
+  return calendarDayNumber(later) - calendarDayNumber(earlier);
 }
 
 export function parseDateKey(key) {

@@ -16,6 +16,29 @@ vMAJOR.MINOR.PATCH
 
 - No changes yet.
 
+## 0.10.4 — 2026-08-24
+
+### Changed
+
+- Limited temperature entry, imported measurements, crossed temperature cells, and the chart scale to 36–38 °C.
+- Split the application entry point and UI layer into smaller feature modules without changing the user workflow.
+- Consolidated styling behind one CSS entry point while keeping base and theme rules maintainable.
+- Strengthened persisted-data normalization and observation validation.
+
+### Fixed
+
+- Made cycle-day calculations safe across daylight-saving time changes.
+- Restored in-memory state to the last durable snapshot when browser persistence fails.
+- Preserved unfinished chart-tool state after failed saves and consistently cleared transient modes when resetting or changing screens.
+- Removed duplicate active-map persistence and other dead or duplicated state paths.
+- Returned directly to the chart after saving a marker instead of opening the Edit Day menu.
+- Updated the marker field heading to match the selected BBT, mucus, or cervix peak type.
+
+### Tests
+
+- Added regression coverage for DST boundaries, malformed imported observations, persistence rollbacks, and transient chart state.
+- Verified the release with 57 automated tests, a production build, and an isolated browser smoke test.
+
 ## 0.10.3 — 2026-08-24
 
 ### Changed

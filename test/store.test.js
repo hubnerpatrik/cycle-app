@@ -87,8 +87,8 @@ test("crossed rows are limited to known chart rows", () => {
 
 test("crossed chart temperatures are normalized and limited to the visible grid", () => {
   assert.deepEqual(
-    normalizeCrossedChartTemps([36, 36.0001, 37.4, 37.45, "36.5", null]),
-    [36, 37.4],
+    normalizeCrossedChartTemps([35.95, 36, 36.0001, 37.45, 38, 38.05, "36.5", null]),
+    [36, 37.45, 38],
   );
 });
 
@@ -163,7 +163,6 @@ test("restoreData replaces state and clears transient selection", () => {
   store.createMap("Before");
   store.selectedKey = "2026-08-17";
   store.hoveredKey = "2026-08-17";
-  store.hoveredPointType = "adjusted";
 
   store.restoreData({
     profile: { name: "Ada" },
@@ -184,5 +183,45 @@ test("restoreData replaces state and clears transient selection", () => {
   assert.equal(store.entries["2026-08-18"].temp, 36.55);
   assert.equal(store.selectedKey, null);
   assert.equal(store.hoveredKey, null);
-  assert.equal(store.hoveredPointType, null);
+});
+
+test("a failed ordinary save restores the durable in-memory state", () => {
+  class FailingStorage extends MemoryStorage {
+    setItem(key, value) {
+      if (this.fail && key === MAPS_STORAGE_KEY) throw new Error("quota exceeded");
+      super.setItem(key, value);
+    }
+  }
+
+  const storage = new FailingStorage();
+  globalThis.localStorage = storage;
+  const store = new Store();
+  store.createMap("Durable map");
+  store.entries["2026-08-18"] = { temp: 36.5 };
+  store.save();
+  const before = JSON.stringify(store.getPersistentState());
+
+  store.entries["2026-08-18"].temp = 36.8;
+  storage.fail = true;
+
+  assert.throws(() => store.save(), /could not be saved/i);
+  assert.equal(JSON.stringify(store.getPersistentState()), before);
+});
+
+test("reset clears every transient interaction mode", () => {
+  globalThis.localStorage = new MemoryStorage();
+  const store = new Store();
+  store.markerSelectionMode = true;
+  store.horizontalCoverlineMode = true;
+  store.verticalCoverlineMode = true;
+  store.crossCellSelectionMode = true;
+  store.crossCellDraft = { "2026-08-18": [36.5] };
+
+  store.reset();
+
+  assert.equal(store.markerSelectionMode, false);
+  assert.equal(store.horizontalCoverlineMode, false);
+  assert.equal(store.verticalCoverlineMode, false);
+  assert.equal(store.crossCellSelectionMode, false);
+  assert.equal(store.crossCellDraft, null);
 });

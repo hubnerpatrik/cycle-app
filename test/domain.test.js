@@ -4,7 +4,8 @@ import { MemoryStorage } from "./setup.js";
 
 globalThis.localStorage = new MemoryStorage();
 const { store } = await import("../store.js");
-const { buildColumns, getCycleStartDates, resolveCycleId } = await import("../domain.js");
+const { parseDateKey } = await import("../core.js");
+const { buildColumns, getCycleStartDates, resolveCycleDay, resolveCycleId } = await import("../domain.js");
 
 function cycleKeys(entries) {
   store.entries = entries;
@@ -35,6 +36,17 @@ test("consecutive dates across a year boundary remain one period", () => {
     "2026-12-31": { bleeding: "menstruation" },
     "2027-01-01": { bleeding: "menstruation" },
   }), ["2026-12-31"]);
+});
+
+test("consecutive dates across the spring DST change remain one period", () => {
+  assert.deepEqual(cycleKeys({
+    "2026-03-29": { bleeding: "menstruation" },
+    "2026-03-30": { bleeding: "menstruation" },
+  }), ["2026-03-29"]);
+  assert.equal(
+    resolveCycleDay(parseDateKey("2026-03-30"), [parseDateKey("2026-03-29")], 1),
+    2,
+  );
 });
 
 test("columns expose all three marker types for the same day", () => {

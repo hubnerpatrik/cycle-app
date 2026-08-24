@@ -21,12 +21,7 @@
 
   <link
     rel="stylesheet"
-    href="styles.css"
-  >
-
-  <link
-    rel="stylesheet"
-    href="playful.css"
+    href="styles/index.css"
   >
 
 </head>
@@ -137,7 +132,7 @@
 
       <div class="modal-section">
         <div class="section-title">Temperature</div>
-        <input id="tempInput" type="number" step="0.01" min="35" max="38" placeholder="36.50">
+        <input id="tempInput" type="number" step="0.01" min="36" max="38" placeholder="36.50">
 
         <label class="input-label">Influence factors</label>
         <select id="tempFactorsInput"></select>
@@ -275,7 +270,7 @@
       </div>
 
       <div class="modal-section">
-        <div class="section-title">Marker</div>
+        <div id="markersMarkerLabel" class="section-title">Mucus Marker</div>
         <select id="markersMarker">
           <option value="">None</option>
           <option value="P">P</option>
