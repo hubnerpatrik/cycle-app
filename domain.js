@@ -38,10 +38,12 @@ export function getCycleStartDates() {
  * if no cycle start has been recorded yet.
  */
 export function resolveCycleDay(date, starts, fallbackIndex) {
-  const d           = normalize(date);
-  const latestStart = [...starts].reverse().find(s => normalize(s) <= d);
-  if (latestStart) {
-    return Math.floor((d - normalize(latestStart)) / 86_400_000) + 1;
+  const normalizedDate = normalize(date);
+  for (let i = starts.length - 1; i >= 0; i--) {
+    const start = normalize(starts[i]);
+    if (start <= normalizedDate) {
+      return Math.floor((normalizedDate - start) / 86_400_000) + 1;
+    }
   }
   return fallbackIndex + 1;
 }
@@ -50,11 +52,11 @@ export function resolveCycleDay(date, starts, fallbackIndex) {
  * Returns a stable cycle ID string (e.g. "cycle-2") for a given date.
  * Increments each time a new cycle start is detected before that date.
  */
-export function resolveCycleId(date) {
-  const starts = getCycleStartDates();
+export function resolveCycleId(date, starts = getCycleStartDates()) {
+  const normalizedDate = normalize(date);
   let cycleIndex = 0;
   for (let i = 0; i < starts.length; i++) {
-    if (normalize(starts[i]) <= normalize(date)) cycleIndex = i + 1;
+    if (normalize(starts[i]) <= normalizedDate) cycleIndex = i + 1;
   }
   return `cycle-${cycleIndex || 1}`;
 }
@@ -71,7 +73,7 @@ function buildColumn(key, index, date, starts) {
     x: columnX(index),
     centerX: columnCenterX(index),
 
-    cycleId: resolveCycleId(date),
+    cycleId: resolveCycleId(date, starts),
     cycleDay: resolveCycleDay(date, starts, index),
 
     temp: raw.temp ?? null,

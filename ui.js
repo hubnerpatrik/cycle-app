@@ -132,6 +132,41 @@ const modalActionDefs = [
   { id: "otherActionBtn", label: "Other", iconClass: "chip-purple", iconSvg: `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg>` },
 ];
 
+const CONSISTENCY_LABELS = {
+  "": "",
+  creamy: "CR",
+  slightlyStretchy: "SS",
+  stretchy: "ST",
+};
+
+const COLOR_LABELS = {
+  "": "",
+  white: "W",
+  whiteTranslucent: "WT",
+  translucent: "T",
+  other: "O",
+};
+
+const MAP_SENSATION_LABELS = {
+  "": "",
+  dry: "D",
+  moist: "M",
+  wet: "W",
+};
+
+const CERVIX_FIRMNESS_LABELS = {
+  "": "",
+  hard: "H",
+  soft: "S",
+};
+
+const CERVIX_HEIGHT_LABELS = {
+  "": "",
+  low: "L",
+  medium: "M",
+  high: "H",
+};
+
 function createActionButton({ id, label, iconClass, iconSvg }) {
   const button = document.createElement("button");
   button.id = id;
@@ -263,7 +298,7 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
     { id: "bleedingRow", label: "Bleeding", group: "red", render: (col, sel) => makeAccentCell(col.bleeding === "menstruation" ? "●" : "", sel, "red", col.bleeding === "menstruation" ? "period" : "") },
     { id: "spottingRow", label: "Spotting", group: "red", render: (col, sel) => makeAccentCell(col.bleeding === "spotting" ? "◐" : "", sel, "red", col.bleeding === "spotting" ? "spotting" : "") },
     { id: "sedimentRow", label: "Clots", group: "red", render: (col, sel) => makeAccentCell(col.sediment ? "✓" : "", sel, "red") },
-    { id: "sensationRow", label: "Sensation", group: "mucus", render: (col, sel) => makeAccentCell(SENSATION_LABELS[col.sensation] || "", sel, "mucus") },
+    { id: "sensationRow", label: "Sensation", group: "mucus", render: (col, sel) => makeAccentCell(MAP_SENSATION_LABELS[col.sensation] || "", sel, "mucus") },
     { id: "stretchRow", label: "Slippery ", group: "mucus", render: (col, sel) => makeAccentCell(col.stretch ? "✓" : "", sel, "mucus") },
     { id: "visibleRow", label: "Discharge", group: "mucus", render: (col, sel) => makeAccentCell(col.visible ? "✓" : "", sel, "mucus") },
     { id: "consistencyRow", label: "Consistency", group: "mucus", render: (col, sel) => makeAccentCell(CONSISTENCY_LABELS[col.consistency] || "", sel, "mucus") },
@@ -319,40 +354,6 @@ export function renderMapRows(columns, selectColumn, hoverColumn, clearHover) {
     el.onclick = () => {
       selectColumn(col.key);
     };
-  };
-
-  const CONSISTENCY_LABELS = {
-    "": "",
-    creamy: "CR",
-    slightlyStretchy: "SS",
-    stretchy: "ST",
-  };
-  const COLOR_LABELS = {
-    "": "",
-    white: "W",
-    whiteTranslucent: "WT",
-    translucent: "T",
-    other: "O",
-  };
-
-  const SENSATION_LABELS = {
-    "": "",
-    dry: "D",
-    moist: "M",
-    wet: "W",
-  };
-
-  const CERVIX_FIRMNESS_LABELS = {
-    "": "",
-    hard: "H",
-    soft: "S",
-  };
-
-  const CERVIX_HEIGHT_LABELS = {
-    "": "",
-    low: "L",
-    medium: "M",
-    high: "H",
   };
 
   columns.forEach(col => {
@@ -448,6 +449,16 @@ function resetModalState() {
   store.modal = store._emptyModal();
 }
 
+function updateSelectedEntry(patch) {
+  if (!store.selectedKey) return null;
+  store.entries[store.selectedKey] = {
+    ...(store.entries[store.selectedKey] || {}),
+    ...patch,
+  };
+  return store.entries[store.selectedKey];
+}
+
+
 /** Opens the edit modal for the currently selected day. */
 export function openModal(currentColumns) {
   if (!store.selectedKey) return showMessage("Select a day first");
@@ -497,12 +508,11 @@ export function saveModal(render) {
   const tempInput = qs("tempInput").value.trim().replace(",", ".");
   const temp = parseFloat(tempInput);
 
-  store.entries[store.selectedKey] = {
-    ...(store.entries[store.selectedKey] || {}),
+  updateSelectedEntry({
     temp:            isNaN(temp) ? null : temp,
     tempFactors:     qs("tempFactorsInput").value,
     measurementTime: store.modal.measurementTimeEnabled ? qs("measurementTimeInput").value : "",
-  };
+  });
 
   store.save();
   showMessage("Saved ✓");
@@ -589,8 +599,7 @@ export function closeMucusModal() {
 export function saveMucusModal(render) {
   if (!store.selectedKey) return;
 
-  store.entries[store.selectedKey] = {
-    ...(store.entries[store.selectedKey] || {}),
+  updateSelectedEntry({
     sensation: store.modal.sensation,
     stretch: store.modal.stretch,
     visible: store.modal.visible,
@@ -598,7 +607,7 @@ export function saveMucusModal(render) {
     color: store.modal.color,
     colorOther: store.modal.colorOther,
     isPeak: store.modal.isPeak,
-  };
+  });
 
   store.save();
   showMessage("Saved ✓");
@@ -628,11 +637,10 @@ export function closeBleedingModal() {
 export function saveBleedingModal(render) {
   if (!store.selectedKey) return;
 
-  store.entries[store.selectedKey] = {
-    ...(store.entries[store.selectedKey] || {}),
+  updateSelectedEntry({
     bleeding: store.modal.bleeding,
     sediment: store.modal.sediment,
-  };
+  });
 
   store.save();
   showMessage("Saved ✓");
@@ -706,12 +714,11 @@ export function saveMarkersModal(render) {
 
   saveVisibleMarkerDraft();
 
-  store.entries[store.selectedKey] = {
-    ...(store.entries[store.selectedKey] || {}),
+  updateSelectedEntry({
     isPeak: store.modal.isPeak === true,
     markers: normalizeDayMarkers(store.modal.markers),
     markerColor: store.modal.markerColor,
-  };
+  });
 
   store.save();
   showMessage("Saved ✓");
@@ -740,12 +747,11 @@ export function closeCervixModal() {
 export function saveCervixModal(render) {
   if (!store.selectedKey) return;
 
-  store.entries[store.selectedKey] = {
-    ...(store.entries[store.selectedKey] || {}),
+  updateSelectedEntry({
     cervixFirmness: store.modal.cervixFirmness,
     cervixHeight: store.modal.cervixHeight,
     cervixOpenness: store.modal.cervixOpenness,
-  };
+  });
 
   store.save();
   showMessage("Saved ✓");
@@ -921,14 +927,10 @@ export function closeOtherModal() {
 export function saveOtherModal(render) {
   if (!store.selectedKey) return;
 
-  const sexValue = store.modal.sex === true;
-
-  store.entries[store.selectedKey] = {
-    ...(store.entries[store.selectedKey] || {}),
+  updateSelectedEntry({
     other: qs("otherModalInput").value.trim(),
-  };
-
-  store.entries[store.selectedKey].sex = sexValue;
+    sex: store.modal.sex === true,
+  });
 
   store.save();
   showMessage("Saved ✓");

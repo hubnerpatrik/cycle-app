@@ -270,23 +270,6 @@ export function drawTemperaturePoints(ctx, columns) {
   ctx.lineWidth = 1;
 }
 
-export function drawSelectedPointHighlight(ctx, columns) {
-  if (!store.selectedKey) return;
-  const col = columns.find(c => c.key === store.selectedKey && c.temp != null);
-  if (!col) return;
-
-  const pointY = store.selectedPointType === "adjusted" && col.adjustedTemp != null
-    ? chartY(col.adjustedTemp)
-    : chartY(col.temp);
-
-  ctx.beginPath();
-  ctx.arc(col.centerX, pointY, 10, 0, Math.PI * 2);
-  ctx.strokeStyle = store.markerSelectionMode ? "rgba(37,99,235,0.85)" : "rgba(37,99,235,0.45)";
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.setLineDash([]);
-}
-
 /** Draws a secondary dot for the time-adjusted temperature — connects it to the measured point with a dashed blue line. */
 export function drawAdjustedTemperaturePoints(ctx, columns) {
   columns.forEach(col => {

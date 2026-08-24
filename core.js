@@ -70,7 +70,6 @@ export function getCalendarFocusDate(entries, today = new Date()) {
 export function getDaysInMonth(year, month) { return new Date(year, month + 1, 0).getDate(); }
 export function getMonthOffset(year, month) { return (new Date(year, month, 1).getDay() + 6) % 7; }
 export function formatTemp(temp) { return temp != null ? Number(temp).toFixed(2) : "-"; }
-export function isValidTemp(temp) { return temp == null || (temp >= 34 && temp <= 42); }
 export function columnX(index) { return index * LAYOUT.columnWidth; }
 export function columnCenterX(index) { return columnX(index) + LAYOUT.columnWidth / 2; }
 export function chartWidth(columns) { return columns.length * LAYOUT.columnWidth; }

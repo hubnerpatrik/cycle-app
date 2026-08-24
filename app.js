@@ -195,6 +195,30 @@ function cancelMarkerPlacement() {
   qs("markersActionBtn")?.classList.remove("active");
 }
 
+function setCrossCellButtonActive(active) {
+  const button = qs("crossCellsActionBtn");
+  if (!button) return;
+  button.classList.toggle("active", active);
+  button.innerText = "Cross cells";
+}
+
+function setCoverlineButtonActive(active) {
+  const button = qs("coverlineBtn");
+  if (!button) return;
+  button.classList.toggle("active", active);
+  button.setAttribute("aria-pressed", String(active));
+}
+
+function clearChartInteractionModes() {
+  coverlineSelected = false;
+  store.horizontalCoverlineMode = false;
+  store.verticalCoverlineMode = false;
+  if (store.crossCellSelectionMode) store.cancelCrossCellSelection();
+  cancelMarkerPlacement();
+  setCrossCellButtonActive(false);
+  setCoverlineButtonActive(false);
+}
+
 export function pixelToPointColumnHit(x, y, columns) {
   if (!columns.length) return null;
   const maxDistance = 18;
@@ -262,31 +286,23 @@ export function clearHover()      { store.hoveredKey = null; renderCurrentChart(
 function startOrSaveCrossCellSelection() {
   if (store.crossCellSelectionMode) {
     store.commitCrossCellSelection();
-    qs("crossCellsActionBtn").classList.remove("active");
-    qs("crossCellsActionBtn").innerText = "Cross cells";
+    setCrossCellButtonActive(false);
     hideToolPill();
     render();
     showMessage("Crossed cells saved.");
     return;
   }
 
-  cancelMarkerPlacement();
-  coverlineSelected = false;
-  store.horizontalCoverlineMode = false;
-  store.verticalCoverlineMode = false;
-  qs("coverlineBtn")?.classList.remove("active");
-  qs("coverlineBtn")?.setAttribute("aria-pressed", "false");
+  clearChartInteractionModes();
   store.beginCrossCellSelection();
-  qs("crossCellsActionBtn").classList.add("active");
-  qs("crossCellsActionBtn").innerText = "Cross cells";
+  setCrossCellButtonActive(true);
   showCrossCellsPill();
   render();
 }
 
 function cancelCrossCellSelection() {
   store.cancelCrossCellSelection();
-  qs("crossCellsActionBtn")?.classList.remove("active");
-  if (qs("crossCellsActionBtn")) qs("crossCellsActionBtn").innerText = "Cross cells";
+  setCrossCellButtonActive(false);
   hideToolPill();
   render();
 }
@@ -410,13 +426,7 @@ function initActiveMap() {
     }
 
     closeActionModal();
-    if (store.crossCellSelectionMode) store.cancelCrossCellSelection();
-    coverlineSelected = false;
-    store.horizontalCoverlineMode = false;
-    store.verticalCoverlineMode = false;
-    qs("crossCellsActionBtn")?.classList.remove("active");
-    qs("coverlineBtn")?.classList.remove("active");
-    qs("coverlineBtn")?.setAttribute("aria-pressed", "false");
+    clearChartInteractionModes();
     render();
     store.markerSelectionMode = true;
     qs("markersActionBtn").classList.add("active");
@@ -479,15 +489,14 @@ function initActiveMap() {
       coverlineSelected = false;
       if (active && store.crossCellSelectionMode) {
         store.cancelCrossCellSelection();
-        qs("crossCellsActionBtn")?.classList.remove("active");
+        setCrossCellButtonActive(false);
       }
       if (active && store.markerSelectionMode) cancelMarkerPlacement();
       if (active && otherToolActive) render();
       else if (selectionWasActive) renderCurrentChart();
       store.horizontalCoverlineMode = active;
       store.verticalCoverlineMode = active;
-      coverlineBtn.classList.toggle("active", active);
-      coverlineBtn.setAttribute("aria-pressed", String(active));
+      setCoverlineButtonActive(active);
       if (active) {
         showPersistentHint("Click then drag lines");
       } else {
@@ -771,14 +780,7 @@ function showStandaloneScreen() {
   const crossCellModeActive = store.crossCellSelectionMode;
   const markerModeActive = store.markerSelectionMode;
   const coverlineSelectionActive = coverlineSelected;
-  coverlineSelected = false;
-  store.horizontalCoverlineMode = false;
-  store.verticalCoverlineMode = false;
-  cancelMarkerPlacement();
-  if (crossCellModeActive) store.cancelCrossCellSelection();
-  qs("coverlineBtn")?.classList.remove("active");
-  qs("coverlineBtn")?.setAttribute("aria-pressed", "false");
-  qs("crossCellsActionBtn")?.classList.remove("active");
+  clearChartInteractionModes();
   if (coverlineModeActive || coverlineSelectionActive || crossCellModeActive || markerModeActive) hideToolPill();
   hideAllModals();
   qs("screenRoot")?.classList.remove("hidden");
