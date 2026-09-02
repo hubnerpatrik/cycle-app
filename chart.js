@@ -13,6 +13,59 @@ function coverlineColumnX(column, position = "start") {
   return column.x;
 }
 
+function coverlineAnchorX(values, keyField, positionField, columns, fallback = null) {
+  const column = columns.find(item => item.key === values[keyField]);
+  return column ? coverlineColumnX(column, values[positionField]) : fallback;
+}
+
+function getCoverlineGeometry(columns) {
+  const values = getCycleCoverlineValues();
+  const width = chartWidth(columns);
+  const horizontalY = values.horizontalTemp == null ? null : chartLineY(values.horizontalTemp);
+  const verticalX = coverlineAnchorX(values, "verticalKey", "verticalPosition", columns);
+
+  return {
+    horizontal: horizontalY == null ? null : {
+      startX: coverlineAnchorX(
+        values,
+        "horizontalStartKey",
+        "horizontalStartPosition",
+        columns,
+        verticalX ?? 0,
+      ),
+      endX: coverlineAnchorX(
+        values,
+        "horizontalEndKey",
+        "horizontalEndPosition",
+        columns,
+        width,
+      ),
+      y: horizontalY,
+    },
+    vertical: verticalX == null ? null : {
+      x: verticalX,
+      topY: values.verticalTopTemp == null
+        ? LAYOUT.chartPaddingTop
+        : chartLineY(values.verticalTopTemp),
+      bottomY: values.verticalBottomTemp == null
+        ? horizontalY ?? LAYOUT.chartHeight - LAYOUT.chartPaddingBottom
+        : chartLineY(values.verticalBottomTemp),
+    },
+  };
+}
+
+function drawCoverlineHandle(ctx, x, y) {
+  if (typeof ctx.arc !== "function" || typeof ctx.fill !== "function") return;
+  ctx.beginPath();
+  ctx.setLineDash([]);
+  ctx.fillStyle = "white";
+  ctx.strokeStyle = "rgba(180,20,20,1)";
+  ctx.lineWidth = 2;
+  ctx.arc(x, y, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+}
+
 /* ─── cycle grouping ──────────────────────── */
 
 /** Groups columns by cycleId — used to draw temperature lines per cycle. */
@@ -66,13 +119,10 @@ export function drawHorizontalGrid(ctx, canvasWidth) {
   ctx.lineWidth = 1;
 }
 
-/** Draws the manually placed vertical coverline — anchored to a day, recomputed to pixels each render. */
+/** Draws the manually placed vertical coverline with independently resizable endpoints. */
 export function drawVerticalCoverline(ctx, columns, selected = false) {
-  const { horizontalTemp, verticalKey, verticalPosition } = getCycleCoverlineValues();
-  if (verticalKey == null) return;
-
-  const col = columns.find(c => c.key === verticalKey);
-  if (!col) return; // anchor day isn't visible in this cycle
+  const { vertical } = getCoverlineGeometry(columns);
+  if (!vertical) return;
 
   ctx.beginPath();
   ctx.setLineDash([6, 4]);
@@ -81,14 +131,14 @@ export function drawVerticalCoverline(ctx, columns, selected = false) {
   ctx.shadowColor = selected ? "rgba(180,20,20,0.35)" : "transparent";
   ctx.shadowBlur = selected ? 5 : 0;
 
-  const originY = horizontalTemp == null
-    ? LAYOUT.chartHeight - LAYOUT.chartPaddingBottom
-    : chartLineY(horizontalTemp);
-  const x = coverlineColumnX(col, verticalPosition);
-  ctx.moveTo(x, originY);
-  ctx.lineTo(x, LAYOUT.chartPaddingTop);
+  ctx.moveTo(vertical.x, vertical.topY);
+  ctx.lineTo(vertical.x, vertical.bottomY);
 
   ctx.stroke();
+  if (selected) {
+    drawCoverlineHandle(ctx, vertical.x, vertical.topY);
+    drawCoverlineHandle(ctx, vertical.x, vertical.bottomY);
+  }
 
   ctx.setLineDash([]);
   ctx.shadowColor = "transparent";
@@ -96,14 +146,10 @@ export function drawVerticalCoverline(ctx, columns, selected = false) {
   ctx.lineWidth = 1;
 }
 
-/** Draws the manually placed horizontal coverline — anchored to a temperature, recomputed to pixels each render. */
+/** Draws the manually placed horizontal coverline with independently resizable endpoints. */
 export function drawHorizontalCoverline(ctx, columns, selected = false) {
-  const { horizontalTemp, verticalKey, verticalPosition } = getCycleCoverlineValues();
-  if (horizontalTemp == null) return;
-
-  const y = chartLineY(horizontalTemp);
-  const verticalColumn = verticalKey == null ? null : columns.find(col => col.key === verticalKey);
-  const originX = verticalColumn ? coverlineColumnX(verticalColumn, verticalPosition) : 0;
+  const { horizontal } = getCoverlineGeometry(columns);
+  if (!horizontal) return;
 
   ctx.beginPath();
   ctx.setLineDash([6, 4]);
@@ -112,10 +158,14 @@ export function drawHorizontalCoverline(ctx, columns, selected = false) {
   ctx.shadowColor = selected ? "rgba(180,20,20,0.35)" : "transparent";
   ctx.shadowBlur = selected ? 5 : 0;
 
-  ctx.moveTo(originX, y);
-  ctx.lineTo(chartWidth(columns), y);
+  ctx.moveTo(horizontal.startX, horizontal.y);
+  ctx.lineTo(horizontal.endX, horizontal.y);
 
   ctx.stroke();
+  if (selected) {
+    drawCoverlineHandle(ctx, horizontal.startX, horizontal.y);
+    drawCoverlineHandle(ctx, horizontal.endX, horizontal.y);
+  }
 
   ctx.setLineDash([]);
   ctx.shadowColor = "transparent";
@@ -374,26 +424,56 @@ export function renderChart(columns, { coverlineSelected = false } = {}) {
 /* ─── coverline interaction ───────────────── */
 
 const COVERLINE_HIT_TOLERANCE = 10;
+const COVERLINE_ENDPOINT_HIT_TOLERANCE = 13;
 
-/** Returns the draggable part of the L-shaped coverline at a chart position. */
+/** Returns a coverline body or endpoint at a chart position. Endpoints take priority. */
 export function getCoverlineDragTarget(x, y, columns, tolerance = COVERLINE_HIT_TOLERANCE) {
-  const { horizontalTemp, verticalKey, verticalPosition } = getCycleCoverlineValues();
-  const verticalColumn = verticalKey == null ? null : columns.find(col => col.key === verticalKey);
-  const originX = verticalColumn ? coverlineColumnX(verticalColumn, verticalPosition) : 0;
-  const originY = horizontalTemp == null
-    ? LAYOUT.chartHeight - LAYOUT.chartPaddingBottom
-    : chartLineY(horizontalTemp);
+  const geometry = getCoverlineGeometry(columns);
+  const endpoints = [];
+  if (geometry.horizontal) {
+    endpoints.push(
+      { target: "horizontal-start", axis: "horizontal", x: geometry.horizontal.startX, y: geometry.horizontal.y },
+      { target: "horizontal-end", axis: "horizontal", x: geometry.horizontal.endX, y: geometry.horizontal.y },
+    );
+  }
+  if (geometry.vertical) {
+    endpoints.push(
+      { target: "vertical-top", axis: "vertical", x: geometry.vertical.x, y: geometry.vertical.topY },
+      { target: "vertical-bottom", axis: "vertical", x: geometry.vertical.x, y: geometry.vertical.bottomY },
+    );
+  }
 
-  const horizontalHit = horizontalTemp != null
-    && x >= originX - tolerance
-    && x <= chartWidth(columns) + tolerance
-    && Math.abs(y - originY) <= tolerance;
-  const verticalHit = verticalColumn != null
-    && y >= LAYOUT.chartPaddingTop - tolerance
-    && y <= originY + tolerance
-    && Math.abs(x - originX) <= tolerance;
+  const endpointHits = endpoints
+    .map(endpoint => ({ ...endpoint, distance: Math.hypot(x - endpoint.x, y - endpoint.y) }))
+    .filter(endpoint => endpoint.distance <= COVERLINE_ENDPOINT_HIT_TOLERANCE)
+    .sort((a, b) => a.distance - b.distance);
+  if (endpointHits.length) {
+    const nearest = endpointHits[0];
+    const overlapping = endpointHits.filter(endpoint =>
+      Math.abs(endpoint.x - nearest.x) < 0.5 && Math.abs(endpoint.y - nearest.y) < 0.5);
+    if (overlapping.length > 1) {
+      const preferredAxis = Math.abs(x - nearest.x) >= Math.abs(y - nearest.y)
+        ? "horizontal"
+        : "vertical";
+      return overlapping.find(endpoint => endpoint.axis === preferredAxis)?.target ?? nearest.target;
+    }
+    return nearest.target;
+  }
 
-  if (horizontalHit && verticalHit) return "both";
+  const horizontalHit = geometry.horizontal
+    && x >= Math.min(geometry.horizontal.startX, geometry.horizontal.endX) - tolerance
+    && x <= Math.max(geometry.horizontal.startX, geometry.horizontal.endX) + tolerance
+    && Math.abs(y - geometry.horizontal.y) <= tolerance;
+  const verticalHit = geometry.vertical
+    && y >= Math.min(geometry.vertical.topY, geometry.vertical.bottomY) - tolerance
+    && y <= Math.max(geometry.vertical.topY, geometry.vertical.bottomY) + tolerance
+    && Math.abs(x - geometry.vertical.x) <= tolerance;
+
+  if (horizontalHit && verticalHit) {
+    return Math.abs(y - geometry.horizontal.y) <= Math.abs(x - geometry.vertical.x)
+      ? "horizontal"
+      : "vertical";
+  }
   if (horizontalHit) return "horizontal";
   if (verticalHit) return "vertical";
   return null;
@@ -417,15 +497,22 @@ function pixelXToCoverlineAnchor(x, columns) {
     Math.abs(x - anchor.x) < Math.abs(x - closest.x) ? anchor : closest);
 }
 
-/** Moves one arm, or the corner and both arms, while preserving the coverline's L shape. */
+function coverlineTempFromY(y, allowTopBoundary = false) {
+  const maximum = Math.round(
+    (LAYOUT.maxTemp + (allowTopBoundary ? LAYOUT.tempStep : 0)) * 100,
+  ) / 100;
+  return Math.min(maximum, Math.max(LAYOUT.minTemp, pixelYToTemp(y)));
+}
+
+/** Moves a coverline body or resizes one endpoint independently. */
 export function updateCoverlineDrag(target, x, y, columns) {
   const values = {};
 
-  if (target === "horizontal" || target === "both") {
-    values.horizontalTemp = pixelYToTemp(y);
+  if (target === "horizontal") {
+    values.horizontalTemp = coverlineTempFromY(y);
   }
 
-  if (target === "vertical" || target === "both") {
+  if (target === "vertical") {
     const anchor = pixelXToCoverlineAnchor(x, columns);
     if (anchor) {
       values.verticalKey = anchor.key;
@@ -433,20 +520,42 @@ export function updateCoverlineDrag(target, x, y, columns) {
     }
   }
 
+  if (target === "horizontal-start" || target === "horizontal-end") {
+    const anchor = pixelXToCoverlineAnchor(x, columns);
+    const prefix = target === "horizontal-start" ? "horizontalStart" : "horizontalEnd";
+    if (anchor) {
+      values[`${prefix}Key`] = anchor.key;
+      values[`${prefix}Position`] = anchor.position;
+    }
+  }
+
+  if (target === "vertical-top" || target === "vertical-bottom") {
+    const field = target === "vertical-top" ? "verticalTopTemp" : "verticalBottomTemp";
+    values[field] = coverlineTempFromY(y, true);
+  }
+
   if (!Object.keys(values).length) return false;
   setCycleCoverlineValues(values);
   return true;
 }
 
-/** Places both arms at once so the initial click always creates a complete L shape. */
+/** Places both lines as an initial L; every endpoint can then be moved independently. */
 export function placeCoverlinesAt(x, y, columns) {
   const anchor = pixelXToCoverlineAnchor(x, columns);
   if (!anchor) return false;
+  const lastColumn = columns.at(-1);
+  const temp = coverlineTempFromY(y);
 
   setCycleCoverlineValues({
-    horizontalTemp: pixelYToTemp(y),
+    horizontalTemp: temp,
+    horizontalStartKey: anchor.key,
+    horizontalStartPosition: anchor.position,
+    horizontalEndKey: lastColumn.key,
+    horizontalEndPosition: "end",
     verticalKey: anchor.key,
     verticalPosition: anchor.position,
+    verticalTopTemp: Math.round((LAYOUT.maxTemp + LAYOUT.tempStep) * 100) / 100,
+    verticalBottomTemp: temp,
   });
   return true;
 }

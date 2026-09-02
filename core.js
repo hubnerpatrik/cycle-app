@@ -11,7 +11,7 @@ export const LAYOUT = {
   chartPaddingTop: 12,
   chartPaddingBottom: 8,
   minTemp: 36.0,
-  maxTemp: 38.0,
+  maxTemp: 37.4,
   tempStep: 0.05,
 };
 

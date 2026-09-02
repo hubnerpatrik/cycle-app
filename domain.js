@@ -163,28 +163,33 @@ export function setCycleCoverlineValues(values, cycleIndex = null) {
   if (!store.coverlines[key]) store.coverlines[key] = {};
   const data = store.coverlines[key];
 
-  if ("horizontalTemp" in values) {
-    if (values.horizontalTemp != null) data.horizontalTemp = values.horizontalTemp;
-    else delete data.horizontalTemp;
-  }
-  if ("verticalKey" in values) {
-    if (values.verticalKey != null) data.verticalKey = values.verticalKey;
-    else {
-      delete data.verticalKey;
-      delete data.verticalPosition;
+  ["horizontalTemp", "verticalTopTemp", "verticalBottomTemp"].forEach(field => {
+    if (!(field in values)) return;
+    if (values[field] != null) data[field] = values[field];
+    else delete data[field];
+  });
+
+  ["vertical", "horizontalStart", "horizontalEnd"].forEach(prefix => {
+    const keyField = `${prefix}Key`;
+    const positionField = `${prefix}Position`;
+    if (keyField in values) {
+      if (values[keyField] != null) data[keyField] = values[keyField];
+      else {
+        delete data[keyField];
+        delete data[positionField];
+      }
     }
-  }
-  if ("verticalPosition" in values) {
-    if (data.verticalKey && ["start", "center", "end"].includes(values.verticalPosition)) {
-      data.verticalPosition = values.verticalPosition;
+    if (!(positionField in values)) return;
+    if (data[keyField] && ["start", "center", "end"].includes(values[positionField])) {
+      data[positionField] = values[positionField];
     } else {
-      delete data.verticalPosition;
+      delete data[positionField];
     }
-  }
+  });
   if (!Object.keys(data).length) delete store.coverlines[key];
 }
 
-/** Removes the complete visible L-shaped coverline, including legacy cycle storage. */
+/** Removes both visible coverlines, including legacy cycle storage. */
 export function clearCycleCoverlineValues(cycleIndex = null) {
   const key = cycleIndex == null ? "default" : `cycle-${cycleIndex}`;
   if (store.coverlines?.[key]) {

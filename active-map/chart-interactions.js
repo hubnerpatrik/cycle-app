@@ -56,10 +56,14 @@ export function createChartInteractions({ getColumns, renderApp, selectColumn, s
     canvas.classList.remove(
       "coverline-drag-horizontal",
       "coverline-drag-vertical",
-      "coverline-drag-both",
+      "coverline-resize-horizontal",
+      "coverline-resize-vertical",
       "coverline-dragging",
     );
-    if (target) canvas.classList.add(`coverline-drag-${target}`);
+    if (target === "horizontal") canvas.classList.add("coverline-drag-horizontal");
+    if (target === "vertical") canvas.classList.add("coverline-drag-vertical");
+    if (target?.startsWith("horizontal-")) canvas.classList.add("coverline-resize-horizontal");
+    if (target?.startsWith("vertical-")) canvas.classList.add("coverline-resize-vertical");
     if (dragging) canvas.classList.add("coverline-dragging");
   }
 
@@ -115,13 +119,18 @@ export function createChartInteractions({ getColumns, renderApp, selectColumn, s
     const toast = showPersistentHint("");
     if (!toast) return;
     const label = document.createElement("span");
+    const cancel = document.createElement("button");
     const save = document.createElement("button");
     label.textContent = "Select cells directly in the temperature chart.";
+    cancel.type = "button";
+    cancel.className = "toast-action toast-action-cancel";
+    cancel.textContent = "Cancel";
+    cancel.onclick = cancelCrossCells;
     save.type = "button";
     save.className = "toast-action toast-action-primary";
     save.textContent = "Save";
     save.onclick = startOrSaveCrossCells;
-    toast.replaceChildren(label, save);
+    toast.replaceChildren(label, cancel, save);
     toast.classList.add("action-toast");
   }
 
@@ -130,7 +139,7 @@ export function createChartInteractions({ getColumns, renderApp, selectColumn, s
     if (!toast) return;
     const label = document.createElement("span");
     const remove = document.createElement("button");
-    label.textContent = "Drag to move";
+    label.textContent = "Drag a line to move it or drag an endpoint to resize it.";
     remove.type = "button";
     remove.className = "toast-action toast-action-danger";
     remove.textContent = "Delete";
@@ -220,7 +229,7 @@ export function createChartInteractions({ getColumns, renderApp, selectColumn, s
       store.horizontalCoverlineMode = active;
       store.verticalCoverlineMode = active;
       setCoverlineButton(active);
-      if (active) showPersistentHint("Click then drag lines");
+      if (active) showPersistentHint("Click to place both coverlines");
       else hideToolPill();
     };
   }

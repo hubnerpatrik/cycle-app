@@ -274,6 +274,18 @@ function normalizeCoverlines(coverlines, strict) {
   const normalized = {};
   Object.entries(coverlines).forEach(([key, value]) => {
     const validKey = key === "default" || /^cycle-\d+$/.test(key);
+    const validAnchor = prefix => {
+      const anchorKey = value[`${prefix}Key`];
+      const position = value[`${prefix}Position`];
+      return (anchorKey == null || isDateKey(anchorKey))
+        && (position == null || (isDateKey(anchorKey) && ["start", "center", "end"].includes(position)));
+    };
+    const validVerticalEndpoint = field => value[field] == null || (
+      typeof value[field] === "number"
+      && Number.isFinite(value[field])
+      && value[field] >= TEMPERATURE_RANGE.min
+      && value[field] <= Math.round((TEMPERATURE_RANGE.max + 0.05) * 100) / 100
+    );
     const validValue = isPlainObject(value)
       && (value.horizontalTemp == null || (
         typeof value.horizontalTemp === "number"
@@ -281,9 +293,11 @@ function normalizeCoverlines(coverlines, strict) {
         && value.horizontalTemp >= TEMPERATURE_RANGE.min
         && value.horizontalTemp <= TEMPERATURE_RANGE.max
       ))
-      && (value.verticalKey == null || isDateKey(value.verticalKey))
-      && (value.verticalPosition == null
-        || (isDateKey(value.verticalKey) && ["start", "center", "end"].includes(value.verticalPosition)));
+      && validAnchor("vertical")
+      && validAnchor("horizontalStart")
+      && validAnchor("horizontalEnd")
+      && validVerticalEndpoint("verticalTopTemp")
+      && validVerticalEndpoint("verticalBottomTemp");
     if (!validKey || !validValue) {
       if (strict) throw new DataValidationError(`The coverline “${key}” is malformed.`);
       return;

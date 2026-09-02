@@ -186,16 +186,22 @@ body::before {
 }
 
 .day.fertile-day.selected {
-  background: #245c3a;
-  color: #fff;
-  border-color: #183e27;
+  background: linear-gradient(145deg, rgba(92, 214, 135, 0.3), rgba(34, 197, 94, 0.3));
+  color: #176534;
+  border-color: rgba(34, 197, 94, 0.3);
+  box-shadow:
+    0 0 0 2px rgba(74, 222, 128, 0.12),
+    0 8px 20px rgba(34, 197, 94, 0.12);
 }
 
 .day.red.selected,
 .day.red.fertile-day.selected {
-  background: #7a1f2b;
-  color: #fff;
-  border-color: #53151d;
+  background: linear-gradient(145deg, rgba(255, 82, 112, 0.3), rgba(220, 38, 38, 0.3));
+  color: #8f1f2d;
+  border-color: rgba(220, 38, 38, 0.3);
+  box-shadow:
+    0 0 0 2px rgba(239, 68, 68, 0.12),
+    0 8px 20px rgba(220, 38, 38, 0.12);
 }
 
 .day-cycle-num {

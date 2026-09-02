@@ -63,10 +63,26 @@ function animatePrimaryButton(button) {
   });
 }
 
+export function saveActiveMap({
+  activeStore = store,
+  notify = showMessage,
+  renderApp = () => {},
+} = {}) {
+  if (!activeStore.getActiveMap()) return false;
+  try {
+    activeStore.save();
+    notify("Map saved ✓");
+    return true;
+  } catch {
+    notify("The map could not be saved. Please try again.");
+    renderApp();
+    return false;
+  }
+}
+
 export function initializeActiveMapControls({
   chartInteractions,
   getColumns,
-  navigate,
   render,
   renderZoomLabel,
   restart,
@@ -170,18 +186,7 @@ export function initializeActiveMapControls({
       showMessage("Data could not be reset. Please try again.");
     }
   });
-  bindButton("saveActiveMapBtn", () => {
-    const activeMap = store.getActiveMap();
-    if (!activeMap || !confirm(`Save and close \"${activeMap.name || "Untitled map"}\"?`)) return;
-    try {
-      if (!store.closeActiveMap()) return;
-      showMessage("Map saved and closed ✓");
-      navigate("my-maps");
-    } catch {
-      showMessage("The map could not be closed. Please try again.");
-      render();
-    }
-  });
+  bindButton("saveActiveMapBtn", () => saveActiveMap({ renderApp: render }));
 
   qsa(".segmented button").forEach(button => {
     button.onclick = () => {
