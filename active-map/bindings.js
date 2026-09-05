@@ -1,4 +1,5 @@
 import { store } from "../store.js";
+import { enhanceTimeInputs } from "../ui/time-picker.js";
 import { LAYOUT, qs, qsa, syncCSSVariables } from "../core.js";
 import {
   changeFertileRangeMonth,
@@ -91,15 +92,7 @@ export function initializeActiveMapControls({
   syncCSSVariables();
   renderTempFactorsOptions();
   renderActionButtons();
-
-  const openAfterAction = (open, delay = 250) => {
-    closeActionModal();
-    setTimeout(open, delay);
-  };
-  const reopenActionAfter = (close, delay = 250) => {
-    close();
-    setTimeout(openActionModal, delay);
-  };
+  enhanceTimeInputs(document);
 
   bindButton("prevMonth", () => {
     store.month--;
@@ -120,16 +113,16 @@ export function initializeActiveMapControls({
 
   qsa(".btn.primary").forEach(animatePrimaryButton);
   bindButton("editBtn", openActionModal);
-  bindButton("closeBtn", () => reopenActionAfter(closeModal));
+  bindButton("closeBtn", closeModal);
   bindButton("saveBtn", () => saveModal(render));
   bindButton("closeActionModalBtn", closeActionModal);
   [
-    ["temperatureActionBtn", () => openAfterAction(() => openModal(getColumns()), 200)],
-    ["bleedingActionBtn", () => openAfterAction(openBleedingModal)],
-    ["mucusActionBtn", () => openAfterAction(openMucusModal)],
-    ["cervixActionBtn", () => openAfterAction(openCervixModal)],
-    ["fertileRangeActionBtn", () => openAfterAction(openFertileRangeModal)],
-    ["otherActionBtn", () => openAfterAction(openOtherModal)],
+    ["temperatureActionBtn", () => openModal(getColumns())],
+    ["bleedingActionBtn", openBleedingModal],
+    ["mucusActionBtn", openMucusModal],
+    ["cervixActionBtn", openCervixModal],
+    ["fertileRangeActionBtn", openFertileRangeModal],
+    ["otherActionBtn", openOtherModal],
   ].forEach(([id, handler]) => bindButton(id, handler));
 
   bindButton("saveBleedingModalBtn", () => saveBleedingModal(render));
@@ -144,12 +137,12 @@ export function initializeActiveMapControls({
   bindButton("saveOtherModalBtn", () => saveOtherModal(render));
 
   [
-    ["closeBleedingModalBtn", () => reopenActionAfter(closeBleedingModal)],
-    ["closeMucusModalBtn", () => reopenActionAfter(closeMucusModal)],
+    ["closeBleedingModalBtn", closeBleedingModal],
+    ["closeMucusModalBtn", closeMucusModal],
     ["closeFertileRangeModalBtn", closeFertileRangeModal],
     ["closeMarkersModalBtn", closeMarkersModal],
-    ["closeCervixModalBtn", () => reopenActionAfter(closeCervixModal)],
-    ["closeOtherModalBtn", () => reopenActionAfter(closeOtherModal)],
+    ["closeCervixModalBtn", closeCervixModal],
+    ["closeOtherModalBtn", closeOtherModal],
   ].forEach(([id, handler]) => bindButton(id, handler));
 
   bindOverlayClicks([

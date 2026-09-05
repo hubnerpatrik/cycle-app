@@ -2,30 +2,39 @@ import { store } from "../store.js";
 import { qs, qsa } from "../core.js";
 import { showMessage } from "./toast.js";
 
+let navigation = null;
+export function configureModalNavigation(callbacks) {
+  navigation = callbacks;
+}
+
+export function hideAllModals() {
+  qsa(".modal").forEach(modal => {
+    modal.classList.remove("show");
+    modal.classList.add("hidden");
+  });
+}
+
 export function showModal(modalId) {
   const modal = qs(modalId);
   if (!modal) return;
+  hideAllModals();
   modal.classList.remove("hidden");
-  requestAnimationFrame(() => requestAnimationFrame(() => modal.classList.add("show")));
+  modal.classList.add("show");
+  navigation?.modalOpened(modalId);
 }
 
 export function hideModal(modalId) {
   const modal = qs(modalId);
   if (!modal) return;
+  const wasOpen = !modal.classList.contains("hidden");
   modal.classList.remove("show");
-  modal.addEventListener("transitionend", () => modal.classList.add("hidden"), { once: true });
+  modal.classList.add("hidden");
+  if (wasOpen) navigation?.modalClosed(modalId);
 }
 
 export function afterModalSave(modalId, render, reopen) {
-  const modal = qs(modalId);
-  if (!modal) {
-    render();
-    return;
-  }
-  modal.addEventListener("transitionend", () => {
-    render();
-    if (reopen) setTimeout(reopen, 200);
-  }, { once: true });
+  render();
+  if (!navigation && reopen) reopen();
 }
 
 export function syncModalUI() {

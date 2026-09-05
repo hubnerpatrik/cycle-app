@@ -372,7 +372,7 @@ export class Store {
   }
 
   getMap(mapId) {
-    return this.maps[mapId] ? this._normalizeMap(this.maps[mapId], mapId, this.maps[mapId].name) : null;
+    return Object.hasOwn(this.maps, mapId) ? this._normalizeMap(this.maps[mapId], mapId, this.maps[mapId].name) : null;
   }
 
   createMap(name) {
@@ -428,7 +428,7 @@ export class Store {
   }
 
   setActiveMapId(mapId) {
-    if (!this.maps[mapId]) return false;
+    if (!Object.hasOwn(this.maps, mapId)) return false;
     this.maps[mapId] = {
       ...this.maps[mapId],
       status: "open",

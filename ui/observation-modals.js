@@ -69,6 +69,7 @@ export function saveModal(render) {
   if (!validateTempInput()) {
     return showMessage(`Temperature must be between ${TEMPERATURE_RANGE.min}–${TEMPERATURE_RANGE.max} °C`);
   }
+  if (store.modal.measurementTimeEnabled && !qs("measurementTimeInput").reportValidity()) return;
   const raw = qs("tempInput").value.trim().replace(",", ".");
   updateSelectedEntry({
     temp: raw ? Number(raw) : null,

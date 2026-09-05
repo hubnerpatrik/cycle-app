@@ -5,7 +5,16 @@ import { buildColumns } from "./domain.js";
 import { createRouter } from "./router.js";
 import { createChartInteractions } from "./active-map/chart-interactions.js";
 import { initializeActiveMapControls } from "./active-map/bindings.js";
+import { configureModalNavigation, hideAllModals } from "./ui/modal-shared.js";
 import {
+  openActionModal,
+  openModal,
+  openBleedingModal,
+  openMucusModal,
+  openCervixModal,
+  openOtherModal,
+  openFertileRangeModal,
+  openDayInfoModal,
   openMarkersModal,
   renderCalendar,
   renderMapRows,
@@ -17,20 +26,10 @@ import {
 import { LAYOUT, getCalendarFocusDate, qs } from "./core.js";
 
 const ZOOM_BASE = 50;
-const MODAL_IDS = [
-  "modal",
-  "actionModal",
-  "bleedingModal",
-  "mucusModal",
-  "markersModal",
-  "cervixModal",
-  "fertileRangeModal",
-  "otherModal",
-  "dayInfoModal",
-];
 
 export let currentColumns = [];
 let router = null;
+let displayedMapId = null;
 
 export function selectColumn(key, pointType = "temp") {
   store.selectedKey = key;
@@ -93,14 +92,6 @@ function renderZoomLabel() {
   qs("zoomLabel").innerText = `${Math.round((LAYOUT.columnWidth / ZOOM_BASE) * 100)}%`;
 }
 
-function hideAllModals() {
-  MODAL_IDS.forEach(id => {
-    const modal = qs(id);
-    modal?.classList.remove("show");
-    modal?.classList.add("hidden");
-  });
-}
-
 function showStandaloneScreen() {
   chartInteractions.deactivate();
   hideAllModals();
@@ -118,9 +109,12 @@ function openActiveMapScreen() {
   });
   chartInteractions.deactivate();
   hideAllModals();
-  const focusDate = getCalendarFocusDate(store.entries);
-  store.month = focusDate.getMonth();
-  store.year = focusDate.getFullYear();
+  if (displayedMapId !== store.getActiveMapId() || qs("activeMapScreen")?.classList.contains("hidden")) {
+    const focusDate = getCalendarFocusDate(store.entries);
+    store.month = focusDate.getMonth();
+    store.year = focusDate.getFullYear();
+  }
+  displayedMapId = store.getActiveMapId();
   qs("screenRoot")?.classList.add("hidden");
   qs("activeMapScreen")?.classList.remove("hidden");
   render();
@@ -145,8 +139,23 @@ document.addEventListener("DOMContentLoaded", () => {
     root: qs("screenRoot"),
     showStandaloneScreen,
     openActiveMap: openActiveMapScreen,
+    openMapPage: page => {
+      const pages = {
+        "edit-day": openActionModal,
+        temperature: () => openModal(currentColumns),
+        bleeding: openBleedingModal,
+        mucus: openMucusModal,
+        cervix: openCervixModal,
+        other: openOtherModal,
+        markers: openMarkersModal,
+        "fertile-range": openFertileRangeModal,
+        "day-info": () => openDayInfoModal(currentColumns),
+      };
+      pages[page]?.();
+    },
     showMessage,
   });
   bindNavigation();
+  configureModalNavigation(router);
   router.start();
 });

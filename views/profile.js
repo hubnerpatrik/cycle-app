@@ -1,3 +1,5 @@
+import { enhanceTimeInputs } from "../ui/time-picker.js";
+
 const GOAL_OPTIONS = [
   ["", "Not set"],
   ["avoid", "Avoid pregnancy"],
@@ -107,6 +109,7 @@ export function renderProfileScreen(container, {
   `;
 
   const form = container.querySelector("#profileScreenForm");
+  enhanceTimeInputs(container);
   form?.addEventListener("submit", event => {
     event.preventDefault();
     onSave?.(readProfile(container));

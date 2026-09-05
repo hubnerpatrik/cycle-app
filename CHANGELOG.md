@@ -12,9 +12,26 @@ vMAJOR.MINOR.PATCH
 
 ---
 
-## Unreleased
+## 0.10.6 — In development
 
-- No changes yet.
+### Changed
+
+- Give main screens and day editors individual hash URLs with browser Back/Forward support.
+- Restore the selected map and editor date from the URL after refresh; validate missing maps and invalid routes.
+- Return profile and create-map Back buttons to the previous page, with a safe fallback for direct links.
+- Route map creation and opening through the same navigation path so header state stays consistent.
+- Remove delayed editor transitions and animation-dependent save callbacks; keep the calendar month when returning from an editor.
+- Match the Profile and Actions heading sizes.
+
+### Fixed
+
+- Hide header navigation reliably during initial profile setup.
+- Reject inherited object properties as map IDs.
+
+### Validation
+
+- Regression tests cover browser history, refresh, map switching, missing maps, invalid dates, setup guards, and modal cleanup without animation events.
+- Existing persistence, backup/import, chart and cycle-calculation tests remain in place. No storage-format migration is required.
 
 ## 0.10.5 — 2026-09-02
 

@@ -4,6 +4,13 @@ import { renderProfileScreen } from "./views/profile.js";
 import { renderMyMapsView } from "./views/my-maps.js";
 import { renderCreateMapView } from "./views/create-map.js";
 import { backupFilename } from "./backup.js";
+import { createNavigation } from "./navigation.js";
+
+export const MODAL_ROUTES = Object.freeze({
+  actionModal: "edit-day", modal: "temperature", bleedingModal: "bleeding",
+  mucusModal: "mucus", cervixModal: "cervix", otherModal: "other",
+  markersModal: "markers", fertileRangeModal: "fertile-range", dayInfoModal: "day-info",
+});
 
 function downloadBackup(contents, mapName) {
   const blob = new Blob([contents], { type: "application/json" });
@@ -17,10 +24,8 @@ function downloadBackup(contents, mapName) {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-export function createRouter({ root, showStandaloneScreen, openActiveMap, showMessage }) {
-  const state = {
-    currentScreen: null,
-  };
+export function createRouter({ root, showStandaloneScreen, openActiveMap, openMapPage, showMessage, browser = window }) {
+  let rendering = false;
 
   const navByScreen = {
     menu: "navMenuBtn",
@@ -57,9 +62,52 @@ export function createRouter({ root, showStandaloneScreen, openActiveMap, showMe
     }
   }
 
-  function navigate(screen) {
-    state.currentScreen = screen;
-    render(screen);
+  const navigation = createNavigation({ browser, normalize: normalizeRoute, render: renderRoute });
+  const navigate = (screen, options) => navigation.navigate(screen, options);
+  const back = () => navigation.back("menu");
+
+  function normalizeRoute(input) {
+    let screen = typeof input === "string" ? input : input.screen;
+    const params = new URLSearchParams(typeof input === "string" ? "" : input.params);
+    if (!store.hasProfile()) return { screen: "profile-setup", params: new URLSearchParams() };
+    if (!Object.hasOwn(navByScreen, screen)) screen = "menu";
+    if (screen !== "active-map") return { screen, params: new URLSearchParams() };
+    const mapId = params.get("map") || store.getActiveMapId();
+    if (!mapId || !store.getMap(mapId)) return { screen: "my-maps", params: new URLSearchParams() };
+    if (mapId !== store.getActiveMapId()) {
+      if (!runStoreAction(() => store.setActiveMapId(mapId)).ok) {
+        return { screen: "my-maps", params: new URLSearchParams() };
+      }
+    }
+    const clean = new URLSearchParams({ map: mapId });
+    const page = params.get("page");
+    const day = params.get("day");
+    const date = day && new Date(`${day}T12:00:00Z`);
+    const validDay = /^\d{4}-\d{2}-\d{2}$/.test(day || "")
+      && Number.isFinite(date?.getTime()) && date.toISOString().slice(0, 10) === day;
+    if (Object.values(MODAL_ROUTES).includes(page)
+      && (["edit-day", "fertile-range"].includes(page) || validDay)) {
+      clean.set("page", page);
+      if (validDay) clean.set("day", day);
+      if (params.get("point") === "adjusted") clean.set("point", "adjusted");
+    }
+    return { screen, params: clean };
+  }
+
+  function renderRoute(route) {
+    rendering = true;
+    try {
+      if (route.screen === "active-map" && route.params.has("page")) {
+        store.selectedKey = route.params.get("day");
+        store.selectedPointType = route.params.get("point") || "temp";
+      }
+      render(route.screen);
+      if (route.screen === "active-map" && route.params.has("page")) {
+        openMapPage?.(route.params.get("page"));
+      }
+    } finally {
+      rendering = false;
+    }
   }
 
   function render(screen) {
@@ -80,7 +128,7 @@ export function createRouter({ root, showStandaloneScreen, openActiveMap, showMe
           onSave: profile => {
             if (!runStoreAction(() => store.saveProfile(profile)).ok) return;
             showMessage?.("Profile saved ✓");
-            navigate("menu");
+            navigate("menu", { replace: true });
           },
         });
         break;
@@ -99,11 +147,11 @@ export function createRouter({ root, showStandaloneScreen, openActiveMap, showMe
           profile: store.getProfile(),
           submitLabel: "Save profile",
           showCancel: true,
-          onCancel: () => navigate("menu"),
+          onCancel: back,
           onSave: profile => {
             if (!runStoreAction(() => store.saveProfile(profile)).ok) return;
             showMessage?.("Profile saved ✓");
-            navigate("menu");
+            back();
           },
         });
         break;
@@ -169,20 +217,19 @@ export function createRouter({ root, showStandaloneScreen, openActiveMap, showMe
           onOpen: mapId => {
             const result = runStoreAction(() => store.setActiveMapId(mapId));
             if (!result.ok || !result.value) return;
-            openActiveMap(mapId);
+            navigate("active-map");
           },
         });
         break;
 
       case "create-map":
         renderCreateMapView(root, {
-          onBack: () => navigate("menu"),
+          onBack: back,
           onCreate: name => {
             const result = runStoreAction(() => store.createMap(name));
             if (!result.ok) return;
-            const map = result.value;
             showMessage?.("Map created ✓");
-            openActiveMap(map.id);
+            navigate("active-map", { replace: true });
           },
         });
         break;
@@ -198,14 +245,25 @@ export function createRouter({ root, showStandaloneScreen, openActiveMap, showMe
   }
 
   function start() {
-    navigate(store.hasProfile() ? "menu" : "profile-setup");
+    navigation.start();
   }
 
   return {
     navigate,
+    back,
     start,
+    modalOpened(modalId) {
+      if (rendering || !MODAL_ROUTES[modalId]) return;
+      const params = new URLSearchParams({ map: store.getActiveMapId(), page: MODAL_ROUTES[modalId] });
+      if (store.selectedKey) params.set("day", store.selectedKey);
+      if (store.selectedPointType === "adjusted") params.set("point", "adjusted");
+      navigate({ screen: "active-map", params }, { silent: true });
+    },
+    modalClosed() {
+      if (!rendering) navigation.back("active-map");
+    },
     get currentScreen() {
-      return state.currentScreen;
+      return navigation.current?.screen;
     },
   };
 }
