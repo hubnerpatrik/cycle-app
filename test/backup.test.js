@@ -169,14 +169,23 @@ test("malformed observations, markers, and coverlines are rejected", () => {
     coverlines: { default: { horizontalTemp: "warm" } },
   })), /coverline/i);
   assert.throws(() => parseBackup(wrapMap({
-    coverlines: { default: { horizontalTemp: 38.05 } },
+    coverlines: { default: { horizontalTemp: 37.41 } },
   })), /coverline/i);
   assert.throws(() => parseBackup(wrapMap({
     coverlines: { default: { verticalKey: "2026-08-18", verticalPosition: "floating" } },
   })), /coverline/i);
+  assert.throws(() => parseBackup(wrapMap({
+    coverlines: { default: { horizontalStartKey: "not-a-date", horizontalStartPosition: "center" } },
+  })), /coverline/i);
+  assert.throws(() => parseBackup(wrapMap({
+    coverlines: { default: { verticalTopTemp: 37.46 } },
+  })), /coverline/i);
   assert.throws(() => parseBackup(wrapMap({ profileSnapshot: [] })), /profile snapshot/i);
   assert.throws(() => parseBackup(wrapMap({
-    entries: { "2026-08-18": { temp: 38.5 } },
+    entries: { "2026-08-18": { temp: 37.41 } },
+  })), /temp/i);
+  assert.throws(() => parseBackup(wrapMap({
+    entries: { "2026-08-18": { temp: 35.99 } },
   })), /temp/i);
   assert.throws(() => parseBackup(wrapMap({
     entries: { "2026-08-18": { other: { text: "not a string" } } },

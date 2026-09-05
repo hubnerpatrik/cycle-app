@@ -16,6 +16,19 @@ vMAJOR.MINOR.PATCH
 
 - No changes yet.
 
+## 0.10.5 — 2026-09-02
+
+### Added
+
+- Added a Cancel button to the Cross cells action pill so an unfinished selection can be discarded directly from the pill.
+- Made both Coverlines fully adjustable: each line can be moved and each endpoint can be dragged independently to change its length or break and rebuild the L shape.
+
+### Changed
+
+- Limited the chart scale, temperature entry, imported measurements, crossed cells, and Coverline positions to 36.00–37.40 °C.
+- Gave selected fertile and period calendar days soft green and red gradients at 30% opacity.
+- Changed Save Map to persist the active map without closing it or leaving the chart, with a confirmation message after saving.
+
 ## 0.10.4 — 2026-08-24
 
 ### Changed

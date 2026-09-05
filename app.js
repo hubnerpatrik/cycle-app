@@ -112,7 +112,6 @@ function openActiveMapScreen() {
   initializeActiveMapControls({
     chartInteractions,
     getColumns: () => currentColumns,
-    navigate: screen => router?.navigate(screen),
     render,
     renderZoomLabel,
     restart: () => router?.start(),

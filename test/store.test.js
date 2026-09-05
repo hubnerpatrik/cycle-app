@@ -87,8 +87,8 @@ test("crossed rows are limited to known chart rows", () => {
 
 test("crossed chart temperatures are normalized and limited to the visible grid", () => {
   assert.deepEqual(
-    normalizeCrossedChartTemps([35.95, 36, 36.0001, 37.45, 38, 38.05, "36.5", null]),
-    [36, 37.45, 38],
+    normalizeCrossedChartTemps([35.95, 36, 36.0001, 37.4, 37.4001, 37.45, "36.5", null]),
+    [36, 37.4],
   );
 });
 
